@@ -1,48 +1,35 @@
-# Frontend - AXON Stack Flow (SPA)
+# Frontend — Vista
 
-Interfaz web (HTML/CSS/JS puro) en arquitectura SPA (Single Page Application).
-
-## Estructura de carpetas
+SPA en HTML, CSS y JavaScript con módulos ES. No accede a la base de datos: todo lo pide a la API.
 
 ```
-frontend/
-├── css/
-│   └── styles.css          # Sistema de diseño (variables, componentes, temas)
-├── js/
-│   ├── core/               # Utilidades compartidas
-│   │   ├── config.js       # URL del API
-│   │   ├── api.js          # Cliente HTTP + refresh token
-│   │   ├── auth.js         # Estado de sesión
-│   │   └── ui.js           # Toasts, iconos, helpers
-│   ├── pages/              # Vistas
-│   │   ├── login.js
-│   │   ├── register.js
-│   │   ├── verify.js
-│   │   ├── dashboard.js
-│   │   ├── users.js
-│   │   ├── endpoints.js
-│   │   └── profile.js
-│   └── app.js              # Router y shell (sidebar)
-├── assets/                 # Imágenes e íconos (reservado)
-├── index.html              # Punto de entrada
-├── nginx.conf              # Para despliegue con Docker
-└── Dockerfile
+main.js → router/ → views/<módulo>/<pantalla>.view.js → services/*.service.js → http.client.js → API
 ```
 
-## Uso
+| Carpeta | Contenido |
+|---|---|
+| `src/config/` | `API_BASE_URL` y claves de almacenamiento |
+| `src/router/` | `routes.js` (ruta → vista, públicas / privadas / solo admin) y `router.js` |
+| `src/views/` | Una carpeta por módulo: `auth/`, `dashboard/`, `users/`, `endpoints/`, `profile/` |
+| `src/components/` | Layout (menú lateral), modal, gráfica, encabezado, estado vacío |
+| `src/services/` | `http.client.js` (tokens y renovación de sesión) y un servicio por recurso de la API |
+| `src/utils/` | Construcción segura de HTML, iconos, notificaciones, exportar CSV |
+| `assets/` | Estilos e imágenes |
+
+## Ejecutar
 
 ```bash
-node scripts/serve-frontend.js   # http://localhost:5500
+node frontend/server.js    # http://localhost:5500
 ```
 
-O ábrelo directamente con Live Server / XAMPP en el puerto 5500.
-El frontend espera el backend en `http://localhost:4000/api` (configurable en `js/core/config.js`).
+Debe abrirse por http (no con doble clic en `index.html`) porque usa módulos ES. Si la API está en otra dirección, cambiar `API_BASE_URL` en `src/config/app.config.js`.
 
-## Características
-
-- Login/registro con verificación por código.
-- Dashboard con métricas y gráficas.
-- Gestión de usuarios (solo admin).
-- Gestión de endpoints.
-- Tema claro/oscuro.
-- Exportación CSV.
+| Ruta | Vista | Acceso |
+|---|---|---|
+| `#/login` | `views/auth/login.view.js` | Pública |
+| `#/register` | `views/auth/register.view.js` | Pública |
+| `#/verify` | `views/auth/verify.view.js` | Pública |
+| `#/dashboard` | `views/dashboard/dashboard.view.js` | Con sesión |
+| `#/users` | `views/users/users.view.js` | Solo admin |
+| `#/endpoints` | `views/endpoints/endpoints.view.js` | Con sesión |
+| `#/profile` | `views/profile/profile.view.js` | Con sesión |

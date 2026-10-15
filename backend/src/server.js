@@ -1,38 +1,39 @@
-require("dotenv").config();
-const { validateEnv } = require("./config/validateEnv");
-validateEnv();
+/**
+ * Punto de arranque del backend.
+ * 1. Valida variables de entorno.  2. Conecta a la BD externa.  3. Inicia el servidor HTTP.
+ */
+const { env, validateEnvironment } = require("./config/environment");
 
-const http = require("http");
+validateEnvironment();
+
 const app = require("./app");
-const { testConnection, pool } = require("./config/database");
-const { initSocket } = require("./socket/socket");
+const { testConnection, closeConnection } = require("./config/database");
 
-const PORT = Number(process.env.PORT) || 4000;
-
-(async () => {
+async function start() {
   try {
     await testConnection();
-    console.log("[db] Conexión MySQL OK");
-  } catch (e) {
-    console.error("[db] No se pudo conectar a MySQL:", e.message);
-    console.error("      Verifique .env y que MySQL esté corriendo.");
+    console.log(`[db] Conectado a la base de datos externa (${env.database.host}:${env.database.port})`);
+  } catch (error) {
+    console.error("[db] No se pudo conectar a la base de datos:", error.message);
+    console.error("     Revisa DB_HOST, DB_USER, DB_PASSWORD y DB_NAME en backend/.env");
     process.exit(1);
   }
 
-  const server = http.createServer(app);
-  const io = initSocket(server);
-  app.set("io", io);
+  const server = app.listen(env.port, () => {
+    console.log(`[server] API escuchando en http://localhost:${env.port}/api`);
+  });
 
-  const shutdown = async (signal) => {
-    console.log(`\n[server] Señal ${signal} recibida. Cerrando...`);
+  const shutdown = (signal) => {
+    console.log(`\n[server] ${signal} recibido. Cerrando...`);
     server.close(async () => {
-      try { await pool.end(); } catch (e) {}
+      await closeConnection().catch(() => {});
       process.exit(0);
     });
     setTimeout(() => process.exit(1), 10000).unref();
   };
+
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
+}
 
-  server.listen(PORT, () => console.log(`[server] AXON backend escuchando en http://localhost:${PORT}`));
-})();
+start();

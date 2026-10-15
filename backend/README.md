@@ -1,59 +1,32 @@
-# Backend - AXON Stack Flow (API REST)
+# Backend — API REST
 
-API REST construida con **Node.js + Express** y arquitectura por capas.
-
-## Estructura de carpetas
+Node.js + Express con patrón **MVC por capas**.
 
 ```
-backend/
-├── src/
-│   ├── config/          # Configuración de base de datos y entorno
-│   ├── controllers/     # Reciben HTTP y devuelven respuestas JSON
-│   ├── services/        # Reglas de negocio y validaciones
-│   ├── repositories/    # Acceso a datos (CRUD SQL)
-│   ├── models/          # Entidades del dominio
-│   ├── dto/             # Objetos de transferencia (entrada/salida)
-│   ├── middleware/      # Auth, rate limit, logging, errores
-│   ├── routes/          # Definición de endpoints
-│   ├── socket/          # Socket.IO
-│   ├── app.js           # Configuración de Express
-│   ├── server.js        # Punto de entrada
-│   ├── dbInit.js        # Crea la BD y las tablas
-│   └── seed.js          # Datos iniciales (usuarios demo)
-├── tests/               # Pruebas (node:test)
-├── package.json
-├── .env.example
-└── .env
+Petición → routes/ → middlewares/ → controllers/ → services/ → models/ → BD externa
 ```
 
-## Variables de entorno (.env)
-
-Ver `.env.example`. Las obligatorias: `JWT_SECRET`, `JWT_REFRESH_SECRET` (≥16 caracteres).
+| Carpeta | Responsabilidad | Regla |
+|---|---|---|
+| `config/` | Variables de entorno y conexión a la BD | Único lugar que lee `.env` |
+| `constants/` | Roles y parámetros de seguridad | Sin lógica |
+| `routes/` | URL, método HTTP y middlewares de cada endpoint | `index.js` reúne todo bajo `/api` |
+| `middlewares/` | Autenticación, roles, validación, límite de intentos, registro de peticiones, errores | — |
+| `controllers/` | Leen `req`, llaman al servicio y responden | No contienen reglas de negocio |
+| `services/` | Reglas de negocio | No conocen `req` ni `res` |
+| `models/` | Entidades y consultas SQL | Únicos que usan la BD |
+| `dtos/` | Validación de entrada y forma de la salida | — |
+| `utils/` | `HttpError`, `asyncHandler`, validadores | — |
 
 ## Comandos
 
-```bash
-npm install
-npm run db:init     # crea base de datos y tablas
-npm run seed        # crea usuarios demo
-npm start           # inicia el servidor (puerto 4000)
-npm run dev         # desarrollo con nodemon
-npm test            # pruebas (backend debe estar corriendo)
-```
+| Comando | Qué hace |
+|---|---|
+| `npm install` | Instala dependencias |
+| `npm start` | Inicia la API en http://localhost:4000/api |
+| `npm run dev` | Inicia y reinicia al guardar cambios |
+| `npm run create-admin -- "Nombre" correo "Clave"` | Crea el primer administrador |
+| `npm test` | Pruebas unitarias (sin BD) |
+| `npm run test:integration` | Pruebas contra la API encendida |
 
-## Endpoints principales
-
-- `POST /api/auth/login`, `verify-code`, `register`, `verify-registration`
-- `POST /api/auth/resend-code`, `resend-registration`, `refresh-token`
-- `GET/POST/PUT/PATCH/DELETE /api/users`
-- `GET /api/metrics/dashboard`
-- `GET/POST/DELETE /api/axon/endpoints`
-- `GET /api/health`
-
-## Reglas de negocio clave
-
-- Rate limiting: 5 intentos / 15 min por IP.
-- Código de verificación: 6 dígitos, expira en 5 min, 5 intentos.
-- Usuarios demo (`is_sample=1`) protegidos.
-- Eliminación lógica (`role='inactive'`).
-- No puedes eliminar tu propio usuario.
+Configuración: copiar `.env.example` a `.env`. Endpoints: [docs/03-endpoints](../docs/03-endpoints/endpoints-api.md).

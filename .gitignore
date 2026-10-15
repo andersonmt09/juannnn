@@ -1,17 +1,23 @@
-# Dependencies
+# Dependencias
 node_modules/
-backend/node_modules/
 
-# Env
-backend/.env
+# Secretos y configuración local (credenciales de la BD externa, JWT, SMTP)
+.env
+*.env
+!.env.example
 
-# MySQL data (no incluir)
+# Datos de base de datos: la BD es externa y nunca se guarda en el repositorio
+*.sqlite
+*.db
 mysql-data/
+*.dump
 
-# Logs
+# Logs y temporales
 *.log
-C:\Users\User\AppData\Local\Temp\opencode\
+coverage/
 
-# OS
+# Sistema operativo y editores
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/

@@ -1,16 +1,18 @@
 {
   "name": "axon-backend",
-  "version": "1.0.0",
-  "description": "AXON Stack Flow - Backend REST API (arquitectura por capas)",
+  "version": "2.0.0",
+  "description": "AXON Stack Flow - API REST (Node.js + Express, patrón MVC por capas)",
   "main": "src/server.js",
-  "type": "commonjs",
+  "private": true,
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "seed": "node src/seed.js",
-    "db:init": "node src/dbInit.js",
-    "test": "node --test tests/*.test.js",
-    "test:api": "node --test tests/api.test.js"
+    "dev": "node --watch src/server.js",
+    "test": "node --test tests/unit/dtos.test.js tests/unit/validators.test.js",
+    "create-admin": "node scripts/create-admin.js",
+    "test:integration": "node --test tests/integration/api.test.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -21,11 +23,6 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.11.3",
-    "nodemailer": "^6.9.15",
-    "socket.io": "^4.7.5",
-    "uuid": "^10.0.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.7"
+    "nodemailer": "^6.9.15"
   }
 }

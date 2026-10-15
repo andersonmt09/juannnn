@@ -1,10 +1,12 @@
 {
   "name": "axon-stack-flow",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
+  "description": "AXON Stack Flow - Gestión de usuarios con autenticación en dos pasos y monitoreo de API",
   "scripts": {
-    "backend": "cd backend && npm start",
-    "frontend": "node scripts/serve-frontend.js",
-    "dev": "echo \"Abre dos terminales: npm run backend y npm run frontend\""
+    "install:backend": "npm --prefix backend install",
+    "backend": "npm --prefix backend start",
+    "frontend": "node frontend/server.js",
+    "test": "npm --prefix backend test"
   }
 }

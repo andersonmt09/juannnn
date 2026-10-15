@@ -1,40 +1,22 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="AXON Stack Flow - Panel de administración y monitoreo" />
   <title>AXON Stack Flow</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b1020'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%233dd6c6'/%3E%3C/svg%3E" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <script>
-    (function () { try { document.documentElement.setAttribute("data-theme", localStorage.getItem("axon_theme") || "dark"); } catch (e) {} })();
-  </script>
+  <!-- Aquí el enrutador pinta cada vista (src/router/router.js) -->
   <div id="app" role="main" aria-live="polite"></div>
 
-  <div id="toast-wrap" class="toast-wrap" aria-live="assertive"></div>
+  <!-- Notificaciones (src/utils/toast.js) -->
+  <div id="toast-container" class="toast-wrap" aria-live="assertive"></div>
 
-  <!-- Core (utilidades compartidas) -->
-  <script src="js/core/config.js"></script>
-  <script src="js/core/api.js"></script>
-  <script src="js/core/auth.js"></script>
-  <script src="js/core/ui.js"></script>
-
-  <!-- Pages -->
-  <script src="js/pages/login.js"></script>
-  <script src="js/pages/register.js"></script>
-  <script src="js/pages/verify.js"></script>
-  <script src="js/pages/dashboard.js"></script>
-  <script src="js/pages/users.js"></script>
-  <script src="js/pages/endpoints.js"></script>
-  <script src="js/pages/profile.js"></script>
-
-  <!-- App shell (must be last) -->
-  <script src="js/app.js"></script>
+  <!-- Punto de entrada: carga módulos ES (requiere servirse por http, ver README) -->
+  <script type="module" src="src/main.js"></script>
 </body>
 </html>
