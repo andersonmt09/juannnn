@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Env
+backend/.env
+
+# MySQL data (no incluir)
+mysql-data/
+
+# Logs
+*.log
+C:\Users\User\AppData\Local\Temp\opencode\
+
+# OS
+.DS_Store
+Thumbs.db

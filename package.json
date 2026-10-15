@@ -1,0 +1,10 @@
+{
+  "name": "axon-stack-flow",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "backend": "cd backend && npm start",
+    "frontend": "node scripts/serve-frontend.js",
+    "dev": "echo \"Abre dos terminales: npm run backend y npm run frontend\""
+  }
+}
