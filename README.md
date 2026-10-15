@@ -2,106 +2,104 @@
 
 Aplicación web para administrar usuarios con inicio de sesión en dos pasos (contraseña + código enviado al correo) y monitorear el uso de su propia API.
 
-| Parte | Tecnología |
-|---|---|
-| Backend | Node.js, Express, JWT, bcrypt |
-| Frontend | HTML, CSS y JavaScript (módulos ES) |
-| Base de datos | MySQL 8, externa al proyecto |
+| Parte | Carpeta | Tecnología |
+|---|---|---|
+| Servidor (API REST) | `servidor/` | Node.js, Express, JWT, bcrypt |
+| Cliente (interfaz web) | `cliente/` | HTML, CSS y JavaScript (módulos ES) |
+| Base de datos | Externa | MySQL 8 — no está dentro del proyecto |
 
 ## Funcionalidades
 
-- Registro de usuarios con verificación de correo.
+- Registro de usuarios con verificación del correo.
 - Inicio de sesión en dos pasos y renovación automática de la sesión.
 - Gestión de usuarios por roles (administrador y usuario) con eliminación lógica.
 - Registro de endpoints para monitoreo.
-- Dashboard con métricas de las peticiones a la API.
+- Panel con métricas de las peticiones a la API.
 - Exportación de usuarios y actividad a CSV.
 - Tema claro y oscuro.
 
 ## Arquitectura
 
-El proyecto sigue el patrón **Modelo – Vista – Controlador**:
+El proyecto sigue el patrón **Modelo – Vista – Controlador**. El cliente nunca se conecta a la base de datos: todo lo pide al servidor a través de la API.
 
 ```
-FRONTEND (Vista)                 BACKEND (Controlador y Modelo)                 BASE DE DATOS
+CLIENTE (Vista)                          SERVIDOR (Controlador y Modelo)                              BASE DE DATOS
 
-views/ → api/  ──── HTTP ────►  routes/ → controllers/ → services/ → models/ ──►  MySQL externa
+vistas/ → peticiones-api/ ── HTTP ──►  rutas/ → intermediarios/ → validadores/ → controladores/ → servicios/ → modelos/ ──►  MySQL externa
+              │
+           estado/ (sesión)
 ```
 
-- **Vista** (`frontend/src/views`): pantallas que ve el usuario. Nunca acceden a la base de datos; piden los datos a la API.
-- **Controlador** (`backend/src/routes` y `backend/src/controllers`): cada ruta define un endpoint y su controlador recibe la petición y devuelve la respuesta.
-- **Servicios** (`backend/src/services`): reglas de negocio.
-- **Modelo** (`backend/src/models`): una clase por tabla. Es la única capa que consulta la base de datos.
+| Capa | Carpeta | Responsabilidad |
+|---|---|---|
+| Vista | `cliente/codigo/vistas/` | Pantallas que ve el usuario |
+| Rutas | `servidor/codigo/rutas/` | Define cada endpoint de la API |
+| Intermediarios | `servidor/codigo/intermediarios/` | Autenticación, roles, límite de intentos, registro de peticiones y errores |
+| Validadores | `servidor/codigo/validadores/` | Revisan los datos de entrada y dan formato a la salida (DTOs) |
+| Controlador | `servidor/codigo/controladores/` | Recibe la petición y devuelve la respuesta |
+| Servicios | `servidor/codigo/servicios/` | Reglas de negocio |
+| Modelo | `servidor/codigo/modelos/` | Una clase por tabla; única capa que consulta la base de datos |
 
-La base de datos **no está dentro del proyecto**. El backend se conecta a un servidor MySQL externo con los datos del archivo `backend/.env`, que no se sube al repositorio.
-
-## Relación con el diseño
-
-La estructura del código sigue el mismo orden del diseño del sistema:
-
-| Elemento del diseño | Dónde está en el código |
-|---|---|
-| Endpoints | `backend/src/routes/` (un archivo por recurso; `index.js` los reúne) |
-| Base de datos | `backend/src/models/` (un modelo por tabla). La base de datos en sí está fuera del proyecto |
-| Diagrama de clases | `models/` (entidades), `controllers/`, `services/` y `dtos/` |
-| Diagrama de secuencia | Recorrido de una petición: vista → api → ruta → middlewares → controlador → servicio → modelo |
-| Casos de uso | Cada vista de `frontend/src/views/` corresponde a una acción del usuario |
-| Requerimientos no funcionales | `middlewares/` (seguridad, roles, validación, límite de intentos) y `constants/security.js` |
+La base de datos **no forma parte del proyecto**. El servidor se conecta a un MySQL externo con los datos de `servidor/.env`, archivo que no se sube al repositorio.
 
 ## Estructura de carpetas
 
 ```
 axon-stack-flow/
-├── backend/
-│   ├── src/
-│   │   ├── config/          Variables de entorno y conexión a la base de datos
-│   │   ├── constants/       Roles y parámetros de seguridad
-│   │   ├── routes/          Endpoints de la API (index.js agrupa todos)
-│   │   ├── controllers/     Reciben la petición y responden
-│   │   ├── services/        Lógica de negocio
-│   │   ├── models/          Acceso a las tablas de la base de datos
-│   │   ├── dtos/            Validación de datos de entrada y formato de salida
-│   │   ├── middlewares/     Autenticación, roles, validación, límite de intentos, logs y errores
-│   │   ├── utils/           Funciones de apoyo
-│   │   ├── app.js           Configuración de Express
-│   │   └── server.js        Arranque del servidor
-│   ├── scripts/             create-admin.js
-│   ├── tests/               unit/ e integration/
+├── servidor/
+│   ├── codigo/
+│   │   ├── configuracion/        entorno.js, base-datos.js
+│   │   ├── constantes/           roles.js, seguridad.js
+│   │   ├── rutas/                indice.js (agrupa todas), autenticacion, usuarios, endpoints, metricas, salud
+│   │   ├── intermediarios/       autenticacion, validacion, limite-intentos, registro-peticiones, errores
+│   │   ├── validadores/          base, autenticacion, usuarios, endpoints
+│   │   ├── controladores/        autenticacion, usuarios, endpoints, metricas, salud
+│   │   ├── servicios/            autenticacion, usuarios, endpoints, metricas, tokens, correo, codigos-verificacion
+│   │   ├── modelos/              usuario, codigo-verificacion, endpoint, registro-peticion
+│   │   ├── utilidades/           error-http, manejador-async, validaciones
+│   │   ├── aplicacion.js         Configuración de Express
+│   │   └── arranque.js           Encendido del servidor
+│   ├── automatizacion/           inicializar-bd.js, crear-admin.js
+│   ├── pruebas/                  unitarias/ e integracion/
 │   └── .env.example
 │
-├── frontend/
-│   ├── assets/              css/ e img/
-│   ├── src/
-│   │   ├── views/           Pantallas: auth, dashboard, users, endpoints, profile
-│   │   ├── components/      Partes reutilizables: menú, modal, gráfica...
-│   │   ├── api/             Llamadas a cada endpoint del backend
-│   │   ├── store/           Sesión del usuario
-│   │   ├── router/          Rutas de la aplicación
-│   │   ├── config/          URL de la API
-│   │   ├── utils/           Funciones de apoyo
-│   │   └── main.js          Punto de entrada
-│   ├── index.html
-│   └── scripts/             dev-server.js (servidor local)
+├── cliente/
+│   ├── recursos/
+│   │   ├── estilos/              principal.css importa variables, base, estructura, componentes y autenticacion
+│   │   └── imagenes/
+│   ├── codigo/
+│   │   ├── vistas/               autenticacion, panel, usuarios, endpoints, perfil
+│   │   ├── componentes/          menu, modal, grafica, encabezado, estado-vacio
+│   │   ├── peticiones-api/       cliente-http.js y un archivo por recurso del servidor
+│   │   ├── estado/               sesion.js
+│   │   ├── enrutador/            rutas.js, enrutador.js
+│   │   ├── configuracion/        api.js (URL del servidor)
+│   │   ├── utilidades/           dom, iconos, notificaciones, csv
+│   │   └── principal.js          Punto de entrada
+│   ├── automatizacion/           servidor-local.js
+│   └── index.html
 │
 ├── package.json
 └── README.md
 ```
 
-Cada recurso usa el mismo nombre en todas las capas. Por ejemplo, para usuarios:
+Cada recurso tiene el mismo nombre en todas las capas. Por ejemplo, **usuarios**:
 
 | Capa | Archivo |
 |---|---|
-| Vista | `frontend/src/views/users/users.view.js` |
-| Llamadas a la API | `frontend/src/api/user.api.js` |
-| Ruta | `backend/src/routes/user.routes.js` |
-| Controlador | `backend/src/controllers/user.controller.js` |
-| Servicio | `backend/src/services/user.service.js` |
-| Modelo | `backend/src/models/user.model.js` |
-| DTO | `backend/src/dtos/user.dto.js` |
+| Vista | `cliente/codigo/vistas/usuarios.js` |
+| Petición a la API | `cliente/codigo/peticiones-api/usuarios.js` |
+| Ruta | `servidor/codigo/rutas/usuarios.js` |
+| Validador | `servidor/codigo/validadores/usuarios.js` |
+| Controlador | `servidor/codigo/controladores/usuarios.js` |
+| Servicio | `servidor/codigo/servicios/usuarios.js` |
+| Modelo | `servidor/codigo/modelos/usuario.js` |
+
+Los nombres de carpetas y archivos están en español; el código interno (variables, funciones, clases y endpoints) está en inglés.
 
 ## Endpoints
 
-Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol administrador.
+Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador.
 
 | Recurso | Método | Ruta | Acceso |
 |---|---|---|---|
@@ -128,18 +126,21 @@ Respuesta correcta: `{ "ok": true, ... }` · Respuesta con error: `{ "ok": false
 
 ## Instalación
 
-**Requisitos:** Node.js 18 o superior y acceso a un servidor MySQL 8 con la base de datos `axon_db` ya creada.
+**Requisitos:** Node.js 18 o superior y acceso a un servidor MySQL 8.
+
+Todos los comandos se ejecutan desde la carpeta raíz del proyecto.
+
+**1. Instalar dependencias**
 
 ```bash
-# 1. Instalar dependencias del backend
-cd backend
 npm install
-
-# 2. Configurar la conexión
-cp .env.example .env      # Windows: copy .env.example .env
 ```
 
-Completa `backend/.env`:
+**2. Configurar la conexión.** Copia el archivo de ejemplo y complétalo:
+
+```bash
+cp servidor/.env.example servidor/.env       # Windows: copy servidor\.env.example servidor\.env
+```
 
 | Variable | Descripción |
 |---|---|
@@ -147,36 +148,43 @@ Completa `backend/.env`:
 | `DB_USER`, `DB_PASSWORD` | Credenciales de MySQL |
 | `DB_NAME` | Nombre de la base (`axon_db`) |
 | `JWT_SECRET`, `JWT_REFRESH_SECRET` | Textos secretos de al menos 16 caracteres |
-| `SMTP_*` | Opcional. Sin SMTP, los códigos de verificación se muestran en la consola |
+| `FRONTEND_ORIGIN` | Direcciones del cliente permitidas por CORS |
+| `SMTP_*` | Opcional. Sin SMTP, los códigos de verificación se muestran en la consola del servidor |
+
+**3. Preparar la base de datos** (una sola vez)
 
 ```bash
-# 3. Crear el primer administrador
-npm run create-admin -- "Nombre Apellido" admin@correo.com "Contraseña1"
-
-# 4. Iniciar la API  →  http://localhost:4000/api
-npm start
+npm run inicializar-bd
+npm run crear-admin -- "Nombre Apellido" admin@correo.com "Contrasena1"
 ```
 
-En otra terminal, desde la carpeta raíz:
+**4. Iniciar.** En dos terminales:
 
 ```bash
-# 5. Iniciar el frontend  →  http://localhost:5500
-npm run frontend
+npm run servidor      # API     →  http://localhost:4000/api
+npm run cliente       # Interfaz →  http://localhost:5500
 ```
 
-## Pruebas
+Abre http://localhost:5500 e inicia sesión con el administrador creado.
 
-```bash
-cd backend
-npm test                   # Pruebas unitarias
-npm run test:integration   # Pruebas de la API (con el servidor encendido)
-```
+## Scripts
+
+| Comando | Qué hace |
+|---|---|
+| `npm run servidor` | Inicia la API |
+| `npm run servidor:dev` | Inicia la API y la reinicia al guardar cambios |
+| `npm run cliente` | Inicia el servidor local del cliente |
+| `npm run inicializar-bd` | Crea la base de datos y las tablas en el servidor MySQL |
+| `npm run crear-admin -- "Nombre" correo "Clave"` | Crea un usuario administrador |
+| `npm run pruebas` | Pruebas unitarias |
+| `npm run pruebas:integracion` | Pruebas de la API (necesitan `servidor/.env` y la base de datos) |
 
 ## Seguridad
 
 - Contraseñas y códigos guardados con bcrypt.
 - Tokens JWT: acceso de 8 horas y renovación de 7 días.
 - Códigos de 6 dígitos que vencen en 5 minutos y permiten 5 intentos.
-- Máximo 5 intentos fallidos de inicio de sesión por IP cada 15 minutos.
+- Máximo 5 intentos fallidos de autenticación por IP cada 15 minutos.
 - Validación de todos los datos de entrada y consultas SQL con parámetros.
-- Cabeceras de seguridad con Helmet y CORS limitado al frontend.
+- Cabeceras de seguridad con Helmet y CORS limitado a las direcciones del cliente.
+- Credenciales solo en `servidor/.env`, excluido del repositorio.
