@@ -25,6 +25,7 @@ Petición → routes/ → middlewares/ → controllers/ → services/ → models
 | `npm install` | Instala dependencias |
 | `npm start` | Inicia la API en http://localhost:4000/api |
 | `npm run dev` | Inicia y reinicia al guardar cambios |
+| `npm run create-tables` | Crea las tablas en la BD externa (una vez) |
 | `npm run create-admin -- "Nombre" correo "Clave"` | Crea el primer administrador |
 | `npm test` | Pruebas unitarias (sin BD) |
 | `npm run test:integration` | Pruebas contra la API encendida |

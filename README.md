@@ -107,6 +107,7 @@ Ejemplo: el administrador crea un usuario.
 cd backend
 npm install
 cp .env.example .env        # en Windows: copy .env.example .env  → completar datos de la BD externa
+npm run create-tables       # crea las tablas (una sola vez)
 npm run create-admin -- "Nombre" admin@correo.com "Contraseña1"
 npm start                   # http://localhost:4000/api
 

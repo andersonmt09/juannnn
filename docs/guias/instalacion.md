@@ -8,7 +8,10 @@
 
 ## 1. Preparar la base de datos (una sola vez)
 
-El administrador del servidor MySQL ejecuta [`docs/04-base-de-datos/script-creacion.sql`](../04-base-de-datos/script-creacion.sql). Crea la base `axon_db` y sus 4 tablas.
+Ejecuta [`docs/04-base-de-datos/script-creacion.sql`](../04-base-de-datos/script-creacion.sql) en el servidor MySQL. Crea la base `axon_db` y sus 4 tablas. Hay dos formas:
+
+- Desde el backend, después de configurar `backend/.env` (paso 2): `npm run create-tables`. No necesita el cliente `mysql` instalado.
+- O abriendo el script en MySQL Workbench / phpMyAdmin y ejecutándolo.
 
 ## 2. Configurar el backend
 
