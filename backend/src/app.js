@@ -1,7 +1,4 @@
-/**
- * Configuración de la aplicación Express.
- * Orden: seguridad → parseo → registro de peticiones → rutas → errores.
- */
+// Configuración de Express: seguridad, JSON, registro de peticiones, rutas y errores.
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");

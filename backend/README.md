@@ -1,33 +1,32 @@
-# Backend — API REST
+# Backend
 
-Node.js + Express con patrón **MVC por capas**.
+API REST en Node.js y Express.
+
+## Flujo de una petición
 
 ```
-Petición → routes/ → middlewares/ → controllers/ → services/ → models/ → BD externa
+routes/ → middlewares/ → controllers/ → services/ → models/ → MySQL externa
 ```
 
-| Carpeta | Responsabilidad | Regla |
-|---|---|---|
-| `config/` | Variables de entorno y conexión a la BD | Único lugar que lee `.env` |
-| `constants/` | Roles y parámetros de seguridad | Sin lógica |
-| `routes/` | URL, método HTTP y middlewares de cada endpoint | `index.js` reúne todo bajo `/api` |
-| `middlewares/` | Autenticación, roles, validación, límite de intentos, registro de peticiones, errores | — |
-| `controllers/` | Leen `req`, llaman al servicio y responden | No contienen reglas de negocio |
-| `services/` | Reglas de negocio | No conocen `req` ni `res` |
-| `models/` | Entidades y consultas SQL | Únicos que usan la BD |
-| `dtos/` | Validación de entrada y forma de la salida | — |
-| `utils/` | `HttpError`, `asyncHandler`, validadores | — |
+| Carpeta | Contenido |
+|---|---|
+| `config/` | Lectura del `.env` y conexión a la base de datos |
+| `constants/` | Roles y parámetros de seguridad |
+| `routes/` | Endpoints. `index.js` los agrupa bajo `/api` |
+| `middlewares/` | Autenticación, roles, validación, límite de intentos, registro de peticiones y errores |
+| `controllers/` | Reciben `req`, llaman al servicio y responden |
+| `services/` | Reglas de negocio |
+| `models/` | Una clase por tabla con sus consultas SQL |
+| `dtos/` | Validan la entrada y definen qué datos se devuelven |
+| `utils/` | `HttpError`, `asyncHandler` y validadores |
 
 ## Comandos
 
-| Comando | Qué hace |
+| Comando | Descripción |
 |---|---|
-| `npm install` | Instala dependencias |
+| `npm install` | Instala las dependencias |
 | `npm start` | Inicia la API en http://localhost:4000/api |
 | `npm run dev` | Inicia y reinicia al guardar cambios |
-| `npm run create-tables` | Crea las tablas en la BD externa (una vez) |
-| `npm run create-admin -- "Nombre" correo "Clave"` | Crea el primer administrador |
-| `npm test` | Pruebas unitarias (sin BD) |
-| `npm run test:integration` | Pruebas contra la API encendida |
-
-Configuración: copiar `.env.example` a `.env`. Endpoints: [docs/03-endpoints](../docs/03-endpoints/endpoints-api.md).
+| `npm run create-admin -- "Nombre" correo "Contraseña"` | Crea un administrador |
+| `npm test` | Pruebas unitarias |
+| `npm run test:integration` | Pruebas de la API (servidor encendido) |

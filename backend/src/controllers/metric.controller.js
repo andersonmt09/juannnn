@@ -1,6 +1,4 @@
-/**
- * CONTROLADOR: Métricas  →  /api/metrics
- */
+// Controlador de /api/metrics.
 const metricService = require("../services/metric.service");
 const asyncHandler = require("../utils/async-handler");
 

@@ -1,4 +1,4 @@
-/** Exportación a CSV (RF-15). */
+// Exportar una lista a archivo CSV.
 import { toast } from "./toast.js";
 
 /**

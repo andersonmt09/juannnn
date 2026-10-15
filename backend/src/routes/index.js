@@ -1,7 +1,4 @@
-/**
- * RUTAS: Punto de entrada de la API  →  /api
- * Reúne todos los módulos. Para ver la API completa, empieza aquí.
- */
+// Agrupa todas las rutas de la API bajo /api
 const { Router } = require("express");
 const healthController = require("../controllers/health.controller");
 const authRoutes = require("./auth.routes");

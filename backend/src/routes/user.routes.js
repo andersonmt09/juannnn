@@ -1,6 +1,4 @@
-/**
- * RUTAS: Usuarios  →  /api/users   (requieren sesión)
- */
+// Rutas de usuarios: /api/users (requieren sesión)
 const { Router } = require("express");
 const userController = require("../controllers/user.controller");
 const { authenticate, authorize } = require("../middlewares/auth.middleware");
@@ -13,11 +11,11 @@ const adminOnly = authorize(ROLES.ADMIN);
 
 router.use(authenticate);
 
-router.get("/",                                                          userController.list);           // RF-06
-router.get("/:id",            validateIdParam,                           userController.getById);        // RF-06
-router.post("/",              adminOnly, validateBody(CreateUserDto),    userController.create);         // RF-07
-router.put("/:id",            adminOnly, validateIdParam, validateBody(UpdateUserDto), userController.update); // RF-08
-router.patch("/:id/password", validateIdParam, validateBody(ChangePasswordDto), userController.changePassword); // RF-09
-router.delete("/:id",         adminOnly, validateIdParam,                userController.remove);         // RF-10
+router.get("/", userController.list);
+router.get("/:id", validateIdParam, userController.getById);
+router.post("/", adminOnly, validateBody(CreateUserDto), userController.create);
+router.put("/:id", adminOnly, validateIdParam, validateBody(UpdateUserDto), userController.update);
+router.patch("/:id/password", validateIdParam, validateBody(ChangePasswordDto), userController.changePassword);
+router.delete("/:id", adminOnly, validateIdParam, userController.remove);
 
 module.exports = router;

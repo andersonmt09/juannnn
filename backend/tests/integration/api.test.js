@@ -1,10 +1,5 @@
-/**
- * Pruebas de integración contra la API en ejecución.
- * Requiere el backend corriendo y conectado a la base de datos.
- *   npm start                 (en otra terminal)
- *   npm run test:integration
- * Otra URL:  BASE_URL=https://mi-api/api npm run test:integration
- */
+// Pruebas contra la API en ejecución (npm start en otra terminal).
+// Otra URL: BASE_URL=http://host:puerto/api npm run test:integration
 const test = require("node:test");
 const assert = require("node:assert/strict");
 

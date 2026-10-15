@@ -1,6 +1,4 @@
-/**
- * CONTROLADOR: Endpoints monitoreados  →  /api/endpoints
- */
+// Controlador de /api/endpoints.
 const endpointService = require("../services/endpoint.service");
 const asyncHandler = require("../utils/async-handler");
 

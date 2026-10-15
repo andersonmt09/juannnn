@@ -1,4 +1,4 @@
-/** Iconos SVG (trazos de 24x24). */
+// Iconos SVG.
 const PATHS = {
   users: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm7-6a3 3 0 1 1 0 6 3 3 0 1 1 0-6zm8 16v-2a3 3 0 0 0-3-3h-1",
   check: "M20 6 9 17l-5-5",

@@ -1,4 +1,4 @@
-/** COMPONENTE: Ventana modal genérica. */
+// Ventana modal reutilizable.
 import { el } from "../utils/dom.js";
 
 /**

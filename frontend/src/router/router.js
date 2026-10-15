@@ -1,9 +1,6 @@
-/**
- * Enrutador (SPA con rutas #/...).
- * Decide qué vista mostrar según la URL y si hay sesión iniciada.
- */
+// Muestra la vista que corresponde a la ruta actual y protege las rutas privadas.
 import { ROUTES, DEFAULT_PUBLIC_ROUTE, DEFAULT_PRIVATE_ROUTE } from "./routes.js";
-import { session } from "../services/session.service.js";
+import { session } from "../store/session.store.js";
 import { renderLayout, setActiveMenu } from "../components/layout.component.js";
 import { el } from "../utils/dom.js";
 

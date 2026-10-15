@@ -1,8 +1,4 @@
-/**
- * MIDDLEWARE: Autenticación y autorización.
- * - authenticate: exige un access token válido (Authorization: Bearer <token>).
- * - authorize(...roles): exige que el usuario tenga uno de los roles indicados.
- */
+// authenticate: exige un token válido. authorize(...roles): exige uno de los roles.
 const tokenService = require("../services/token.service");
 const HttpError = require("../utils/http-error");
 

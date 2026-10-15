@@ -1,10 +1,8 @@
-/**
- * VISTA: Mi perfil (RF-17) y cambio de contraseña (RF-09)   ruta: #/profile
- */
+// Vista #/profile: datos del usuario y cambio de contraseña.
 import { el } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
-import { userService } from "../../services/user.service.js";
-import { session } from "../../services/session.service.js";
+import { userApi } from "../../api/user.api.js";
+import { session } from "../../store/session.store.js";
 import { pageHeader } from "../../components/page-header.component.js";
 
 export function renderProfileView(container) {
@@ -19,7 +17,7 @@ export function renderProfileView(container) {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
-      await userService.changePassword(user.id, new FormData(form).get("password"));
+      await userApi.changePassword(user.id, new FormData(form).get("password"));
       toast.success("Contraseña actualizada");
       form.reset();
     } catch (error) {

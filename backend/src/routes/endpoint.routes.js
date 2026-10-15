@@ -1,6 +1,4 @@
-/**
- * RUTAS: Endpoints monitoreados  →  /api/endpoints   (requieren sesión)
- */
+// Rutas de endpoints monitoreados: /api/endpoints (requieren sesión)
 const { Router } = require("express");
 const endpointController = require("../controllers/endpoint.controller");
 const { authenticate, authorize } = require("../middlewares/auth.middleware");
@@ -13,8 +11,8 @@ const adminOnly = authorize(ROLES.ADMIN);
 
 router.use(authenticate);
 
-router.get("/",                                                         endpointController.list);   // RF-12
-router.post("/",      adminOnly, validateBody(CreateEndpointDto),       endpointController.create); // RF-13
-router.delete("/:id", adminOnly, validateIdParam,                       endpointController.remove); // RF-13
+router.get("/", endpointController.list);
+router.post("/", adminOnly, validateBody(CreateEndpointDto), endpointController.create);
+router.delete("/:id", adminOnly, validateIdParam, endpointController.remove);
 
 module.exports = router;

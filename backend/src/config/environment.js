@@ -1,8 +1,4 @@
-/**
- * Configuración del entorno.
- * Lee las variables de backend/.env y las expone en un solo objeto.
- * Ningún otro archivo debe leer process.env directamente.
- */
+// Variables de entorno (backend/.env). El resto del código lee la configuración desde aquí.
 require("dotenv").config();
 
 const env = {
@@ -10,7 +6,7 @@ const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   frontendOrigin: process.env.FRONTEND_ORIGIN || "http://localhost:5500",
 
-  // Base de datos EXTERNA: el sistema solo guarda la conexión, no los datos.
+  // La base de datos es externa: aquí solo están los datos de conexión.
   database: {
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT) || 3306,
@@ -36,7 +32,7 @@ const env = {
   },
 };
 
-/** Detiene el arranque si falta alguna variable obligatoria. */
+// Detiene el arranque si falta alguna variable obligatoria.
 function validateEnvironment() {
   const missing = [];
   if (!env.database.host) missing.push("DB_HOST");

@@ -1,22 +1,19 @@
 # Dependencias
 node_modules/
 
-# Secretos y configuración local (credenciales de la BD externa, JWT, SMTP)
+# Variables de entorno (credenciales)
 .env
-*.env
 !.env.example
 
-# Datos de base de datos: la BD es externa y nunca se guarda en el repositorio
-*.sqlite
-*.db
-mysql-data/
-*.dump
+# Documentación y base de datos: se manejan fuera del repositorio
+docs/
+database/
+*.sql
 
-# Logs y temporales
+# Logs
 *.log
-coverage/
 
-# Sistema operativo y editores
+# Sistema y editores
 .DS_Store
 Thumbs.db
 .vscode/

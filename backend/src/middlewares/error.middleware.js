@@ -1,8 +1,4 @@
-/**
- * MIDDLEWARE: Manejo de errores.
- * - notFound: responde 404 para rutas que no existen.
- * - errorHandler: convierte cualquier error en una respuesta JSON uniforme.
- */
+// Respuesta 404 para rutas inexistentes y formato único para los errores.
 const HttpError = require("../utils/http-error");
 const { env } = require("../config/environment");
 

@@ -1,7 +1,4 @@
-/**
- * Tabla de rutas del frontend: ruta → vista.
- * public: se puede ver sin sesión.  adminOnly: solo administradores.
- */
+// Rutas de la aplicación: ruta -> vista. public = sin sesión, adminOnly = solo administradores.
 import { renderLoginView } from "../views/auth/login.view.js";
 import { renderRegisterView } from "../views/auth/register.view.js";
 import { renderVerifyView } from "../views/auth/verify.view.js";

@@ -1,11 +1,7 @@
-/**
- * COMPONENTE: Estructura principal (menú lateral + área de contenido).
- * Se muestra en todas las vistas que requieren sesión.
- */
+// Menú lateral y área de contenido de las páginas privadas.
 import { el, initials } from "../utils/dom.js";
 import { icon } from "../utils/icons.js";
-import { session } from "../services/session.service.js";
-import { authService } from "../services/auth.service.js";
+import { session } from "../store/session.store.js";
 
 const MENU = [
   { route: "#/dashboard", icon: "chart", label: "Dashboard" },
@@ -13,6 +9,11 @@ const MENU = [
   { route: "#/endpoints", icon: "link", label: "Endpoints" },
   { route: "#/profile", icon: "shield", label: "Mi perfil" },
 ];
+
+function logout() {
+  session.clear();
+  location.hash = "#/login";
+}
 
 function themeButton() {
   const label = () => (document.documentElement.dataset.theme === "light" ? "Modo oscuro" : "Modo claro");
@@ -26,7 +27,7 @@ function themeButton() {
   return button;
 }
 
-/** Dibuja el layout y devuelve el contenedor donde se pinta cada vista. */
+// Dibuja el layout y devuelve el contenedor donde se pinta cada vista.
 export function renderLayout(root) {
   const user = session.getUser();
 
@@ -47,7 +48,7 @@ export function renderLayout(root) {
     ]),
     el("div", { class: "sidebar-footer" }, [
       themeButton(),
-      el("button", { type: "button", class: "btn btn-ghost full", onclick: () => authService.logout() }, [
+      el("button", { type: "button", class: "btn btn-ghost full", onclick: logout }, [
         icon("logout", "nav-icon"), " Cerrar sesión",
       ]),
     ]),
@@ -58,7 +59,7 @@ export function renderLayout(root) {
   return content;
 }
 
-/** Marca como activa la opción del menú de la ruta actual. */
+// Marca como activa la opción del menú de la ruta actual.
 export function setActiveMenu(route) {
   document.querySelectorAll(".sidebar .nav-item").forEach((link) => {
     link.classList.toggle("active", link.dataset.route === route);

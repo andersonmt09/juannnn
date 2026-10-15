@@ -1,6 +1,4 @@
-/**
- * CONTROLADOR: Usuarios  →  /api/users
- */
+// Controlador de /api/users.
 const userService = require("../services/user.service");
 const asyncHandler = require("../utils/async-handler");
 const { ROLES } = require("../constants/roles");

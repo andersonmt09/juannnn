@@ -1,4 +1,4 @@
-/** Pruebas unitarias de los DTOs (no necesitan base de datos). */
+// Pruebas de los DTOs (no necesitan base de datos).
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { LoginDto, RegisterDto, VerifyCodeDto } = require("../../src/dtos/auth.dto");

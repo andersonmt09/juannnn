@@ -1,7 +1,4 @@
-/**
- * SERVICIO: Envío de correos.
- * Si no hay SMTP configurado (desarrollo), el correo se imprime en consola.
- */
+// Envío de correos. Sin SMTP configurado, el mensaje se muestra en la consola.
 const nodemailer = require("nodemailer");
 const { env } = require("../config/environment");
 const { CODE_PURPOSE, SECURITY } = require("../constants/security");

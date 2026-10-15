@@ -1,7 +1,4 @@
-/**
- * SERVICIO: Sesión del usuario en el navegador.
- * Guarda y lee tokens y datos del usuario en localStorage.
- */
+// Tokens, usuario actual y preferencias guardadas en localStorage.
 import { STORAGE_KEYS } from "../config/app.config.js";
 
 const storage = {

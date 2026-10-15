@@ -1,7 +1,4 @@
-/**
- * Punto de arranque del backend.
- * 1. Valida variables de entorno.  2. Conecta a la BD externa.  3. Inicia el servidor HTTP.
- */
+// Arranque: valida el .env, comprueba la conexión a la base de datos e inicia el servidor.
 const { env, validateEnvironment } = require("./config/environment");
 
 validateEnvironment();

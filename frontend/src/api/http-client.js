@@ -1,10 +1,6 @@
-/**
- * Cliente HTTP: única puerta de salida del frontend hacia la API.
- * - Agrega el token de acceso a cada petición.
- * - Si el token expira (401), intenta renovarlo una vez con el refresh token.
- */
+// Cliente HTTP hacia la API. Agrega el token y lo renueva una vez si expira.
 import { APP_CONFIG } from "../config/app.config.js";
-import { session } from "./session.service.js";
+import { session } from "../store/session.store.js";
 
 export class ApiError extends Error {
   constructor(message, status, data) {

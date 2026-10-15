@@ -1,11 +1,8 @@
-/**
- * VISTA: Endpoints monitoreados   ruta: #/endpoints
- * RF-12 listar · RF-13 crear/eliminar (solo administrador)
- */
+// Vista #/endpoints: el administrador puede crear y eliminar.
 import { el } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
-import { endpointService } from "../../services/endpoint.service.js";
-import { session } from "../../services/session.service.js";
+import { endpointApi } from "../../api/endpoint.api.js";
+import { session } from "../../store/session.store.js";
 import { pageHeader } from "../../components/page-header.component.js";
 import { emptyState } from "../../components/empty-state.component.js";
 
@@ -15,7 +12,7 @@ export async function renderEndpointsView(container) {
   const isAdmin = session.isAdmin();
   const tablePanel = el("div", { class: "panel" }, [el("p", { class: "muted" }, ["Cargando..."])]);
 
-  // ----- Formulario (solo admin) -----
+  // Formulario (solo admin)
   const form = el("form", {}, [
     el("label", { for: "ep-name" }, ["Nombre"]),
     el("input", { id: "ep-name", name: "name", required: true }),
@@ -35,7 +32,7 @@ export async function renderEndpointsView(container) {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
-      await endpointService.create(Object.fromEntries(new FormData(form)));
+      await endpointApi.create(Object.fromEntries(new FormData(form)));
       toast.success("Endpoint creado");
       form.reset();
       formPanel.classList.add("hidden");
@@ -45,11 +42,11 @@ export async function renderEndpointsView(container) {
     }
   });
 
-  // ----- Tabla -----
+  // Tabla
   async function removeEndpoint(endpoint) {
     if (!confirm(`¿Eliminar el endpoint "${endpoint.name}"?`)) return;
     try {
-      await endpointService.remove(endpoint.id);
+      await endpointApi.remove(endpoint.id);
       toast.success("Endpoint eliminado");
       await loadEndpoints();
     } catch (error) {
@@ -59,7 +56,7 @@ export async function renderEndpointsView(container) {
 
   async function loadEndpoints() {
     try {
-      const endpoints = await endpointService.list();
+      const endpoints = await endpointApi.list();
       if (!endpoints.length) {
         tablePanel.replaceChildren(emptyState("Sin endpoints", "Aún no hay endpoints registrados."));
         return;

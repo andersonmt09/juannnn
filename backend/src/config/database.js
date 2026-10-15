@@ -1,9 +1,4 @@
-/**
- * Conexión a la base de datos EXTERNA (MySQL).
- * La base de datos no vive dentro de este proyecto: se accede por red
- * con las credenciales definidas en backend/.env.
- * Solo los modelos (src/models) usan este pool.
- */
+// Pool de conexiones a la base de datos MySQL externa. Solo lo usan los modelos.
 const mysql = require("mysql2/promise");
 const { env } = require("./environment");
 
@@ -20,14 +15,14 @@ const pool = mysql.createPool({
   timezone: "Z",
 });
 
-/** Verifica que el servidor de base de datos responde. */
+// Verifica que el servidor de base de datos responde.
 async function testConnection() {
   const connection = await pool.getConnection();
   await connection.ping();
   connection.release();
 }
 
-/** Cierra todas las conexiones (al apagar el servidor). */
+// Cierra todas las conexiones (al apagar el servidor).
 async function closeConnection() {
   await pool.end();
 }

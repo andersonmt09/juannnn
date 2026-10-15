@@ -1,8 +1,4 @@
-/**
- * MIDDLEWARE: Validación de entrada.
- * - validateBody(Dto): construye el DTO desde req.body, lo valida y lo deja en req.dto.
- * - validateIdParam: exige que :id sea un entero positivo.
- */
+// Valida req.body con un DTO (queda en req.dto) y el parámetro :id.
 const HttpError = require("../utils/http-error");
 const { isPositiveInteger } = require("../utils/validators");
 

@@ -1,6 +1,4 @@
-/**
- * COMPONENTE: Gráfica de dona (usa Chart.js cargado en index.html).
- */
+// Gráfica de dona con Chart.js.
 import { el } from "../utils/dom.js";
 
 const PALETTE = ["#3dd6c6", "#4ade80", "#f4b942", "#ff6b7a", "#6ae3d6", "#9aa0c3"];

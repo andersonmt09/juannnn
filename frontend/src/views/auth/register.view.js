@@ -1,10 +1,8 @@
-/**
- * VISTA: Registro de usuario (RF-01)   ruta: #/register
- */
+// Vista #/register
 import { el } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
-import { authService } from "../../services/auth.service.js";
-import { session } from "../../services/session.service.js";
+import { authApi } from "../../api/auth.api.js";
+import { session } from "../../store/session.store.js";
 
 export function renderRegisterView(container) {
   const submit = el("button", { type: "submit", class: "btn btn-primary" }, ["Registrarse"]);
@@ -23,7 +21,7 @@ export function renderRegisterView(container) {
     submit.disabled = true;
     submit.textContent = "Enviando...";
     try {
-      const result = await authService.register(Object.fromEntries(new FormData(form)));
+      const result = await authApi.register(Object.fromEntries(new FormData(form)));
       session.setPendingVerification(result.email, "registration");
       toast.success("Código de verificación enviado a tu correo");
       location.hash = "#/verify";

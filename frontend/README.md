@@ -1,20 +1,35 @@
-# Frontend — Vista
+# Frontend
 
-SPA en HTML, CSS y JavaScript con módulos ES. No accede a la base de datos: todo lo pide a la API.
+Interfaz web en HTML, CSS y JavaScript. No se conecta a la base de datos; todos los datos los pide a la API.
+
+## Flujo
 
 ```
-main.js → router/ → views/<módulo>/<pantalla>.view.js → services/*.service.js → http.client.js → API
+main.js → router/ → views/ → api/ → backend
 ```
 
 | Carpeta | Contenido |
 |---|---|
-| `src/config/` | `API_BASE_URL` y claves de almacenamiento |
-| `src/router/` | `routes.js` (ruta → vista, públicas / privadas / solo admin) y `router.js` |
-| `src/views/` | Una carpeta por módulo: `auth/`, `dashboard/`, `users/`, `endpoints/`, `profile/` |
-| `src/components/` | Layout (menú lateral), modal, gráfica, encabezado, estado vacío |
-| `src/services/` | `http.client.js` (tokens y renovación de sesión) y un servicio por recurso de la API |
-| `src/utils/` | Construcción segura de HTML, iconos, notificaciones, exportar CSV |
-| `assets/` | Estilos e imágenes |
+| `src/views/` | Una carpeta por módulo: `auth`, `dashboard`, `users`, `endpoints`, `profile` |
+| `src/components/` | Menú lateral, modal, gráfica, encabezado y estado vacío |
+| `src/api/` | `http-client.js` y un archivo por recurso del backend |
+| `src/store/` | Sesión del usuario (tokens y datos) |
+| `src/router/` | `routes.js` (rutas y permisos) y `router.js` |
+| `src/config/` | URL de la API |
+| `src/utils/` | Creación de elementos, iconos, notificaciones y CSV |
+| `assets/css/` | `main.css` importa `variables`, `base`, `layout`, `components` y `auth` |
+
+## Rutas
+
+| Ruta | Vista | Acceso |
+|---|---|---|
+| `#/login` | `views/auth/login.view.js` | Público |
+| `#/register` | `views/auth/register.view.js` | Público |
+| `#/verify` | `views/auth/verify.view.js` | Público |
+| `#/dashboard` | `views/dashboard/dashboard.view.js` | Con sesión |
+| `#/users` | `views/users/users.view.js` | Administrador |
+| `#/endpoints` | `views/endpoints/endpoints.view.js` | Con sesión |
+| `#/profile` | `views/profile/profile.view.js` | Con sesión |
 
 ## Ejecutar
 
@@ -22,14 +37,4 @@ main.js → router/ → views/<módulo>/<pantalla>.view.js → services/*.servic
 node frontend/server.js    # http://localhost:5500
 ```
 
-Debe abrirse por http (no con doble clic en `index.html`) porque usa módulos ES. Si la API está en otra dirección, cambiar `API_BASE_URL` en `src/config/app.config.js`.
-
-| Ruta | Vista | Acceso |
-|---|---|---|
-| `#/login` | `views/auth/login.view.js` | Pública |
-| `#/register` | `views/auth/register.view.js` | Pública |
-| `#/verify` | `views/auth/verify.view.js` | Pública |
-| `#/dashboard` | `views/dashboard/dashboard.view.js` | Con sesión |
-| `#/users` | `views/users/users.view.js` | Solo admin |
-| `#/endpoints` | `views/endpoints/endpoints.view.js` | Con sesión |
-| `#/profile` | `views/profile/profile.view.js` | Con sesión |
+Se debe abrir por `http://localhost:5500` (no con doble clic en `index.html`). Si la API está en otra dirección, cambia `API_BASE_URL` en `src/config/app.config.js`.

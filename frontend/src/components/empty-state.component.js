@@ -1,4 +1,4 @@
-/** COMPONENTE: Mensaje cuando una lista no tiene datos. */
+// Mensaje para listas vacías.
 import { el } from "../utils/dom.js";
 
 export function emptyState(title, text) {

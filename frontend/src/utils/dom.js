@@ -1,4 +1,4 @@
-/** Utilidades para construir HTML de forma segura. */
+// Helpers para crear elementos HTML de forma segura.
 
 /**
  * Crea un elemento.  el("button", { class: "btn" }, ["Guardar"])
@@ -17,16 +17,6 @@ export function el(tag, attrs = {}, children = []) {
     element.append(child instanceof Node ? child : document.createTextNode(String(child)));
   }
   return element;
-}
-
-/** Escapa texto para usarlo dentro de plantillas HTML. */
-export function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 export function formatDate(value) {

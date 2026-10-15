@@ -1,10 +1,5 @@
-/**
- * Crea el primer usuario administrador en la base de datos externa.
- * No guarda contraseñas en el código: se pasan al ejecutar el script.
- *
- * Uso:
- *   npm run create-admin -- "Nombre Apellido" correo@dominio.com "Contraseña"
- */
+// Crea un usuario administrador.
+// Uso: npm run create-admin -- "Nombre" correo@dominio.com "Contraseña"
 const bcrypt = require("bcryptjs");
 const { validateEnvironment } = require("../src/config/environment");
 const { closeConnection } = require("../src/config/database");

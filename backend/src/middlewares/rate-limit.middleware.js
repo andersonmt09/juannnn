@@ -1,8 +1,4 @@
-/**
- * MIDDLEWARE: Límite de intentos en autenticación (RNF-03).
- * Máximo 5 intentos fallidos por IP cada 15 minutos.
- * Las peticiones exitosas no cuentan.
- */
+// Máximo 5 intentos fallidos por IP cada 15 minutos en las rutas de autenticación.
 const rateLimit = require("express-rate-limit");
 const { SECURITY } = require("../constants/security");
 

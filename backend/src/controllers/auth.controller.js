@@ -1,7 +1,4 @@
-/**
- * CONTROLADOR: Autenticación  →  /api/auth
- * Recibe la petición ya validada (req.dto), llama al servicio y responde.
- */
+// Controlador de /api/auth.
 const authService = require("../services/auth.service");
 const asyncHandler = require("../utils/async-handler");
 const { CODE_PURPOSE } = require("../constants/security");

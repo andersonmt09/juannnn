@@ -1,8 +1,4 @@
-/**
- * SERVICIO: Códigos de verificación por correo.
- * Genera, guarda (hasheado), envía y valida códigos de 6 dígitos.
- * Lo usan el login en dos pasos y la verificación del registro.
- */
+// Genera, envía y valida los códigos de 6 dígitos (registro e inicio de sesión).
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const VerificationCode = require("../models/verification-code.model");
@@ -14,7 +10,7 @@ function generateCode() {
   return String(crypto.randomInt(0, 10 ** SECURITY.CODE_LENGTH)).padStart(SECURITY.CODE_LENGTH, "0");
 }
 
-/** Invalida los códigos anteriores, crea uno nuevo y lo envía por correo. */
+// Invalida los códigos anteriores, crea uno nuevo y lo envía por correo.
 async function issue({ userId, email, purpose }) {
   await VerificationCode.invalidateAll(email, purpose);
 
@@ -26,7 +22,7 @@ async function issue({ userId, email, purpose }) {
   await emailService.sendVerificationCode(email, code, purpose);
 }
 
-/** Comprueba el código; si es correcto lo marca como usado. */
+// Comprueba el código; si es correcto lo marca como usado.
 async function verify({ email, purpose, code }) {
   const record = await VerificationCode.findActive(email, purpose);
   if (!record) throw HttpError.unauthorized("Código inválido o expirado");

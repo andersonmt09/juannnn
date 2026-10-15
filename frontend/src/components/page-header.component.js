@@ -1,4 +1,4 @@
-/** COMPONENTE: Encabezado de página con título, subtítulo y acciones. */
+// Encabezado de página con título, subtítulo y botones.
 import { el } from "../utils/dom.js";
 
 export function pageHeader(title, subtitle = "", actions = []) {

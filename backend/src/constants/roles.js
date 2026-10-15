@@ -1,4 +1,4 @@
-/** Roles de usuario (columna users.role). */
+// Roles de usuario (columna users.role).
 const ROLES = Object.freeze({
   ADMIN: "admin",
   USER: "user",

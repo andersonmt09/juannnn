@@ -1,7 +1,4 @@
-/**
- * Error con código HTTP. Los servicios lanzan HttpError y el
- * middleware de errores lo convierte en la respuesta JSON.
- */
+// Error con código HTTP. Los servicios lo lanzan y error.middleware lo convierte en respuesta.
 class HttpError extends Error {
   constructor(statusCode, message, details) {
     super(message);

@@ -1,6 +1,4 @@
-/**
- * RUTAS: Autenticación  →  /api/auth   (públicas)
- */
+// Rutas públicas de autenticación: /api/auth
 const { Router } = require("express");
 const authController = require("../controllers/auth.controller");
 const { validateBody } = require("../middlewares/validate.middleware");
@@ -9,12 +7,17 @@ const { LoginDto, RegisterDto, VerifyCodeDto, EmailDto, RefreshTokenDto } = requ
 
 const router = Router();
 
-router.post("/register",                  authRateLimiter, validateBody(RegisterDto),     authController.register);               // RF-01
-router.post("/register/verify",           authRateLimiter, validateBody(VerifyCodeDto),   authController.verifyRegistration);     // RF-02
-router.post("/register/resend-code",      authRateLimiter, validateBody(EmailDto),        authController.resendRegistrationCode); // RF-04
-router.post("/login",                     authRateLimiter, validateBody(LoginDto),        authController.login);                  // RF-03
-router.post("/login/verify",              authRateLimiter, validateBody(VerifyCodeDto),   authController.verifyLogin);            // RF-03
-router.post("/login/resend-code",         authRateLimiter, validateBody(EmailDto),        authController.resendLoginCode);        // RF-04
-router.post("/refresh-token",                              validateBody(RefreshTokenDto), authController.refreshToken);           // RF-05
+// Registro
+router.post("/register", authRateLimiter, validateBody(RegisterDto), authController.register);
+router.post("/register/verify", authRateLimiter, validateBody(VerifyCodeDto), authController.verifyRegistration);
+router.post("/register/resend-code", authRateLimiter, validateBody(EmailDto), authController.resendRegistrationCode);
+
+// Inicio de sesión en dos pasos
+router.post("/login", authRateLimiter, validateBody(LoginDto), authController.login);
+router.post("/login/verify", authRateLimiter, validateBody(VerifyCodeDto), authController.verifyLogin);
+router.post("/login/resend-code", authRateLimiter, validateBody(EmailDto), authController.resendLoginCode);
+
+// Renovación del token de acceso
+router.post("/refresh-token", validateBody(RefreshTokenDto), authController.refreshToken);
 
 module.exports = router;

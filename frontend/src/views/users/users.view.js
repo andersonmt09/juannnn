@@ -1,12 +1,9 @@
-/**
- * VISTA: Gestión de usuarios (solo administrador)   ruta: #/users
- * RF-06 listar · RF-07 crear · RF-08 editar · RF-09 contraseña · RF-10 eliminar · RF-15 exportar
- */
+// Vista #/users (solo administradores): listar, crear, editar, eliminar y exportar.
 import { el } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
 import { exportToCsv } from "../../utils/csv.js";
-import { userService } from "../../services/user.service.js";
-import { session } from "../../services/session.service.js";
+import { userApi } from "../../api/user.api.js";
+import { session } from "../../store/session.store.js";
 import { pageHeader } from "../../components/page-header.component.js";
 import { createModal } from "../../components/modal.component.js";
 import { emptyState } from "../../components/empty-state.component.js";
@@ -21,7 +18,7 @@ export async function renderUsersView(container) {
   let editingUser = null;
   const tablePanel = el("div", { class: "panel" }, [el("p", { class: "muted" }, ["Cargando..."])]);
 
-  // ----- Formulario (crear / editar) -----
+  // Formulario (crear / editar)
   const passwordLabel = el("label", { for: "user-password" }, ["Contraseña"]);
   const form = el("form", {}, [
     el("label", { for: "user-name" }, ["Nombre"]),
@@ -59,11 +56,11 @@ export async function renderUsersView(container) {
     const { name, email, role, password } = Object.fromEntries(new FormData(form));
     try {
       if (editingUser) {
-        await userService.update(editingUser.id, { name, email, role });
-        if (password) await userService.changePassword(editingUser.id, password);
+        await userApi.update(editingUser.id, { name, email, role });
+        if (password) await userApi.changePassword(editingUser.id, password);
         toast.success("Usuario actualizado");
       } else {
-        await userService.create({ name, email, role, password });
+        await userApi.create({ name, email, role, password });
         toast.success("Usuario creado");
       }
       modal.close();
@@ -73,11 +70,11 @@ export async function renderUsersView(container) {
     }
   });
 
-  // ----- Tabla -----
+  // Tabla
   async function removeUser(user) {
     if (!confirm(`¿Eliminar a ${user.name}? (eliminación lógica)`)) return;
     try {
-      await userService.remove(user.id);
+      await userApi.remove(user.id);
       toast.success("Usuario eliminado");
       await loadUsers();
     } catch (error) {
@@ -115,7 +112,7 @@ export async function renderUsersView(container) {
 
   async function loadUsers() {
     try {
-      users = await userService.list();
+      users = await userApi.list();
       renderTable();
     } catch (error) {
       tablePanel.replaceChildren(el("p", { class: "muted" }, ["Error al cargar usuarios."]));

@@ -7,7 +7,6 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "create-tables": "node scripts/create-tables.js",
     "create-admin": "node scripts/create-admin.js",
     "test": "node --test tests/unit/dtos.test.js tests/unit/validators.test.js",
     "test:integration": "node --test tests/integration/api.test.js"

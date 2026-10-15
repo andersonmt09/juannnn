@@ -1,7 +1,4 @@
-/**
- * SERVICIO: Tokens JWT.
- * Access token (corta duración) + refresh token (renovación de sesión).
- */
+// Emisión y verificación de tokens JWT (acceso y refresh).
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { env } = require("../config/environment");

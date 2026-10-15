@@ -1,7 +1,4 @@
-/**
- * SERVICIO: Gestión de usuarios.
- * RF-06, RF-07, RF-08, RF-09, RF-10
- */
+// Lógica de gestión de usuarios.
 const bcrypt = require("bcryptjs");
 const User = require("../models/user.model");
 const HttpError = require("../utils/http-error");
@@ -15,18 +12,16 @@ async function findActiveOrFail(id) {
   return user;
 }
 
-/** RF-06: lista usuarios con paginación. */
 async function list({ includeInactive, page, limit }) {
   const { users, total } = await User.findAll({ includeInactive, page, limit });
   return { users: users.map((u) => new UserResponseDto(u)), meta: { total, page, limit } };
 }
 
-/** RF-06: consulta un usuario. */
 async function getById(id) {
   return new UserResponseDto(await findActiveOrFail(id));
 }
 
-/** RF-07: el administrador crea un usuario (ya verificado). */
+// Los usuarios creados por un administrador quedan verificados.
 async function create({ name, email, password, role }, createdById) {
   if (await User.findByEmail(email)) throw HttpError.conflict("El correo ya está registrado");
 
@@ -35,7 +30,6 @@ async function create({ name, email, password, role }, createdById) {
   return new UserResponseDto(user);
 }
 
-/** RF-08: el administrador edita nombre, correo o rol. */
 async function update(id, changes) {
   const user = await findActiveOrFail(id);
 
@@ -47,7 +41,7 @@ async function update(id, changes) {
   return new UserResponseDto(await User.update(id, changes));
 }
 
-/** RF-09: cambio de contraseña (el propio usuario o un administrador). */
+// Cada usuario cambia su propia contraseña; el administrador puede cambiar cualquiera.
 async function changePassword(id, { password }, requester) {
   const user = await findActiveOrFail(id);
   const isOwner = Number(requester.id) === Number(user.id);
@@ -57,7 +51,7 @@ async function changePassword(id, { password }, requester) {
   return { message: "Contraseña actualizada" };
 }
 
-/** RF-10: eliminación lógica, con usuarios demo y propio usuario protegidos. */
+// Eliminación lógica. No se permite borrar usuarios demo ni el propio usuario.
 async function remove(id, requester) {
   const user = await findActiveOrFail(id);
   if (user.isSample) throw HttpError.badRequest("Los usuarios demo no se pueden eliminar");

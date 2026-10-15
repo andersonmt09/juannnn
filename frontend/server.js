@@ -1,9 +1,4 @@
-/**
- * Servidor estático del frontend (solo para desarrollo).
- * Uso:  node frontend/server.js   →  http://localhost:5500
- * Los módulos ES del navegador no funcionan abriendo index.html con doble clic,
- * por eso se sirve por http.
- */
+// Servidor estático para desarrollo: node frontend/server.js -> http://localhost:5500
 const http = require("http");
 const fs = require("fs");
 const path = require("path");

@@ -1,8 +1,4 @@
-/**
- * SERVICIO: Autenticación.
- * Reglas de negocio de registro, login en dos pasos y renovación de sesión.
- * RF-01, RF-02, RF-03, RF-04, RF-05
- */
+// Lógica de registro, inicio de sesión en dos pasos y renovación de sesión.
 const bcrypt = require("bcryptjs");
 const User = require("../models/user.model");
 const verificationCodeService = require("./verification-code.service");
@@ -12,7 +8,6 @@ const { UserResponseDto } = require("../dtos/user.dto");
 const { ROLES } = require("../constants/roles");
 const { SECURITY, CODE_PURPOSE } = require("../constants/security");
 
-/** RF-01: registra un usuario y envía el código de verificación. */
 async function register({ name, email, password }) {
   const existing = await User.findByEmail(email);
   if (existing) throw HttpError.conflict("El correo ya está registrado");
@@ -24,14 +19,13 @@ async function register({ name, email, password }) {
   return { requiresVerification: true, email };
 }
 
-/** RF-02: confirma el correo con el código recibido. */
 async function verifyRegistration({ email, code }) {
   await verificationCodeService.verify({ email, code, purpose: CODE_PURPOSE.REGISTRATION });
   await User.markEmailVerified(email);
   return { verified: true };
 }
 
-/** RF-03 (paso 1): valida credenciales y envía el código de acceso. */
+// Paso 1: valida correo y contraseña y envía el código al correo.
 async function login({ email, password }) {
   const user = await User.findByEmail(email);
   const validPassword = user && (await bcrypt.compare(password, user.passwordHash));
@@ -43,7 +37,7 @@ async function login({ email, password }) {
   return { requiresVerification: true, email };
 }
 
-/** RF-03 (paso 2): valida el código y entrega los tokens de sesión. */
+// Paso 2: valida el código y entrega los tokens.
 async function verifyLogin({ email, code }) {
   await verificationCodeService.verify({ email, code, purpose: CODE_PURPOSE.LOGIN });
 
@@ -53,7 +47,6 @@ async function verifyLogin({ email, code }) {
   return { ...tokenService.issueTokens(user), user: new UserResponseDto(user) };
 }
 
-/** RF-04: reenvía el código (login o registro). */
 async function resendCode({ email, purpose }) {
   const user = await User.findByEmail(email);
   if (!user) throw HttpError.notFound("Usuario no encontrado");
@@ -66,7 +59,6 @@ async function resendCode({ email, purpose }) {
   return { message: "Código reenviado" };
 }
 
-/** RF-05: renueva la sesión con el refresh token. */
 async function refreshSession({ refreshToken }) {
   const payload = tokenService.verifyRefreshToken(refreshToken);
   const user = await User.findById(payload.id);

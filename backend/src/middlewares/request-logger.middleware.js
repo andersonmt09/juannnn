@@ -1,8 +1,4 @@
-/**
- * MIDDLEWARE: Registro de peticiones (RF-14).
- * Al terminar cada respuesta guarda método, ruta, estado y latencia.
- * Si el registro falla, la petición del usuario no se ve afectada.
- */
+// Guarda cada petición en request_logs al terminar la respuesta, sin retrasarla.
 const RequestLog = require("../models/request-log.model");
 
 function requestLogger(req, res, next) {

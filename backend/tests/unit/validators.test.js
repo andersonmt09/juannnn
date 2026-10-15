@@ -1,4 +1,4 @@
-/** Pruebas unitarias de utilidades. */
+// Pruebas de utilidades.
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { isValidEmail, isValidHttpMethod, isPositiveInteger } = require("../../src/utils/validators");

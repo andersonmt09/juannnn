@@ -1,4 +1,4 @@
-/** Notificaciones emergentes (éxito, error, info). */
+// Notificaciones emergentes.
 import { icon } from "./icons.js";
 
 const ICON_BY_TYPE = { success: "check", error: "alert", info: "logo" };

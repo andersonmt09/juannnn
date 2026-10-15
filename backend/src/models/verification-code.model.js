@@ -1,7 +1,4 @@
-/**
- * MODELO: Código de verificación (tabla `login_verification_codes`).
- * Guarda el hash del código de 6 dígitos enviado por correo.
- */
+// Modelo de la tabla login_verification_codes (códigos enviados por correo).
 const { pool } = require("../config/database");
 
 class VerificationCode {
@@ -28,7 +25,7 @@ class VerificationCode {
     return result.insertId;
   }
 
-  /** Último código sin usar y sin expirar para un correo y propósito. */
+  // Último código sin usar y sin expirar para un correo y propósito.
   static async findActive(email, purpose) {
     const [rows] = await pool.query(
       `SELECT * FROM login_verification_codes
@@ -47,7 +44,7 @@ class VerificationCode {
     await pool.query("UPDATE login_verification_codes SET used = 1 WHERE id = ?", [id]);
   }
 
-  /** Invalida los códigos anteriores antes de generar uno nuevo. */
+  // Invalida los códigos anteriores antes de generar uno nuevo.
   static async invalidateAll(email, purpose) {
     await pool.query(
       "UPDATE login_verification_codes SET used = 1 WHERE email = ? AND purpose = ? AND used = 0",

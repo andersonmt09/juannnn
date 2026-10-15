@@ -1,4 +1,4 @@
-/** DTOs de autenticación (entrada de /api/auth). */
+// DTOs de entrada para /api/auth.
 const BaseDto = require("./base.dto");
 const { isValidEmail, normalizeEmail } = require("../utils/validators");
 const { SECURITY } = require("../constants/security");

@@ -1,6 +1,4 @@
-/**
- * MODELO: Endpoint monitoreado (tabla `endpoints`).
- */
+// Modelo de la tabla endpoints.
 const { pool } = require("../config/database");
 
 class Endpoint {

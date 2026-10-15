@@ -1,7 +1,4 @@
-/**
- * CONTROLADOR: Estado del servicio  →  /api/health
- * Indica si la API está activa y si la base de datos externa responde.
- */
+// Estado de la API y de la conexión a la base de datos.
 const { testConnection } = require("../config/database");
 
 async function check(req, res) {

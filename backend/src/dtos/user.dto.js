@@ -1,4 +1,4 @@
-/** DTOs de usuarios (entrada y salida de /api/users). */
+// DTOs de entrada y salida para /api/users.
 const BaseDto = require("./base.dto");
 const { isValidEmail, normalizeEmail } = require("../utils/validators");
 const { ROLES } = require("../constants/roles");
@@ -52,7 +52,7 @@ class ChangePasswordDto extends BaseDto {
   }
 }
 
-/** Salida: nunca expone el hash de la contraseña. */
+// Salida: nunca expone el hash de la contraseña.
 class UserResponseDto {
   constructor(user) {
     this.id = user.id;

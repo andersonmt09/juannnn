@@ -1,7 +1,4 @@
-/**
- * SERVICIO: Métricas del dashboard.
- * RF-11
- */
+// Datos del dashboard: usuarios, endpoints y estadísticas de peticiones.
 const User = require("../models/user.model");
 const Endpoint = require("../models/endpoint.model");
 const RequestLog = require("../models/request-log.model");

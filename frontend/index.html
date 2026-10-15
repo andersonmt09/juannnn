@@ -6,17 +6,17 @@
   <meta name="description" content="AXON Stack Flow - Panel de administración y monitoreo" />
   <title>AXON Stack Flow</title>
   <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <!-- Aquí el enrutador pinta cada vista (src/router/router.js) -->
+  <!-- Contenedor donde se muestran las vistas -->
   <div id="app" role="main" aria-live="polite"></div>
 
-  <!-- Notificaciones (src/utils/toast.js) -->
+  <!-- Notificaciones -->
   <div id="toast-container" class="toast-wrap" aria-live="assertive"></div>
 
-  <!-- Punto de entrada: carga módulos ES (requiere servirse por http, ver README) -->
+  <!-- La app usa módulos ES: abrir con node frontend/server.js -->
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

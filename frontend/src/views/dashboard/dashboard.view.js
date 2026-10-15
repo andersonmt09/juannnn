@@ -1,12 +1,10 @@
-/**
- * VISTA: Dashboard de métricas (RF-11) y exportación de actividad (RF-15)   ruta: #/dashboard
- */
+// Vista #/dashboard
 import { el, formatDate } from "../../utils/dom.js";
 import { icon } from "../../utils/icons.js";
 import { toast } from "../../utils/toast.js";
 import { exportToCsv } from "../../utils/csv.js";
-import { metricService } from "../../services/metric.service.js";
-import { session } from "../../services/session.service.js";
+import { metricApi } from "../../api/metric.api.js";
+import { session } from "../../store/session.store.js";
 import { pageHeader } from "../../components/page-header.component.js";
 import { doughnutChart } from "../../components/doughnut-chart.component.js";
 import { emptyState } from "../../components/empty-state.component.js";
@@ -43,7 +41,7 @@ export async function renderDashboardView(container) {
   );
 
   try {
-    const data = await metricService.getDashboard();
+    const data = await metricApi.getDashboard();
     const s = data.summary;
 
     const exportButton = el("button", {

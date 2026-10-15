@@ -1,7 +1,4 @@
-/**
- * MODELO: Registro de peticiones (tabla `request_logs`).
- * Cada petición a la API queda registrada para las métricas del dashboard.
- */
+// Modelo de la tabla request_logs (registro de cada petición a la API).
 const { pool } = require("../config/database");
 
 class RequestLog {

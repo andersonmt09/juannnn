@@ -1,4 +1,4 @@
-/** Validaciones reutilizables por los DTOs. */
+// Validaciones reutilizables.
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 

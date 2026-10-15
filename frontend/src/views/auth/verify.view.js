@@ -1,12 +1,8 @@
-/**
- * VISTA: Verificación con código de 6 dígitos   ruta: #/verify
- * Sirve para el registro (RF-02) y para el login en dos pasos (RF-03).
- * Permite reenviar el código (RF-04).
- */
+// Vista #/verify: código de 6 dígitos para el registro o el inicio de sesión.
 import { el } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
-import { authService } from "../../services/auth.service.js";
-import { session } from "../../services/session.service.js";
+import { authApi } from "../../api/auth.api.js";
+import { session } from "../../store/session.store.js";
 
 export function renderVerifyView(container) {
   const { email, purpose } = session.getPendingVerification();
@@ -33,14 +29,15 @@ export function renderVerifyView(container) {
     submit.disabled = true;
     try {
       if (isRegistration) {
-        await authService.verifyRegistration(email, code);
+        await authApi.verifyRegistration(email, code);
         session.clearPendingVerification();
         toast.success("Correo verificado. Ya puedes iniciar sesión.");
         location.hash = "#/login";
       } else {
-        const user = await authService.verifyLogin(email, code);
+        const result = await authApi.verifyLogin(email, code);
+        session.save(result);
         session.clearPendingVerification();
-        toast.success(`Bienvenido, ${user.name}`);
+        toast.success(`Bienvenido, ${result.user.name}`);
         location.hash = "#/dashboard";
       }
     } catch (error) {
@@ -52,7 +49,7 @@ export function renderVerifyView(container) {
 
   const resend = async () => {
     try {
-      await (isRegistration ? authService.resendRegistrationCode(email) : authService.resendLoginCode(email));
+      await (isRegistration ? authApi.resendRegistrationCode(email) : authApi.resendLoginCode(email));
       toast.success("Código reenviado");
     } catch (error) {
       toast.error(error.message);

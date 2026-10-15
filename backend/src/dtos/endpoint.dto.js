@@ -1,4 +1,4 @@
-/** DTOs de endpoints monitoreados (entrada de /api/endpoints). */
+// DTOs de entrada para /api/endpoints.
 const BaseDto = require("./base.dto");
 const { isValidHttpMethod, HTTP_METHODS } = require("../utils/validators");
 

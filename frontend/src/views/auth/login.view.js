@@ -1,10 +1,8 @@
-/**
- * VISTA: Inicio de sesión (RF-03, paso 1)   ruta: #/login
- */
+// Vista #/login
 import { el } from "../../utils/dom.js";
 import { toast } from "../../utils/toast.js";
-import { authService } from "../../services/auth.service.js";
-import { session } from "../../services/session.service.js";
+import { authApi } from "../../api/auth.api.js";
+import { session } from "../../store/session.store.js";
 
 export function renderLoginView(container) {
   const submit = el("button", { type: "submit", class: "btn btn-primary" }, ["Ingresar"]);
@@ -22,7 +20,7 @@ export function renderLoginView(container) {
     submit.disabled = true;
     submit.textContent = "Verificando...";
     try {
-      const result = await authService.login(email, password);
+      const result = await authApi.login(email, password);
       session.setPendingVerification(result.email, "login");
       toast.info("Te enviamos un código a tu correo");
       location.hash = "#/verify";

@@ -1,7 +1,4 @@
-/**
- * MODELO: Usuario (tabla `users`).
- * Única capa que ejecuta SQL sobre la tabla de usuarios.
- */
+// Modelo de la tabla users.
 const { pool } = require("../config/database");
 const { ROLES } = require("../constants/roles");
 
@@ -24,7 +21,7 @@ class User {
 
   static fromRow(row) { return row ? new User(row) : null; }
 
-  // ---------- Consultas ----------
+  // Consultas
 
   static async findById(id) {
     const [rows] = await pool.query("SELECT * FROM users WHERE id = ? LIMIT 1", [id]);
@@ -52,7 +49,7 @@ class User {
     return rows.reduce((acc, row) => ({ ...acc, [row.role]: Number(row.total) }), {});
   }
 
-  // ---------- Escritura ----------
+  // Escritura
 
   static async create({ name, email, passwordHash, role = ROLES.USER, emailVerified = false, createdById = null }) {
     const [result] = await pool.query(
@@ -83,7 +80,7 @@ class User {
     await pool.query("UPDATE users SET email_verified = 1 WHERE email = ?", [email]);
   }
 
-  /** Eliminación lógica: el registro se conserva con rol 'inactive'. */
+  // Eliminación lógica: el registro se conserva con rol 'inactive'.
   static async softDelete(id) {
     await pool.query("UPDATE users SET role = 'inactive' WHERE id = ?", [id]);
   }
