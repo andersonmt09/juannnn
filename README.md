@@ -35,6 +35,19 @@ views/ → api/  ──── HTTP ────►  routes/ → controllers/ →
 
 La base de datos **no está dentro del proyecto**. El backend se conecta a un servidor MySQL externo con los datos del archivo `backend/.env`, que no se sube al repositorio.
 
+## Relación con el diseño
+
+La estructura del código sigue el mismo orden del diseño del sistema:
+
+| Elemento del diseño | Dónde está en el código |
+|---|---|
+| Endpoints | `backend/src/routes/` (un archivo por recurso; `index.js` los reúne) |
+| Base de datos | `backend/src/models/` (un modelo por tabla). La base de datos en sí está fuera del proyecto |
+| Diagrama de clases | `models/` (entidades), `controllers/`, `services/` y `dtos/` |
+| Diagrama de secuencia | Recorrido de una petición: vista → api → ruta → middlewares → controlador → servicio → modelo |
+| Casos de uso | Cada vista de `frontend/src/views/` corresponde a una acción del usuario |
+| Requerimientos no funcionales | `middlewares/` (seguridad, roles, validación, límite de intentos) y `constants/security.js` |
+
 ## Estructura de carpetas
 
 ```
@@ -88,7 +101,7 @@ Cada recurso usa el mismo nombre en todas las capas. Por ejemplo, para usuarios:
 
 ## Endpoints
 
-Todas las rutas empiezan por `/api`. Las marcadas con 🔒 requieren token y las de **admin** requieren rol administrador.
+Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol administrador.
 
 | Recurso | Método | Ruta | Acceso |
 |---|---|---|---|
@@ -100,16 +113,16 @@ Todas las rutas empiezan por `/api`. Las marcadas con 🔒 requieren token y las
 | | POST | `/auth/login/verify` | Público |
 | | POST | `/auth/login/resend-code` | Público |
 | | POST | `/auth/refresh-token` | Público |
-| Usuarios | GET | `/users` | 🔒 |
-| | GET | `/users/:id` | 🔒 |
-| | POST | `/users` | 🔒 admin |
-| | PUT | `/users/:id` | 🔒 admin |
-| | PATCH | `/users/:id/password` | 🔒 propio o admin |
-| | DELETE | `/users/:id` | 🔒 admin |
-| Endpoints | GET | `/endpoints` | 🔒 |
-| | POST | `/endpoints` | 🔒 admin |
-| | DELETE | `/endpoints/:id` | 🔒 admin |
-| Métricas | GET | `/metrics/dashboard` | 🔒 |
+| Usuarios | GET | `/users` | Sesión |
+| | GET | `/users/:id` | Sesión |
+| | POST | `/users` | Admin |
+| | PUT | `/users/:id` | Admin |
+| | PATCH | `/users/:id/password` | Sesión (propio usuario o admin) |
+| | DELETE | `/users/:id` | Admin |
+| Endpoints | GET | `/endpoints` | Sesión |
+| | POST | `/endpoints` | Admin |
+| | DELETE | `/endpoints/:id` | Admin |
+| Métricas | GET | `/metrics/dashboard` | Sesión |
 
 Respuesta correcta: `{ "ok": true, ... }` · Respuesta con error: `{ "ok": false, "message": "..." }`
 

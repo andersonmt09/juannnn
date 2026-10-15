@@ -36,7 +36,7 @@ function recentRequestsTable(requests) {
 
 export async function renderDashboardView(container) {
   container.replaceChildren(
-    pageHeader("Dashboard", `Resumen del sistema · ${session.getUser()?.name || ""}`),
+    pageHeader("Dashboard", `Resumen del sistema - ${session.getUser()?.name || ""}`),
     el("p", { class: "muted" }, ["Cargando..."])
   );
 
@@ -53,7 +53,7 @@ export async function renderDashboardView(container) {
     }, ["Exportar CSV"]);
 
     container.replaceChildren(
-      pageHeader("Dashboard", `Resumen del sistema · ${session.getUser()?.name || ""}`),
+      pageHeader("Dashboard", `Resumen del sistema - ${session.getUser()?.name || ""}`),
       el("div", { class: "cards" }, [
         summaryCard("Usuarios totales", s.usersTotal, "users"),
         summaryCard("Usuarios activos", s.usersActive, "check"),
