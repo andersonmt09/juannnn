@@ -81,7 +81,7 @@ axon-stack-flow/
 │   │   ├── utils/           Funciones de apoyo
 │   │   └── main.js          Punto de entrada
 │   ├── index.html
-│   └── server.js            Servidor local
+│   └── scripts/             dev-server.js (servidor local)
 │
 ├── package.json
 └── README.md

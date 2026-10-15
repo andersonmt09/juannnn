@@ -6,7 +6,7 @@
   "scripts": {
     "install:backend": "npm --prefix backend install",
     "backend": "npm --prefix backend start",
-    "frontend": "node frontend/server.js",
+    "frontend": "node frontend/scripts/dev-server.js",
     "test": "npm --prefix backend test"
   }
 }

@@ -34,7 +34,7 @@ main.js → router/ → views/ → api/ → backend
 ## Ejecutar
 
 ```bash
-node frontend/server.js    # http://localhost:5500
+npm run frontend    # desde la carpeta raíz → http://localhost:5500
 ```
 
 Se debe abrir por `http://localhost:5500` (no con doble clic en `index.html`). Si la API está en otra dirección, cambia `API_BASE_URL` en `src/config/app.config.js`.

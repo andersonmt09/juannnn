@@ -1,9 +1,9 @@
-// Servidor estático para desarrollo: node frontend/server.js -> http://localhost:5500
+// Servidor estático para desarrollo: npm run frontend -> http://localhost:5500
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-const ROOT = __dirname;
+const ROOT = path.join(__dirname, "..");
 const PORT = Number(process.env.FRONTEND_PORT) || 5500;
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -19,7 +19,7 @@ http.createServer((req, res) => {
   const urlPath = decodeURIComponent(req.url.split("?")[0]);
   const filePath = path.join(ROOT, urlPath === "/" ? "index.html" : urlPath);
 
-  if (!filePath.startsWith(ROOT) || filePath === __filename) {
+  if (!filePath.startsWith(ROOT) || filePath.startsWith(__dirname)) {
     res.writeHead(403);
     return res.end("Prohibido");
   }
