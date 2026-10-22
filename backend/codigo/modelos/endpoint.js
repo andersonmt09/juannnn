@@ -1,5 +1,5 @@
 // Modelo de los endpoints monitoreados (recurso /endpoints).
-const db = require("../base-datos/cliente-bd");
+const db = require("../integraciones/cliente-bd");
 
 class Endpoint {
   constructor(row) {

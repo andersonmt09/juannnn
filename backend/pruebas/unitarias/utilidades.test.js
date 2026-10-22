@@ -3,7 +3,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { isValidEmail, isValidHttpMethod, isPositiveInteger } = require("../../codigo/utilidades/validaciones");
 const HttpError = require("../../codigo/utilidades/error-http");
-const { generateCode } = require("../../codigo/casos-de-uso/codigos-verificacion");
+const { generateCode } = require("../../codigo/servicios/apoyo/codigos-verificacion");
 
 test("isValidEmail", () => {
   assert.equal(isValidEmail("ana@test.com"), true);

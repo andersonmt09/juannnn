@@ -1,18 +1,20 @@
-// Rutas de la aplicación: ruta -> vista. public = sin sesión, adminOnly = solo administradores.
-import { renderLoginView, renderRegisterView, renderVerifyView } from "../vistas/autenticacion.js";
-import { renderDashboardView } from "../vistas/panel.js";
-import { renderUsersView } from "../vistas/usuarios.js";
-import { renderEndpointsView } from "../vistas/endpoints.js";
-import { renderProfileView } from "../vistas/perfil.js";
+// Rutas de la aplicación: ruta -> controlador. public = sin sesión, adminOnly = solo administradores.
+import { showLogin } from "../controladores/inicio-sesion.js";
+import { showRegister } from "../controladores/registro.js";
+import { showVerify } from "../controladores/verificacion.js";
+import { showDashboard } from "../controladores/panel.js";
+import { showUsers } from "../controladores/usuarios.js";
+import { showEndpoints } from "../controladores/endpoints.js";
+import { showProfile } from "../controladores/perfil.js";
 
 export const ROUTES = {
-  "#/login":     { view: renderLoginView,     public: true },
-  "#/register":  { view: renderRegisterView,  public: true },
-  "#/verify":    { view: renderVerifyView,    public: true },
-  "#/dashboard": { view: renderDashboardView },
-  "#/users":     { view: renderUsersView,     adminOnly: true },
-  "#/endpoints": { view: renderEndpointsView },
-  "#/profile":   { view: renderProfileView },
+  "#/login":     { controller: showLogin,     public: true },
+  "#/register":  { controller: showRegister,  public: true },
+  "#/verify":    { controller: showVerify,    public: true },
+  "#/dashboard": { controller: showDashboard },
+  "#/users":     { controller: showUsers,     adminOnly: true },
+  "#/endpoints": { controller: showEndpoints },
+  "#/profile":   { controller: showProfile },
 };
 
 export const DEFAULT_PUBLIC_ROUTE = "#/login";

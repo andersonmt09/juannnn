@@ -1,24 +1,22 @@
-// Vista #/users (solo administradores): listar, crear, editar, eliminar y exportar.
+// Vista de gestión de usuarios (#/users). Dibuja la tabla y el formulario; las acciones las decide el controlador.
 import { el } from "../utilidades/dom.js";
-import { toast } from "../utilidades/notificaciones.js";
-import { exportToCsv } from "../utilidades/csv.js";
-import { userApi } from "../servicios-api/usuarios.js";
-import { session } from "../estado/sesion.js";
 import { pageHeader } from "../componentes/encabezado.js";
 import { createModal } from "../componentes/modal.js";
 import { emptyState } from "../componentes/estado-vacio.js";
 
-export async function renderUsersView(container) {
-  if (!session.isAdmin()) {
-    container.replaceChildren(pageHeader("Usuarios"), el("p", { class: "muted" }, ["Acceso restringido a administradores."]));
-    return;
-  }
-
-  let users = [];
-  let editingUser = null;
+/**
+ * @param {HTMLElement} container
+ * @param {{
+ *   onNew: () => void,
+ *   onEdit: (user: object) => void,
+ *   onDelete: (user: object) => void,
+ *   onSave: (data: { name: string, email: string, role: string, password: string }) => void,
+ *   onExport: () => void,
+ * }} handlers
+ */
+export function renderUsersView(container, handlers) {
   const tablePanel = el("div", { class: "panel" }, [el("p", { class: "muted" }, ["Cargando..."])]);
 
-  // Formulario (crear / editar)
   const passwordLabel = el("label", { for: "user-password" }, ["Contraseña"]);
   const form = el("form", {}, [
     el("label", { for: "user-name" }, ["Nombre"]),
@@ -39,96 +37,65 @@ export async function renderUsersView(container) {
   ]);
   const modal = createModal("Usuario", form);
 
-  function openForm(user = null) {
-    editingUser = user;
-    modal.setTitle(user ? "Editar usuario" : "Nuevo usuario");
-    form.reset();
-    form.elements.name.value = user?.name || "";
-    form.elements.email.value = user?.email || "";
-    form.elements.role.value = user?.role || "user";
-    form.elements.password.required = !user;
-    passwordLabel.textContent = user ? "Nueva contraseña (opcional)" : "Contraseña";
-    modal.open();
-  }
-
-  form.addEventListener("submit", async (event) => {
+  form.addEventListener("submit", (event) => {
     event.preventDefault();
-    const { name, email, role, password } = Object.fromEntries(new FormData(form));
-    try {
-      if (editingUser) {
-        await userApi.update(editingUser.id, { name, email, role });
-        if (password) await userApi.changePassword(editingUser.id, password);
-        toast.success("Usuario actualizado");
-      } else {
-        await userApi.create({ name, email, role, password });
-        toast.success("Usuario creado");
-      }
-      modal.close();
-      await loadUsers();
-    } catch (error) {
-      toast.error(error.message);
-    }
+    handlers.onSave(Object.fromEntries(new FormData(form)));
   });
 
-  // Tabla
-  async function removeUser(user) {
-    if (!confirm(`¿Eliminar a ${user.name}? (eliminación lógica)`)) return;
-    try {
-      await userApi.remove(user.id);
-      toast.success("Usuario eliminado");
-      await loadUsers();
-    } catch (error) {
-      toast.error(error.message);
-    }
-  }
-
-  function renderTable() {
-    if (!users.length) {
-      tablePanel.replaceChildren(emptyState("Sin usuarios", "Crea el primer usuario."));
-      return;
-    }
-    const currentId = session.getUser()?.id;
-    const rows = users.map((u) => el("tr", {}, [
-      el("td", {}, [String(u.id)]),
-      el("td", {}, [u.name]),
-      el("td", {}, [u.email]),
-      el("td", {}, [el("span", { class: `badge role-${u.role}` }, [u.role])]),
-      el("td", {}, [u.emailVerified ? "Sí" : "No"]),
-      el("td", { class: "actions" }, [
-        el("button", { class: "btn btn-sm", onclick: () => openForm(u) }, ["Editar"]),
-        el("button", {
-          class: "btn btn-sm btn-danger",
-          disabled: u.id === currentId || u.isSample,
-          title: u.isSample ? "Usuario demo protegido" : undefined,
-          onclick: () => removeUser(u),
-        }, ["Eliminar"]),
-      ]),
-    ]));
-    tablePanel.replaceChildren(el("table", { class: "table" }, [
-      el("thead", {}, [el("tr", {}, ["ID", "Nombre", "Correo", "Rol", "Verificado", "Acciones"].map((h) => el("th", {}, [h])))]),
-      el("tbody", {}, rows),
-    ]));
-  }
-
-  async function loadUsers() {
-    try {
-      users = await userApi.list();
-      renderTable();
-    } catch (error) {
-      tablePanel.replaceChildren(el("p", { class: "muted" }, ["Error al cargar usuarios."]));
-      toast.error(error.message);
-    }
-  }
-
-  const exportButton = el("button", {
-    class: "btn",
-    onclick: () => exportToCsv(users, "axon-usuarios.csv", [
-      ["id", "id"], ["name", "nombre"], ["email", "correo"], ["role", "rol"],
-      ["emailVerified", "verificado"], ["createdDate", "creado"],
+  container.replaceChildren(
+    pageHeader("Usuarios", "Gestión de cuentas y roles", [
+      el("button", { class: "btn", onclick: handlers.onExport }, ["Exportar CSV"]),
+      el("button", { class: "btn btn-primary", onclick: handlers.onNew }, ["+ Nuevo usuario"]),
     ]),
-  }, ["Exportar CSV"]);
-  const newButton = el("button", { class: "btn btn-primary", onclick: () => openForm() }, ["+ Nuevo usuario"]);
+    tablePanel,
+    modal.element
+  );
 
-  container.replaceChildren(pageHeader("Usuarios", "Gestión de cuentas y roles", [exportButton, newButton]), tablePanel, modal.element);
-  await loadUsers();
+  return {
+    showUsers(users, currentUserId) {
+      if (!users.length) {
+        tablePanel.replaceChildren(emptyState("Sin usuarios", "Crea el primer usuario."));
+        return;
+      }
+      const rows = users.map((u) => el("tr", {}, [
+        el("td", {}, [String(u.id)]),
+        el("td", {}, [u.name]),
+        el("td", {}, [u.email]),
+        el("td", {}, [el("span", { class: `badge role-${u.role}` }, [u.role])]),
+        el("td", {}, [u.emailVerified ? "Sí" : "No"]),
+        el("td", { class: "actions" }, [
+          el("button", { class: "btn btn-sm", onclick: () => handlers.onEdit(u) }, ["Editar"]),
+          el("button", {
+            class: "btn btn-sm btn-danger",
+            disabled: u.id === currentUserId || u.isSample,
+            title: u.isSample ? "Usuario demo protegido" : undefined,
+            onclick: () => handlers.onDelete(u),
+          }, ["Eliminar"]),
+        ]),
+      ]));
+      tablePanel.replaceChildren(el("table", { class: "table" }, [
+        el("thead", {}, [el("tr", {}, ["ID", "Nombre", "Correo", "Rol", "Verificado", "Acciones"].map((h) => el("th", {}, [h])))]),
+        el("tbody", {}, rows),
+      ]));
+    },
+
+    showError() {
+      tablePanel.replaceChildren(el("p", { class: "muted" }, ["Error al cargar usuarios."]));
+    },
+
+    openForm(user = null) {
+      modal.setTitle(user ? "Editar usuario" : "Nuevo usuario");
+      form.reset();
+      form.elements.name.value = user?.name || "";
+      form.elements.email.value = user?.email || "";
+      form.elements.role.value = user?.role || "user";
+      form.elements.password.required = !user;
+      passwordLabel.textContent = user ? "Nueva contraseña (opcional)" : "Contraseña";
+      modal.open();
+    },
+
+    closeForm() {
+      modal.close();
+    },
+  };
 }

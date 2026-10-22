@@ -1,7 +1,6 @@
-// Menú lateral y área de contenido de las páginas privadas.
+// Menú lateral y área de contenido de las páginas privadas. Recibe los datos y las acciones; no conoce la sesión.
 import { el, initials } from "../utilidades/dom.js";
 import { icon } from "../utilidades/iconos.js";
-import { session } from "../estado/sesion.js";
 
 const MENU = [
   { route: "#/dashboard", icon: "chart", label: "Dashboard" },
@@ -10,33 +9,26 @@ const MENU = [
   { route: "#/profile", icon: "shield", label: "Mi perfil" },
 ];
 
-function logout() {
-  session.clear();
-  location.hash = "#/login";
-}
+const themeLabel = (theme) => (theme === "light" ? "Modo oscuro" : "Modo claro");
 
-function themeButton() {
-  const label = () => (document.documentElement.dataset.theme === "light" ? "Modo oscuro" : "Modo claro");
-  const button = el("button", { type: "button", class: "btn btn-ghost full" }, [label()]);
-  button.addEventListener("click", () => {
-    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-    document.documentElement.dataset.theme = next;
-    session.setTheme(next);
-    button.textContent = label();
-  });
-  return button;
-}
-
-// Dibuja el layout y devuelve el contenedor donde se pinta cada vista.
-export function renderLayout(root) {
-  const user = session.getUser();
-
+/**
+ * Dibuja el layout y devuelve el contenedor donde se pinta cada página.
+ * @param {HTMLElement} root
+ * @param {{ user: object, isAdmin: boolean, theme: string }} data
+ * @param {{ onToggleTheme: () => string, onLogout: () => void }} handlers
+ */
+export function renderLayout(root, { user, isAdmin, theme }, { onToggleTheme, onLogout }) {
   const nav = el("nav", {}, MENU
-    .filter((item) => !item.adminOnly || session.isAdmin())
+    .filter((item) => !item.adminOnly || isAdmin)
     .map((item) => el("a", { href: item.route, class: "nav-item", "data-route": item.route }, [
       icon(item.icon, "nav-icon"),
       el("span", {}, [item.label]),
     ])));
+
+  const themeButton = el("button", { type: "button", class: "btn btn-ghost full" }, [themeLabel(theme)]);
+  themeButton.addEventListener("click", () => {
+    themeButton.textContent = themeLabel(onToggleTheme());
+  });
 
   const sidebar = el("aside", { class: "sidebar" }, [
     el("div", { class: "brand" }, [icon("logo", "brand-dot"), el("span", {}, ["AXON"])]),
@@ -47,8 +39,8 @@ export function renderLayout(root) {
       el("div", {}, [el("div", { class: "name" }, [user?.name || "—"]), el("div", { class: "role" }, [user?.role || ""])]),
     ]),
     el("div", { class: "sidebar-footer" }, [
-      themeButton(),
-      el("button", { type: "button", class: "btn btn-ghost full", onclick: logout }, [
+      themeButton,
+      el("button", { type: "button", class: "btn btn-ghost full", onclick: onLogout }, [
         icon("logout", "nav-icon"), " Cerrar sesión",
       ]),
     ]),

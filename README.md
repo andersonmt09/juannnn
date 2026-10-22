@@ -20,33 +20,43 @@ Aplicación web para administrar usuarios con inicio de sesión en dos pasos (co
 
 ## Arquitectura
 
-El proyecto sigue el patrón **Modelo – Vista – Controlador**. El frontend nunca se conecta a la base de datos: todo lo pide al backend, y el backend a su vez pide los datos a la API de la base de datos externa.
+El proyecto sigue el patrón **Modelo – Vista – Controlador** tanto en el backend como en el frontend. El frontend nunca se conecta a la base de datos: todo lo pide al backend, y el backend pide los datos a la API de la base de datos externa.
 
 ```
-FRONTEND (Vista)                        BACKEND (Controlador y Modelo)                                    BASE DE DATOS
+FRONTEND                                   BACKEND                                              BASE DE DATOS
 
-vistas/ → servicios-api/ ── HTTP ──►  api/rutas → seguridad/intermediarios → api/validadores → api/controladores
-              │                                                                     │
-           estado/ (sesión)                                             casos-de-uso/ → modelos/ ──►  API de la base de datos externa
-                                                                                │
-                                                                         proveedores/ (correo, tokens)
+vista ─► controlador ─► servicio ── HTTP ──► ruta ─► middlewares ─► controlador ─► servicio ─► modelo ──► API externa
+  ▲            │                                          (DTO de entrada)              │     (DTO de salida)
+  └── datos ───┘ (modelo: sesión)                                                integraciones (correo, tokens)
 ```
 
-## Relación con el diseño del sistema
+### Backend
 
-La organización del backend sigue el mismo flujo del diseño: **RF / RNF → Casos de uso / Endpoints → Base de datos → Diagrama de clases, secuencia y actividades**.
-
-| Elemento del diseño | Carpeta | Contenido |
+| Capa | Carpeta | Responsabilidad |
 |---|---|---|
-| Endpoints y validación de los RF | `backend/codigo/api/` | `rutas/` (cada endpoint), `validadores/` (datos de entrada y salida) y `controladores/` (reciben la petición y responden) |
-| Casos de uso, secuencia y actividades | `backend/codigo/casos-de-uso/` | Flujos del negocio: autenticación, usuarios, endpoints, métricas y códigos de verificación |
-| RNF (seguridad) | `backend/codigo/seguridad/` | `constantes/` (roles y parámetros de seguridad) e `intermediarios/` (autenticación, roles, límite de intentos, registro de peticiones, validación y errores) |
-| Base de datos | `backend/codigo/base-datos/` | `cliente-bd.js`: único punto de salida hacia la API de la base de datos externa; `crear-admin.js` |
-| Diagrama de clases | `backend/codigo/modelos/` | Una clase por entidad; única capa que pide datos a la base de datos externa |
-| Servicios técnicos | `backend/codigo/proveedores/` | Envío de correos y tokens JWT, separados de la lógica de negocio |
-| Vista | `frontend/codigo/vistas/` | Pantallas que ve el usuario |
+| Rutas | `rutas/` | Cada endpoint: URL, método y qué middlewares se aplican. `indice.js` las agrupa bajo `/api` |
+| Middlewares | `middlewares/` | Autenticación, roles, validación con DTO, límite de intentos, registro de peticiones y errores |
+| DTO | `dtos/entrada/` y `dtos/salida/` | Entrada: limpian y validan lo que envía el cliente. Salida: definen qué datos se responden (nunca el hash de la contraseña) |
+| **Controlador** | `controladores/` | Lee la petición ya validada, llama al servicio y responde en JSON |
+| Servicios | `servicios/` | Reglas de negocio. `apoyo/` contiene lógica compartida (códigos de verificación) |
+| **Modelo** | `modelos/` | Una clase por entidad; única capa que pide y guarda datos |
+| Integraciones | `integraciones/` | Comunicación con sistemas externos: API de la base de datos, correo SMTP y tokens JWT |
+| Configuración y constantes | `configuracion/`, `constantes/` | Variables de entorno, roles y parámetros de seguridad |
 
-La base de datos **no forma parte del proyecto**: aquí no hay SQL, tablas ni conexión directa. Los modelos llaman a la API de la base de datos externa mediante `base-datos/cliente-bd.js`, con la dirección y la clave definidas en `backend/.env`, archivo que no se sube al repositorio.
+En el backend la **vista** es la respuesta JSON, cuyo formato definen los DTO de salida.
+
+### Frontend
+
+| Capa | Carpeta | Responsabilidad |
+|---|---|---|
+| **Vista** | `vistas/` | Una por pantalla. Solo dibuja los datos que recibe y avisa de los eventos (`onSubmit`, `onDelete`…). No llama a la API ni navega |
+| **Controlador** | `controladores/` | Uno por pantalla. Pide los datos a los servicios, se los pasa a la vista, atiende sus eventos, muestra los mensajes y decide la navegación |
+| **Modelo** | `modelos/` | Estado del cliente: `sesion.js` (tokens y usuario) y `preferencias.js` (tema) |
+| Servicios | `servicios/` | `cliente-http.js` y un archivo por recurso del backend |
+| Enrutador | `enrutador/` | Relaciona cada ruta `#/...` con su controlador y protege las rutas privadas |
+| Componentes | `componentes/` | Piezas visuales reutilizables: menú, modal, gráfica, encabezado y estado vacío |
+
+La base de datos **no forma parte del proyecto**: aquí no hay SQL, tablas ni conexión directa. Los modelos del backend llaman a la API de la base de datos externa mediante `integraciones/cliente-bd.js`, con la dirección y la clave definidas en `backend/.env`, archivo que no se sube al repositorio.
 
 ## Estructura de carpetas
 
@@ -54,35 +64,37 @@ La base de datos **no forma parte del proyecto**: aquí no hay SQL, tablas ni co
 axon-stack-flow/
 ├── backend/
 │   ├── codigo/
-│   │   ├── api/
-│   │   │   ├── rutas/              indice.js (agrupa todas), autenticacion, usuarios, endpoints, metricas, salud
-│   │   │   ├── validadores/        base, autenticacion, usuarios, endpoints
-│   │   │   └── controladores/      autenticacion, usuarios, endpoints, metricas, salud
-│   │   ├── casos-de-uso/           autenticacion, codigos-verificacion, usuarios, endpoints, metricas
-│   │   ├── proveedores/            correo.js, tokens.js
+│   │   ├── rutas/                  indice.js, autenticacion, usuarios, endpoints, metricas, salud
+│   │   ├── middlewares/            autenticacion, roles, validacion, limite-intentos, registro-peticiones, errores
+│   │   ├── dtos/
+│   │   │   ├── entrada/            base, autenticacion, usuarios, endpoints
+│   │   │   └── salida/             usuario, endpoint, registro-peticion
+│   │   ├── controladores/          autenticacion, usuarios, endpoints, metricas, salud
+│   │   ├── servicios/              autenticacion, usuarios, endpoints, metricas
+│   │   │   └── apoyo/              codigos-verificacion
 │   │   ├── modelos/                usuario, codigo-verificacion, endpoint, registro-peticion
-│   │   ├── base-datos/             cliente-bd.js (llamadas a la API externa), crear-admin.js
-│   │   ├── seguridad/
-│   │   │   ├── constantes/         roles.js, seguridad.js
-│   │   │   └── intermediarios/     autenticacion, limite-intentos, registro-peticiones, validacion, errores
+│   │   ├── integraciones/          cliente-bd, correo, tokens
 │   │   ├── configuracion/          entorno.js
+│   │   ├── constantes/             roles.js, seguridad.js
 │   │   ├── utilidades/             error-http, manejador-async, validaciones
 │   │   ├── aplicacion.js           Configuración de Express
 │   │   └── arranque.js             Encendido del servidor
+│   ├── scripts/                    crear-admin.js
 │   ├── pruebas/
-│   │   ├── unitarias/              utilidades.test.js, validadores.test.js
+│   │   ├── unitarias/              dtos.test.js, utilidades.test.js
 │   │   └── integracion/            api.test.js
 │   └── .env.example
 │
 ├── frontend/
 │   ├── codigo/
-│   │   ├── vistas/                 autenticacion, panel, usuarios, endpoints, perfil
-│   │   ├── componentes/            menu, modal, grafica, encabezado, estado-vacio
-│   │   ├── servicios-api/          autenticacion, usuarios, endpoints, metricas
-│   │   ├── configuracion/          api.js (URL del backend), cliente-http.js
-│   │   ├── estado/                 sesion.js
+│   │   ├── vistas/                 inicio-sesion, registro, verificacion, panel, usuarios, endpoints, perfil
+│   │   ├── controladores/          los mismos nombres que vistas/ + sesion.js (cerrar sesión y tema)
+│   │   ├── modelos/                sesion.js, preferencias.js
+│   │   ├── servicios/              cliente-http, autenticacion, usuarios, endpoints, metricas
 │   │   ├── enrutador/              rutas.js, enrutador.js
-│   │   ├── utilidades/             dom, iconos, notificaciones, csv
+│   │   ├── componentes/            menu, modal, grafica, encabezado, estado-vacio
+│   │   ├── configuracion/          api.js (URL del backend y claves de almacenamiento)
+│   │   ├── utilidades/             dom, iconos, notificaciones, csv, almacenamiento
 │   │   └── principal.js            Punto de entrada
 │   ├── recursos/
 │   │   ├── estilos/                principal.css importa variables, base, estructura, componentes y autenticacion
@@ -99,12 +111,14 @@ Cada recurso tiene el mismo nombre en todas las capas. Por ejemplo, **usuarios**
 | Capa | Archivo |
 |---|---|
 | Vista | `frontend/codigo/vistas/usuarios.js` |
-| Servicio de la API | `frontend/codigo/servicios-api/usuarios.js` |
-| Ruta | `backend/codigo/api/rutas/usuarios.js` |
-| Validador | `backend/codigo/api/validadores/usuarios.js` |
-| Controlador | `backend/codigo/api/controladores/usuarios.js` |
-| Caso de uso | `backend/codigo/casos-de-uso/usuarios.js` |
+| Controlador (frontend) | `frontend/codigo/controladores/usuarios.js` |
+| Servicio (frontend) | `frontend/codigo/servicios/usuarios.js` |
+| Ruta | `backend/codigo/rutas/usuarios.js` |
+| DTO de entrada | `backend/codigo/dtos/entrada/usuarios.js` |
+| Controlador (backend) | `backend/codigo/controladores/usuarios.js` |
+| Servicio (backend) | `backend/codigo/servicios/usuarios.js` |
 | Modelo | `backend/codigo/modelos/usuario.js` |
+| DTO de salida | `backend/codigo/dtos/salida/usuario.js` |
 
 Los nombres de carpetas y archivos están en español; el código interno (variables, funciones, clases y endpoints) está en inglés.
 

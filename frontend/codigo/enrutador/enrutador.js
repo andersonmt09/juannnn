@@ -1,7 +1,10 @@
-// Muestra la vista que corresponde a la ruta actual y protege las rutas privadas.
+// Decide qué controlador atiende la ruta actual, protege las rutas privadas y arma el menú.
 import { ROUTES, DEFAULT_PUBLIC_ROUTE, DEFAULT_PRIVATE_ROUTE } from "./rutas.js";
-import { session } from "../estado/sesion.js";
+import { session } from "../modelos/sesion.js";
+import { preferences } from "../modelos/preferencias.js";
+import { logout, toggleTheme } from "../controladores/sesion.js";
 import { renderLayout, setActiveMenu } from "../componentes/menu.js";
+import { SESSION_EXPIRED_EVENT } from "../servicios/cliente-http.js";
 import { el } from "../utilidades/dom.js";
 
 function resolve(hash) {
@@ -15,11 +18,21 @@ function resolve(hash) {
   return hash;
 }
 
+function privateContainer(root) {
+  const existing = document.getElementById("page");
+  if (existing) return existing;
+  return renderLayout(
+    root,
+    { user: session.getUser(), isAdmin: session.isAdmin(), theme: preferences.getTheme() },
+    { onToggleTheme: toggleTheme, onLogout: logout }
+  );
+}
+
 function navigate() {
   const root = document.getElementById("app");
   const target = resolve(location.hash);
   if (target !== location.hash) {
-    location.hash = target; // dispara de nuevo navigate()
+    location.hash = target; // vuelve a llamar a navigate()
     return;
   }
 
@@ -27,16 +40,17 @@ function navigate() {
   if (route.public) {
     const container = el("div", { id: "auth-container" });
     root.replaceChildren(container);
-    route.view(container);
+    route.controller(container);
     return;
   }
 
-  const content = document.getElementById("page") || renderLayout(root);
+  const content = privateContainer(root);
   setActiveMenu(target);
-  route.view(content);
+  route.controller(content);
 }
 
 export function startRouter() {
   window.addEventListener("hashchange", navigate);
+  window.addEventListener(SESSION_EXPIRED_EVENT, () => { location.hash = DEFAULT_PUBLIC_ROUTE; });
   navigate();
 }

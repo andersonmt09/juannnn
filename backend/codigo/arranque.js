@@ -4,7 +4,7 @@ const { env, validateEnvironment } = require("./configuracion/entorno");
 validateEnvironment();
 
 const app = require("./aplicacion");
-const db = require("./base-datos/cliente-bd");
+const db = require("./integraciones/cliente-bd");
 
 async function start() {
   try {

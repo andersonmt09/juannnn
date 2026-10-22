@@ -1,5 +1,5 @@
 // Modelo de los códigos de verificación enviados por correo (recurso /verification-codes).
-const db = require("../base-datos/cliente-bd");
+const db = require("../integraciones/cliente-bd");
 
 class VerificationCode {
   constructor(row) {

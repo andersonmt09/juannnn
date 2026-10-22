@@ -3,9 +3,9 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const { env } = require("./configuracion/entorno");
-const apiRoutes = require("./api/rutas/indice");
-const requestLogger = require("./seguridad/intermediarios/registro-peticiones");
-const { notFound, errorHandler } = require("./seguridad/intermediarios/errores");
+const apiRoutes = require("./rutas/indice");
+const requestLogger = require("./middlewares/registro-peticiones");
+const { notFound, errorHandler } = require("./middlewares/errores");
 
 const app = express();
 

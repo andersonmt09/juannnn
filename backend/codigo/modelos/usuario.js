@@ -1,6 +1,6 @@
 // Modelo de usuario. Los datos viven en la base de datos externa (recurso /users).
-const db = require("../base-datos/cliente-bd");
-const { ROLES } = require("../seguridad/constantes/roles");
+const db = require("../integraciones/cliente-bd");
+const { ROLES } = require("../constantes/roles");
 
 class User {
   constructor(row) {

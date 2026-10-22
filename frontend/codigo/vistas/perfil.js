@@ -1,28 +1,22 @@
-// Vista #/profile: datos del usuario y cambio de contraseña.
+// Vista de perfil (#/profile): datos del usuario y formulario de cambio de contraseña.
 import { el } from "../utilidades/dom.js";
-import { toast } from "../utilidades/notificaciones.js";
-import { userApi } from "../servicios-api/usuarios.js";
-import { session } from "../estado/sesion.js";
 import { pageHeader } from "../componentes/encabezado.js";
 
-export function renderProfileView(container) {
-  const user = session.getUser();
-
+/**
+ * @param {HTMLElement} container
+ * @param {{ user: { name: string, email: string, role: string } }} data
+ * @param {{ onChangePassword: (password: string) => void }} handlers
+ */
+export function renderProfileView(container, { user }, { onChangePassword }) {
   const form = el("form", {}, [
     el("label", { for: "profile-password" }, ["Nueva contraseña (mínimo 6 caracteres)"]),
     el("input", { id: "profile-password", name: "password", type: "password", required: true, minlength: "6", autocomplete: "new-password" }),
     el("button", { type: "submit", class: "btn btn-primary" }, ["Actualizar contraseña"]),
   ]);
 
-  form.addEventListener("submit", async (event) => {
+  form.addEventListener("submit", (event) => {
     event.preventDefault();
-    try {
-      await userApi.changePassword(user.id, new FormData(form).get("password"));
-      toast.success("Contraseña actualizada");
-      form.reset();
-    } catch (error) {
-      toast.error(error.message);
-    }
+    onChangePassword(new FormData(form).get("password"));
   });
 
   container.replaceChildren(
@@ -34,4 +28,10 @@ export function renderProfileView(container) {
     ]),
     el("div", { class: "panel" }, [el("h3", {}, ["Cambiar contraseña"]), form])
   );
+
+  return {
+    resetForm() {
+      form.reset();
+    },
+  };
 }

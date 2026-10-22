@@ -1,5 +1,5 @@
 // Modelo del registro de peticiones a la API (recurso /request-logs).
-const db = require("../base-datos/cliente-bd");
+const db = require("../integraciones/cliente-bd");
 
 class RequestLog {
   constructor(row) {

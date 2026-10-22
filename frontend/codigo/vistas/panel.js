@@ -1,10 +1,6 @@
-// Vista #/dashboard
+// Vista del panel de métricas (#/dashboard). Solo dibuja los datos que recibe.
 import { el, formatDate } from "../utilidades/dom.js";
 import { icon } from "../utilidades/iconos.js";
-import { toast } from "../utilidades/notificaciones.js";
-import { exportToCsv } from "../utilidades/csv.js";
-import { metricApi } from "../servicios-api/metricas.js";
-import { session } from "../estado/sesion.js";
 import { pageHeader } from "../componentes/encabezado.js";
 import { doughnutChart } from "../componentes/grafica.js";
 import { emptyState } from "../componentes/estado-vacio.js";
@@ -34,45 +30,43 @@ function recentRequestsTable(requests) {
   ]);
 }
 
-export async function renderDashboardView(container) {
+const header = (userName) => pageHeader("Dashboard", `Resumen del sistema - ${userName || ""}`);
+
+export function renderDashboardLoading(container, { userName }) {
+  container.replaceChildren(header(userName), el("p", { class: "muted" }, ["Cargando..."]));
+}
+
+export function renderDashboardError(container, { userName }) {
+  container.replaceChildren(header(userName), el("p", { class: "muted" }, ["No se pudo cargar el dashboard."]));
+}
+
+/**
+ * @param {HTMLElement} container
+ * @param {{ userName: string, dashboard: object }} data
+ * @param {{ onExport: () => void }} handlers
+ */
+export function renderDashboardView(container, { userName, dashboard }, { onExport }) {
+  const s = dashboard.summary;
   container.replaceChildren(
-    pageHeader("Dashboard", `Resumen del sistema - ${session.getUser()?.name || ""}`),
-    el("p", { class: "muted" }, ["Cargando..."])
+    header(userName),
+    el("div", { class: "cards" }, [
+      summaryCard("Usuarios totales", s.usersTotal, "users"),
+      summaryCard("Usuarios activos", s.usersActive, "check"),
+      summaryCard("Administradores", s.usersAdmin, "shield"),
+      summaryCard("Endpoints registrados", s.endpoints, "link"),
+      summaryCard("Peticiones (24 h)", s.requestsLast24h, "chart"),
+      summaryCard("Latencia promedio", `${s.avgLatencyMs} ms`, "bolt"),
+    ]),
+    el("div", { class: "grid-2" }, [
+      doughnutChart("Códigos de respuesta", dashboard.requestsByStatus.map((x) => ({ label: String(x.status), value: x.count }))),
+      doughnutChart("Peticiones por método", dashboard.requestsByMethod.map((x) => ({ label: x.method, value: x.count }))),
+    ]),
+    el("div", { class: "panel" }, [
+      el("div", { class: "row-between" }, [
+        el("h3", {}, ["Actividad reciente"]),
+        el("button", { class: "btn btn-sm", onclick: onExport }, ["Exportar CSV"]),
+      ]),
+      recentRequestsTable(dashboard.recentRequests),
+    ])
   );
-
-  try {
-    const data = await metricApi.getDashboard();
-    const s = data.summary;
-
-    const exportButton = el("button", {
-      class: "btn btn-sm",
-      onclick: () => exportToCsv(data.recentRequests, "axon-actividad.csv", [
-        ["id", "id"], ["method", "metodo"], ["path", "ruta"], ["statusCode", "estado"],
-        ["latencyMs", "latencia_ms"], ["createdAt", "fecha"],
-      ]),
-    }, ["Exportar CSV"]);
-
-    container.replaceChildren(
-      pageHeader("Dashboard", `Resumen del sistema - ${session.getUser()?.name || ""}`),
-      el("div", { class: "cards" }, [
-        summaryCard("Usuarios totales", s.usersTotal, "users"),
-        summaryCard("Usuarios activos", s.usersActive, "check"),
-        summaryCard("Administradores", s.usersAdmin, "shield"),
-        summaryCard("Endpoints registrados", s.endpoints, "link"),
-        summaryCard("Peticiones (24 h)", s.requestsLast24h, "chart"),
-        summaryCard("Latencia promedio", `${s.avgLatencyMs} ms`, "bolt"),
-      ]),
-      el("div", { class: "grid-2" }, [
-        doughnutChart("Códigos de respuesta", data.requestsByStatus.map((x) => ({ label: String(x.status), value: x.count }))),
-        doughnutChart("Peticiones por método", data.requestsByMethod.map((x) => ({ label: x.method, value: x.count }))),
-      ]),
-      el("div", { class: "panel" }, [
-        el("div", { class: "row-between" }, [el("h3", {}, ["Actividad reciente"]), exportButton]),
-        recentRequestsTable(data.recentRequests),
-      ])
-    );
-  } catch (error) {
-    container.replaceChildren(pageHeader("Dashboard"), el("p", { class: "muted" }, ["No se pudo cargar el dashboard."]));
-    toast.error(error.message);
-  }
 }

@@ -8,9 +8,9 @@
     "backend": "node backend/codigo/arranque.js",
     "backend:dev": "node --watch backend/codigo/arranque.js",
     "frontend": "node frontend/automatizacion/servidor-local.js",
-    "crear-admin": "node backend/codigo/base-datos/crear-admin.js",
-    "test": "node --test backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/validadores.test.js backend/pruebas/integracion/api.test.js",
-    "pruebas:unitarias": "node --test backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/validadores.test.js",
+    "crear-admin": "node backend/scripts/crear-admin.js",
+    "test": "node --test backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/dtos.test.js backend/pruebas/integracion/api.test.js",
+    "pruebas:unitarias": "node --test backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/dtos.test.js",
     "pruebas:integracion": "node --test backend/pruebas/integracion/api.test.js"
   },
   "engines": {

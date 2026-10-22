@@ -1,0 +1,10 @@
+// Servicio de usuarios: llamadas a /api/users
+import { http } from "./cliente-http.js";
+
+export const userService = {
+  list: () => http.get("/users").then((res) => res.data),
+  create: (data) => http.post("/users", data).then((res) => res.data),
+  update: (id, data) => http.put(`/users/${id}`, data).then((res) => res.data),
+  changePassword: (id, password) => http.patch(`/users/${id}/password`, { password }),
+  remove: (id) => http.delete(`/users/${id}`),
+};
