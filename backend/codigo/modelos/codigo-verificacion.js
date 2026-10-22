@@ -1,5 +1,5 @@
-// Modelo de la tabla login_verification_codes (códigos enviados por correo).
-const { pool } = require("../base-datos/conexion");
+// Modelo de los códigos de verificación enviados por correo (recurso /verification-codes).
+const db = require("../base-datos/cliente-bd");
 
 class VerificationCode {
   constructor(row) {
@@ -17,39 +17,32 @@ class VerificationCode {
   static fromRow(row) { return row ? new VerificationCode(row) : null; }
 
   static async create({ userId, email, purpose, codeHash, expiresAt }) {
-    const [result] = await pool.query(
-      `INSERT INTO login_verification_codes (user_id, email, purpose, code_hash, expires_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      [userId, email, purpose, codeHash, expiresAt]
-    );
-    return result.insertId;
+    const row = await db.post("/verification-codes", {
+      user_id: userId,
+      email,
+      purpose,
+      code_hash: codeHash,
+      expires_at: expiresAt.toISOString(),
+    });
+    return row.id;
   }
 
-  // Último código sin usar y sin expirar para un correo y propósito.
+  // Último código sin usar y sin vencer para un correo y propósito.
   static async findActive(email, purpose) {
-    const [rows] = await pool.query(
-      `SELECT * FROM login_verification_codes
-       WHERE email = ? AND purpose = ? AND used = 0 AND expires_at > UTC_TIMESTAMP()
-       ORDER BY id DESC LIMIT 1`,
-      [email, purpose]
-    );
-    return VerificationCode.fromRow(rows[0]);
+    return VerificationCode.fromRow(await db.find("/verification-codes/active", { email, purpose }));
   }
 
   static async incrementAttempts(id) {
-    await pool.query("UPDATE login_verification_codes SET attempts = attempts + 1 WHERE id = ?", [id]);
+    await db.post(`/verification-codes/${id}/attempts`);
   }
 
   static async markUsed(id) {
-    await pool.query("UPDATE login_verification_codes SET used = 1 WHERE id = ?", [id]);
+    await db.patch(`/verification-codes/${id}`, { used: true });
   }
 
   // Invalida los códigos anteriores antes de generar uno nuevo.
   static async invalidateAll(email, purpose) {
-    await pool.query(
-      "UPDATE login_verification_codes SET used = 1 WHERE email = ? AND purpose = ? AND used = 0",
-      [email, purpose]
-    );
+    await db.post("/verification-codes/invalidate", { email, purpose });
   }
 }
 

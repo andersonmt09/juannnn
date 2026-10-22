@@ -1,10 +1,10 @@
-// Estado de la API y de la conexión a la base de datos.
-const { testConnection } = require("../../base-datos/conexion");
+// Estado de la API y de la base de datos externa.
+const db = require("../../base-datos/cliente-bd");
 
 async function check(req, res) {
   let database = "ok";
   try {
-    await testConnection();
+    await db.ping();
   } catch {
     database = "unreachable";
   }

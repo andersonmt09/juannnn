@@ -7,14 +7,11 @@ const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   frontendOrigin: process.env.FRONTEND_ORIGIN || "http://localhost:5500,http://127.0.0.1:5500",
 
-  // La base de datos es externa: aquí solo están los datos de conexión.
-  database: {
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT) || 3306,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD || "",
-    name: process.env.DB_NAME,
-    ssl: process.env.DB_SSL === "true",
+  // La base de datos es externa: el backend solo conoce la dirección de su API.
+  databaseApi: {
+    url: process.env.DATABASE_API_URL || "",
+    key: process.env.DATABASE_API_KEY || "",
+    timeoutMs: Number(process.env.DATABASE_API_TIMEOUT_MS) || 5000,
   },
 
   jwt: {
@@ -36,9 +33,8 @@ const env = {
 // Detiene el arranque si falta alguna variable obligatoria.
 function validateEnvironment() {
   const missing = [];
-  if (!env.database.host) missing.push("DB_HOST");
-  if (!env.database.user) missing.push("DB_USER");
-  if (!env.database.name) missing.push("DB_NAME");
+  if (!/^https?:\/\//.test(env.databaseApi.url)) missing.push("DATABASE_API_URL (debe empezar por http:// o https://)");
+  if (!env.databaseApi.key) missing.push("DATABASE_API_KEY");
   if (!env.jwt.secret || env.jwt.secret.length < 16) missing.push("JWT_SECRET (mínimo 16 caracteres)");
   if (!env.jwt.refreshSecret || env.jwt.refreshSecret.length < 16) missing.push("JWT_REFRESH_SECRET (mínimo 16 caracteres)");
 

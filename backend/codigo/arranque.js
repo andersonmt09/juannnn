@@ -1,18 +1,18 @@
-// Arranque: valida el .env, comprueba la conexión a la base de datos e inicia el servidor.
+// Arranque: valida el .env, comprueba que la API de la base de datos responde e inicia el servidor.
 const { env, validateEnvironment } = require("./configuracion/entorno");
 
 validateEnvironment();
 
 const app = require("./aplicacion");
-const { testConnection, closeConnection } = require("./base-datos/conexion");
+const db = require("./base-datos/cliente-bd");
 
 async function start() {
   try {
-    await testConnection();
-    console.log(`[db] Conectado a la base de datos externa (${env.database.host}:${env.database.port})`);
+    await db.ping();
+    console.log(`[bd] API de la base de datos disponible (${env.databaseApi.url})`);
   } catch (error) {
-    console.error("[db] No se pudo conectar a la base de datos:", error.message);
-    console.error("     Revisa DB_HOST, DB_USER, DB_PASSWORD y DB_NAME en backend/.env");
+    console.error("[bd] No se pudo contactar la API de la base de datos:", error.message);
+    console.error("     Revisa DATABASE_API_URL y DATABASE_API_KEY en backend/.env");
     process.exit(1);
   }
 
@@ -22,10 +22,7 @@ async function start() {
 
   const shutdown = (signal) => {
     console.log(`\n[backend] ${signal} recibido. Cerrando...`);
-    server.close(async () => {
-      await closeConnection().catch(() => {});
-      process.exit(0);
-    });
+    server.close(() => process.exit(0));
     setTimeout(() => process.exit(1), 10000).unref();
   };
 

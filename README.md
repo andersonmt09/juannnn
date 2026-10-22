@@ -6,7 +6,7 @@ Aplicación web para administrar usuarios con inicio de sesión en dos pasos (co
 |---|---|---|
 | Backend (API REST) | `backend/` | Node.js, Express, JWT, bcrypt |
 | Frontend (interfaz web) | `frontend/` | HTML, CSS y JavaScript (módulos ES) |
-| Base de datos | Externa | MySQL 8 — no está dentro del proyecto |
+| Base de datos | Externa | Se consulta por medio de su API — no hay código de base de datos en el proyecto |
 
 ## Funcionalidades
 
@@ -20,14 +20,14 @@ Aplicación web para administrar usuarios con inicio de sesión en dos pasos (co
 
 ## Arquitectura
 
-El proyecto sigue el patrón **Modelo – Vista – Controlador**. El frontend nunca se conecta a la base de datos: todo lo pide al backend a través de la API.
+El proyecto sigue el patrón **Modelo – Vista – Controlador**. El frontend nunca se conecta a la base de datos: todo lo pide al backend, y el backend a su vez pide los datos a la API de la base de datos externa.
 
 ```
 FRONTEND (Vista)                        BACKEND (Controlador y Modelo)                                    BASE DE DATOS
 
 vistas/ → servicios-api/ ── HTTP ──►  api/rutas → seguridad/intermediarios → api/validadores → api/controladores
               │                                                                     │
-           estado/ (sesión)                                             casos-de-uso/ → modelos/ ──►  MySQL externa
+           estado/ (sesión)                                             casos-de-uso/ → modelos/ ──►  API de la base de datos externa
                                                                                 │
                                                                          proveedores/ (correo, tokens)
 ```
@@ -41,12 +41,12 @@ La organización del backend sigue el mismo flujo del diseño: **RF / RNF → Ca
 | Endpoints y validación de los RF | `backend/codigo/api/` | `rutas/` (cada endpoint), `validadores/` (datos de entrada y salida) y `controladores/` (reciben la petición y responden) |
 | Casos de uso, secuencia y actividades | `backend/codigo/casos-de-uso/` | Flujos del negocio: autenticación, usuarios, endpoints, métricas y códigos de verificación |
 | RNF (seguridad) | `backend/codigo/seguridad/` | `constantes/` (roles y parámetros de seguridad) e `intermediarios/` (autenticación, roles, límite de intentos, registro de peticiones, validación y errores) |
-| Base de datos | `backend/codigo/base-datos/` | Conexión al MySQL externo, creación de tablas y del primer administrador |
-| Diagrama de clases | `backend/codigo/modelos/` | Una clase por tabla; única capa que consulta la base de datos |
+| Base de datos | `backend/codigo/base-datos/` | `cliente-bd.js`: único punto de salida hacia la API de la base de datos externa; `crear-admin.js` |
+| Diagrama de clases | `backend/codigo/modelos/` | Una clase por entidad; única capa que pide datos a la base de datos externa |
 | Servicios técnicos | `backend/codigo/proveedores/` | Envío de correos y tokens JWT, separados de la lógica de negocio |
 | Vista | `frontend/codigo/vistas/` | Pantallas que ve el usuario |
 
-La base de datos **no forma parte del proyecto**. El backend se conecta a un MySQL externo con los datos de `backend/.env`, archivo que no se sube al repositorio.
+La base de datos **no forma parte del proyecto**: aquí no hay SQL, tablas ni conexión directa. Los modelos llaman a la API de la base de datos externa mediante `base-datos/cliente-bd.js`, con la dirección y la clave definidas en `backend/.env`, archivo que no se sube al repositorio.
 
 ## Estructura de carpetas
 
@@ -61,7 +61,7 @@ axon-stack-flow/
 │   │   ├── casos-de-uso/           autenticacion, codigos-verificacion, usuarios, endpoints, metricas
 │   │   ├── proveedores/            correo.js, tokens.js
 │   │   ├── modelos/                usuario, codigo-verificacion, endpoint, registro-peticion
-│   │   ├── base-datos/             conexion.js, inicializar-bd.js, crear-admin.js
+│   │   ├── base-datos/             cliente-bd.js (llamadas a la API externa), crear-admin.js
 │   │   ├── seguridad/
 │   │   │   ├── constantes/         roles.js, seguridad.js
 │   │   │   └── intermediarios/     autenticacion, limite-intentos, registro-peticiones, validacion, errores
@@ -135,9 +135,34 @@ Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el tok
 
 Respuesta correcta: `{ "ok": true, ... }` · Respuesta con error: `{ "ok": false, "message": "..." }`
 
+## API de la base de datos externa
+
+Los modelos usan los siguientes recursos de la API externa. Cada petición envía la clave en el encabezado `x-api-key` y los datos viajan en JSON con los nombres de columna de la base (`password_hash`, `email_verified`, `created_at`...).
+
+| Modelo | Método | Ruta | Uso |
+|---|---|---|---|
+| Estado | GET | `/health` | Comprobar que la API responde |
+| `usuario.js` | GET | `/users?email=&includeInactive=&page=&limit=` | Buscar y listar usuarios → `{ data, total }` |
+| | GET | `/users/:id` | Un usuario (404 si no existe) |
+| | GET | `/users/count-by-role` | `{ admin, user, inactive }` |
+| | POST | `/users` | Crear usuario |
+| | PATCH | `/users/:id` | Editar datos, contraseña, verificación o rol |
+| `codigo-verificacion.js` | POST | `/verification-codes` | Guardar un código (hash) |
+| | GET | `/verification-codes/active?email=&purpose=` | Último código vigente (404 si no hay) |
+| | POST | `/verification-codes/:id/attempts` | Sumar un intento |
+| | PATCH | `/verification-codes/:id` | Marcar como usado |
+| | POST | `/verification-codes/invalidate` | Invalidar los códigos anteriores |
+| `endpoint.js` | GET | `/endpoints`, `/endpoints/:id`, `/endpoints/count` | Consultar endpoints monitoreados |
+| | POST / DELETE | `/endpoints`, `/endpoints/:id` | Crear y eliminar |
+| `registro-peticion.js` | POST | `/request-logs` | Registrar una petición |
+| | GET | `/request-logs?limit=` | Últimas peticiones → `{ data }` |
+| | GET | `/request-logs/summary` | `{ total, last24h, avgLatencyMs, byStatus, byMethod }` |
+
+Si la API externa no responde, el backend devuelve 503; si responde con error, 502.
+
 ## Instalación
 
-**Requisitos:** Node.js 18 o superior y acceso a un servidor MySQL 8.
+**Requisitos:** Node.js 18 o superior y la dirección y clave de la API de la base de datos externa.
 
 Todos los comandos se ejecutan desde la carpeta raíz del proyecto.
 
@@ -155,17 +180,16 @@ cp backend/.env.example backend/.env       # Windows: copy backend\.env.example 
 
 | Variable | Descripción |
 |---|---|
-| `DB_HOST`, `DB_PORT` | Servidor de la base de datos |
-| `DB_USER`, `DB_PASSWORD` | Credenciales de MySQL |
-| `DB_NAME` | Nombre de la base (`axon_db`) |
+| `DATABASE_API_URL` | Dirección de la API de la base de datos externa |
+| `DATABASE_API_KEY` | Clave de acceso a esa API |
+| `DATABASE_API_TIMEOUT_MS` | Tiempo máximo de espera por petición (por defecto 5000) |
 | `JWT_SECRET`, `JWT_REFRESH_SECRET` | Textos secretos de al menos 16 caracteres |
 | `FRONTEND_ORIGIN` | Direcciones del frontend permitidas por CORS |
 | `SMTP_*` | Opcional. Sin SMTP, los códigos de verificación se muestran en la consola del backend |
 
-**3. Preparar la base de datos** (una sola vez)
+**3. Crear el primer administrador** (una sola vez; se guarda en la base de datos externa)
 
 ```bash
-npm run inicializar-bd
 npm run crear-admin -- "Nombre Apellido" admin@correo.com "Contrasena1"
 ```
 
@@ -185,11 +209,10 @@ Abre http://localhost:5500 e inicia sesión con el administrador creado.
 | `npm run backend` | Inicia la API |
 | `npm run backend:dev` | Inicia la API y la reinicia al guardar cambios |
 | `npm run frontend` | Inicia el servidor local del frontend |
-| `npm run inicializar-bd` | Crea la base de datos y las tablas en el servidor MySQL |
 | `npm run crear-admin -- "Nombre" correo "Clave"` | Crea un usuario administrador |
 | `npm test` | Todas las pruebas (unitarias e integración) |
 | `npm run pruebas:unitarias` | Solo pruebas unitarias (no necesitan base de datos) |
-| `npm run pruebas:integracion` | Solo pruebas de la API (necesitan `backend/.env` y la base de datos) |
+| `npm run pruebas:integracion` | Solo pruebas de la API (necesitan `backend/.env` y la API de la base de datos disponible) |
 
 ## Seguridad
 
@@ -197,6 +220,7 @@ Abre http://localhost:5500 e inicia sesión con el administrador creado.
 - Tokens JWT: acceso de 8 horas y renovación de 7 días.
 - Códigos de 6 dígitos que vencen en 5 minutos y permiten 5 intentos.
 - Máximo 5 intentos fallidos de autenticación por IP cada 15 minutos.
-- Validación de todos los datos de entrada y consultas SQL con parámetros.
+- Validación de todos los datos de entrada antes de enviarlos a la base de datos.
+- El proyecto no tiene acceso directo a la base: solo usa su API con una clave y un tiempo máximo de espera.
 - Cabeceras de seguridad con Helmet y CORS limitado a las direcciones del frontend.
 - Credenciales solo en `backend/.env`, excluido del repositorio.

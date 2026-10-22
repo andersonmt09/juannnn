@@ -8,7 +8,6 @@
     "backend": "node backend/codigo/arranque.js",
     "backend:dev": "node --watch backend/codigo/arranque.js",
     "frontend": "node frontend/automatizacion/servidor-local.js",
-    "inicializar-bd": "node backend/codigo/base-datos/inicializar-bd.js",
     "crear-admin": "node backend/codigo/base-datos/crear-admin.js",
     "test": "node --test backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/validadores.test.js backend/pruebas/integracion/api.test.js",
     "pruebas:unitarias": "node --test backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/validadores.test.js",
@@ -25,7 +24,6 @@
     "express-rate-limit": "^7.4.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.11.3",
     "nodemailer": "^6.9.15"
   }
 }

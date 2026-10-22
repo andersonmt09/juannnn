@@ -1,10 +1,9 @@
 // Pruebas de la API completa. Levantan aplicacion.js en un puerto libre,
 // así que no hace falta tener el servidor encendido, pero sí backend/.env
-// con una base de datos accesible.
+// con la API de la base de datos externa disponible.
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { validateEnvironment } = require("../../codigo/configuracion/entorno");
-const { closeConnection } = require("../../codigo/base-datos/conexion");
 
 validateEnvironment();
 const app = require("../../codigo/aplicacion");
@@ -20,7 +19,6 @@ test.before(async () => {
 
 test.after(async () => {
   await new Promise((resolve) => server.close(resolve));
-  await closeConnection();
 });
 
 async function request(method, path, body) {

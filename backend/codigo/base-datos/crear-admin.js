@@ -2,7 +2,6 @@
 // Uso: npm run crear-admin -- "Nombre" correo@dominio.com "Contraseña"
 const bcrypt = require("bcryptjs");
 const { validateEnvironment } = require("../configuracion/entorno");
-const { closeConnection } = require("./conexion");
 const User = require("../modelos/usuario");
 const { ROLES } = require("../seguridad/constantes/roles");
 const { SECURITY } = require("../seguridad/constantes/seguridad");
@@ -34,5 +33,4 @@ main()
   .catch((error) => {
     console.error("Error:", error.message);
     process.exitCode = 1;
-  })
-  .finally(() => closeConnection().catch(() => {}));
+  });
