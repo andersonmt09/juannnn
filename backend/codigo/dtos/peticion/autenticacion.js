@@ -1,23 +1,10 @@
-// DTOs de entrada para /api/auth: limpian y validan lo que envía el cliente.
+// DTOs de petición de /api/auth: limpian y validan lo que envía el cliente.
 const BaseDto = require("./base");
 const { isValidEmail, normalizeEmail } = require("../../utilidades/validaciones");
 const { SECURITY } = require("../../constantes/seguridad");
 
-class LoginDto extends BaseDto {
-  constructor({ email, password } = {}) {
-    super();
-    this.email = normalizeEmail(email);
-    this.password = password || "";
-  }
-  validate() {
-    const errors = [];
-    if (!isValidEmail(this.email)) errors.push("El correo electrónico no es válido");
-    if (!this.password) errors.push("La contraseña es obligatoria");
-    return errors;
-  }
-}
-
-class RegisterDto extends BaseDto {
+// POST /api/auth/register
+class RegisterRequestDto extends BaseDto {
   constructor({ name, email, password } = {}) {
     super();
     this.name = String(name || "").trim();
@@ -35,7 +22,23 @@ class RegisterDto extends BaseDto {
   }
 }
 
-class VerifyCodeDto extends BaseDto {
+// POST /api/auth/login
+class LoginRequestDto extends BaseDto {
+  constructor({ email, password } = {}) {
+    super();
+    this.email = normalizeEmail(email);
+    this.password = password || "";
+  }
+  validate() {
+    const errors = [];
+    if (!isValidEmail(this.email)) errors.push("El correo electrónico no es válido");
+    if (!this.password) errors.push("La contraseña es obligatoria");
+    return errors;
+  }
+}
+
+// POST /api/auth/register/verify y POST /api/auth/login/verify
+class VerifyCodeRequestDto extends BaseDto {
   constructor({ email, code } = {}) {
     super();
     this.email = normalizeEmail(email);
@@ -49,7 +52,8 @@ class VerifyCodeDto extends BaseDto {
   }
 }
 
-class EmailDto extends BaseDto {
+// POST /api/auth/register/resend-code y POST /api/auth/login/resend-code
+class ResendCodeRequestDto extends BaseDto {
   constructor({ email } = {}) {
     super();
     this.email = normalizeEmail(email);
@@ -59,7 +63,8 @@ class EmailDto extends BaseDto {
   }
 }
 
-class RefreshTokenDto extends BaseDto {
+// POST /api/auth/refresh-token
+class RefreshTokenRequestDto extends BaseDto {
   constructor({ refreshToken } = {}) {
     super();
     this.refreshToken = refreshToken || "";
@@ -69,4 +74,10 @@ class RefreshTokenDto extends BaseDto {
   }
 }
 
-module.exports = { LoginDto, RegisterDto, VerifyCodeDto, EmailDto, RefreshTokenDto };
+module.exports = {
+  RegisterRequestDto,
+  LoginRequestDto,
+  VerifyCodeRequestDto,
+  ResendCodeRequestDto,
+  RefreshTokenRequestDto,
+};

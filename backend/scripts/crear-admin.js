@@ -5,12 +5,12 @@ const { validateEnvironment } = require("../codigo/configuracion/entorno");
 const User = require("../codigo/modelos/usuario");
 const { ROLES } = require("../codigo/constantes/roles");
 const { SECURITY } = require("../codigo/constantes/seguridad");
-const { CreateUserDto } = require("../codigo/dtos/entrada/usuarios");
+const { CreateUserRequestDto } = require("../codigo/dtos/peticion/usuarios");
 
 async function main() {
   validateEnvironment();
   const [name, email, password] = process.argv.slice(2);
-  const dto = new CreateUserDto({ name, email, password, role: ROLES.ADMIN });
+  const dto = new CreateUserRequestDto({ name, email, password, role: ROLES.ADMIN });
   const errors = dto.validate();
   if (errors.length) {
     console.error("Uso: npm run crear-admin -- \"Nombre\" correo@dominio.com \"Contraseña\"");

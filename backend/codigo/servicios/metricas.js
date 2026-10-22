@@ -3,7 +3,6 @@ const User = require("../modelos/usuario");
 const Endpoint = require("../modelos/endpoint");
 const RequestLog = require("../modelos/registro-peticion");
 const { ROLES } = require("../constantes/roles");
-const { RequestLogResponseDto } = require("../dtos/salida/registro-peticion");
 
 async function getDashboard() {
   const [roles, endpointCount, logs, recentLogs] = await Promise.all([
@@ -30,7 +29,7 @@ async function getDashboard() {
     },
     requestsByStatus: logs.byStatus,
     requestsByMethod: logs.byMethod,
-    recentRequests: recentLogs.map((log) => new RequestLogResponseDto(log)),
+    recentRequests: recentLogs,
   };
 }
 

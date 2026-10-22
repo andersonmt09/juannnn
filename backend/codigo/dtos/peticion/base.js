@@ -1,4 +1,4 @@
-// Clase base de los DTOs: cada DTO limpia los datos en el constructor y define validate().
+// Clase base de los DTOs de petición: cada DTO limpia los datos en el constructor y define validate().
 const HttpError = require("../../utilidades/error-http");
 
 class BaseDto {

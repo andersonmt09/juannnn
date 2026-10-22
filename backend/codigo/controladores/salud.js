@@ -1,14 +1,11 @@
-// Estado de la API y de la base de datos externa.
-const db = require("../integraciones/cliente-bd");
+// Controlador de /api/health: estado de la API y de la base de datos externa (HealthResponseDto).
+const healthService = require("../servicios/salud");
+const asyncHandler = require("../utilidades/manejador-async");
+const { HealthResponseDto } = require("../dtos/respuesta/salud");
 
-async function check(req, res) {
-  let database = "ok";
-  try {
-    await db.ping();
-  } catch {
-    database = "unreachable";
-  }
-  res.status(database === "ok" ? 200 : 503).json({ ok: database === "ok", service: "axon-api", database });
-}
+const check = asyncHandler(async (req, res) => {
+  const status = await healthService.check();
+  res.status(status.databaseAvailable ? 200 : 503).json(new HealthResponseDto(status));
+});
 
 module.exports = { check };

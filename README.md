@@ -25,9 +25,9 @@ El proyecto sigue el patrón **Modelo – Vista – Controlador** tanto en el ba
 ```
 FRONTEND                                   BACKEND                                              BASE DE DATOS
 
-vista ─► controlador ─► servicio ── HTTP ──► ruta ─► middlewares ─► controlador ─► servicio ─► modelo ──► API externa
-  ▲            │                                          (DTO de entrada)              │     (DTO de salida)
-  └── datos ───┘ (modelo: sesión)                                                integraciones (correo, tokens)
+vista ─► controlador ─► servicio ── req ──► ruta ─► middlewares ─► DTO de petición ─► controlador ─► servicio ─► modelo ──► API externa
+  ▲                         │                                                               │
+  └──── datos ◄─────────────┴──────── res ◄──────────── DTO de respuesta ◄──────────────────┘
 ```
 
 ### Backend
@@ -36,14 +36,14 @@ vista ─► controlador ─► servicio ── HTTP ──► ruta ─► middl
 |---|---|---|
 | Rutas | `rutas/` | Cada endpoint: URL, método y qué middlewares se aplican. `indice.js` las agrupa bajo `/api` |
 | Middlewares | `middlewares/` | Autenticación, roles, validación con DTO, límite de intentos, registro de peticiones y errores |
-| DTO | `dtos/entrada/` y `dtos/salida/` | Entrada: limpian y validan lo que envía el cliente. Salida: definen qué datos se responden (nunca el hash de la contraseña) |
-| **Controlador** | `controladores/` | Lee la petición ya validada, llama al servicio y responde en JSON |
-| Servicios | `servicios/` | Reglas de negocio. `apoyo/` contiene lógica compartida (códigos de verificación) |
+| DTO | `dtos/peticion/` y `dtos/respuesta/` | **Petición (req):** cada endpoint con datos tiene su DTO, que reúne body, `:id` y `?query`, los limpia y los valida. **Respuesta (res):** cada endpoint responde con su DTO; nunca se envía un modelo directo ni el hash de la contraseña |
+| **Controlador** | `controladores/` | Recibe el DTO de petición (`req.dto`), llama al servicio y responde con el DTO de respuesta |
+| Servicios | `servicios/` | Reglas de negocio; devuelven datos del dominio, no respuestas HTTP. `apoyo/` contiene lógica compartida (códigos de verificación) |
 | **Modelo** | `modelos/` | Una clase por entidad; única capa que pide y guarda datos |
 | Integraciones | `integraciones/` | Comunicación con sistemas externos: API de la base de datos, correo SMTP y tokens JWT |
 | Configuración y constantes | `configuracion/`, `constantes/` | Variables de entorno, roles y parámetros de seguridad |
 
-En el backend la **vista** es la respuesta JSON, cuyo formato definen los DTO de salida.
+En el backend la **vista** es la respuesta JSON, cuyo formato definen los DTO de respuesta.
 
 ### Frontend
 
@@ -67,10 +67,10 @@ axon-stack-flow/
 │   │   ├── rutas/                  indice.js, autenticacion, usuarios, endpoints, metricas, salud
 │   │   ├── middlewares/            autenticacion, roles, validacion, limite-intentos, registro-peticiones, errores
 │   │   ├── dtos/
-│   │   │   ├── entrada/            base, autenticacion, usuarios, endpoints
-│   │   │   └── salida/             usuario, endpoint, registro-peticion
+│   │   │   ├── peticion/           base, autenticacion, usuarios, endpoints
+│   │   │   └── respuesta/          comunes, autenticacion, usuarios, endpoints, metricas, salud
 │   │   ├── controladores/          autenticacion, usuarios, endpoints, metricas, salud
-│   │   ├── servicios/              autenticacion, usuarios, endpoints, metricas
+│   │   ├── servicios/              autenticacion, usuarios, endpoints, metricas, salud
 │   │   │   └── apoyo/              codigos-verificacion
 │   │   ├── modelos/                usuario, codigo-verificacion, endpoint, registro-peticion
 │   │   ├── integraciones/          cliente-bd, correo, tokens
@@ -114,11 +114,11 @@ Cada recurso tiene el mismo nombre en todas las capas. Por ejemplo, **usuarios**
 | Controlador (frontend) | `frontend/codigo/controladores/usuarios.js` |
 | Servicio (frontend) | `frontend/codigo/servicios/usuarios.js` |
 | Ruta | `backend/codigo/rutas/usuarios.js` |
-| DTO de entrada | `backend/codigo/dtos/entrada/usuarios.js` |
+| DTO de petición | `backend/codigo/dtos/peticion/usuarios.js` |
 | Controlador (backend) | `backend/codigo/controladores/usuarios.js` |
 | Servicio (backend) | `backend/codigo/servicios/usuarios.js` |
 | Modelo | `backend/codigo/modelos/usuario.js` |
-| DTO de salida | `backend/codigo/dtos/salida/usuario.js` |
+| DTO de respuesta | `backend/codigo/dtos/respuesta/usuarios.js` |
 
 Los nombres de carpetas y archivos están en español; el código interno (variables, funciones, clases y endpoints) está en inglés.
 
@@ -126,28 +126,31 @@ Los nombres de carpetas y archivos están en español; el código interno (varia
 
 Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador.
 
-| Recurso | Método | Ruta | Acceso |
-|---|---|---|---|
-| Estado | GET | `/health` | Público |
-| Autenticación | POST | `/auth/register` | Público |
-| | POST | `/auth/register/verify` | Público |
-| | POST | `/auth/register/resend-code` | Público |
-| | POST | `/auth/login` | Público |
-| | POST | `/auth/login/verify` | Público |
-| | POST | `/auth/login/resend-code` | Público |
-| | POST | `/auth/refresh-token` | Público |
-| Usuarios | GET | `/users` | Sesión |
-| | GET | `/users/:id` | Sesión |
-| | POST | `/users` | Admin |
-| | PUT | `/users/:id` | Admin |
-| | PATCH | `/users/:id/password` | Sesión (propio usuario o admin) |
-| | DELETE | `/users/:id` | Admin |
-| Endpoints | GET | `/endpoints` | Sesión |
-| | POST | `/endpoints` | Admin |
-| | DELETE | `/endpoints/:id` | Admin |
-| Métricas | GET | `/metrics/dashboard` | Sesión |
+Cada endpoint tiene su **DTO de petición** (lo que entra en `req`: body, `:id` y `?query`) y su **DTO de respuesta** (lo que sale en `res`).
 
-Respuesta correcta: `{ "ok": true, ... }` · Respuesta con error: `{ "ok": false, "message": "..." }`
+| Método | Ruta | Acceso | DTO de petición (`dtos/peticion/`) | DTO de respuesta (`dtos/respuesta/`) |
+|---|---|---|---|---|
+| GET | `/health` | Público | — | `HealthResponseDto` |
+| POST | `/auth/register` | Público | `RegisterRequestDto` | `VerificationRequiredResponseDto` |
+| POST | `/auth/register/verify` | Público | `VerifyCodeRequestDto` | `EmailVerifiedResponseDto` |
+| POST | `/auth/register/resend-code` | Público | `ResendCodeRequestDto` | `MessageResponseDto` |
+| POST | `/auth/login` | Público | `LoginRequestDto` | `VerificationRequiredResponseDto` |
+| POST | `/auth/login/verify` | Público | `VerifyCodeRequestDto` | `SessionResponseDto` |
+| POST | `/auth/login/resend-code` | Público | `ResendCodeRequestDto` | `MessageResponseDto` |
+| POST | `/auth/refresh-token` | Público | `RefreshTokenRequestDto` | `SessionResponseDto` |
+| GET | `/users?page=&limit=&all=` | Sesión | `ListUsersRequestDto` | `UserListResponseDto` |
+| GET | `/users/:id` | Sesión | `UserIdRequestDto` | `UserResponseDto` |
+| POST | `/users` | Admin | `CreateUserRequestDto` | `UserResponseDto` |
+| PUT | `/users/:id` | Admin | `UpdateUserRequestDto` | `UserResponseDto` |
+| PATCH | `/users/:id/password` | Sesión (propio o admin) | `ChangePasswordRequestDto` | `MessageResponseDto` |
+| DELETE | `/users/:id` | Admin | `UserIdRequestDto` | `MessageResponseDto` |
+| GET | `/endpoints` | Sesión | — | `EndpointListResponseDto` |
+| POST | `/endpoints` | Admin | `CreateEndpointRequestDto` | `EndpointResponseDto` |
+| DELETE | `/endpoints/:id` | Admin | `EndpointIdRequestDto` | `MessageResponseDto` |
+| GET | `/metrics/dashboard` | Sesión | — | `DashboardResponseDto` |
+
+Cualquier error responde con `ErrorResponseDto`: `{ "ok": false, "message": "...", "errors": [...] }`.
+
 
 ## API de la base de datos externa
 

@@ -1,6 +1,7 @@
-// Respuesta 404 para rutas inexistentes y formato único para los errores.
+// Respuesta 404 para rutas inexistentes y formato único para los errores (ErrorResponseDto).
 const HttpError = require("../utilidades/error-http");
 const { env } = require("../configuracion/entorno");
+const { ErrorResponseDto } = require("../dtos/respuesta/comunes");
 
 function notFound(req, res, next) {
   next(HttpError.notFound(`Ruta no encontrada: ${req.method} ${req.originalUrl}`));
@@ -13,11 +14,8 @@ function errorHandler(error, req, res, next) {
 
   if (isServerError) console.error("[error]", error);
 
-  res.status(statusCode).json({
-    ok: false,
-    message: isServerError && env.nodeEnv === "production" ? "Error interno del servidor" : error.message,
-    ...(error.details ? { errors: error.details } : {}),
-  });
+  const message = isServerError && env.nodeEnv === "production" ? "Error interno del servidor" : error.message;
+  res.status(statusCode).json(new ErrorResponseDto(message, error.details));
 }
 
 module.exports = { notFound, errorHandler };

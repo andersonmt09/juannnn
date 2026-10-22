@@ -1,10 +1,10 @@
 // Lógica de registro, inicio de sesión en dos pasos y renovación de sesión.
+// Devuelve datos del dominio; el controlador los convierte en el DTO de respuesta.
 const bcrypt = require("bcryptjs");
 const User = require("../modelos/usuario");
 const verificationCodeService = require("./apoyo/codigos-verificacion");
 const tokenService = require("../integraciones/tokens");
 const HttpError = require("../utilidades/error-http");
-const { UserResponseDto } = require("../dtos/salida/usuario");
 const { ROLES } = require("../constantes/roles");
 const { SECURITY, CODE_PURPOSE } = require("../constantes/seguridad");
 
@@ -16,13 +16,12 @@ async function register({ name, email, password }) {
   const user = await User.create({ name, email, passwordHash, role: ROLES.USER });
 
   await verificationCodeService.issue({ userId: user.id, email, purpose: CODE_PURPOSE.REGISTRATION });
-  return { requiresVerification: true, email };
+  return { email };
 }
 
 async function verifyRegistration({ email, code }) {
   await verificationCodeService.verify({ email, code, purpose: CODE_PURPOSE.REGISTRATION });
   await User.markEmailVerified(email);
-  return { verified: true };
 }
 
 // Paso 1: valida correo y contraseña y envía el código al correo.
@@ -34,7 +33,7 @@ async function login({ email, password }) {
   if (!user.emailVerified) throw HttpError.forbidden("Debes verificar tu correo electrónico primero");
 
   await verificationCodeService.issue({ userId: user.id, email, purpose: CODE_PURPOSE.LOGIN });
-  return { requiresVerification: true, email };
+  return { email };
 }
 
 // Paso 2: valida el código y entrega los tokens.
@@ -44,7 +43,7 @@ async function verifyLogin({ email, code }) {
   const user = await User.findByEmail(email);
   if (!user || !user.isActive()) throw HttpError.unauthorized("Usuario no válido");
 
-  return { ...tokenService.issueTokens(user), user: new UserResponseDto(user) };
+  return { ...tokenService.issueTokens(user), user };
 }
 
 async function resendCode({ email, purpose }) {
@@ -56,7 +55,6 @@ async function resendCode({ email, purpose }) {
   }
 
   await verificationCodeService.issue({ userId: user.id, email, purpose });
-  return { message: "Código reenviado" };
 }
 
 async function refreshSession({ refreshToken }) {
@@ -64,7 +62,7 @@ async function refreshSession({ refreshToken }) {
   const user = await User.findById(payload.id);
   if (!user || !user.isActive()) throw HttpError.unauthorized("Usuario no válido");
 
-  return { ...tokenService.issueTokens(user), user: new UserResponseDto(user) };
+  return { ...tokenService.issueTokens(user), user };
 }
 
 module.exports = { register, verifyRegistration, login, verifyLogin, resendCode, refreshSession };

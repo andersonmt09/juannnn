@@ -1,8 +1,9 @@
-// DTOs de entrada para /api/endpoints: limpian y validan lo que envía el cliente.
+// DTOs de petición de /api/endpoints: limpian y validan lo que envía el cliente.
 const BaseDto = require("./base");
-const { isValidHttpMethod, HTTP_METHODS } = require("../../utilidades/validaciones");
+const { isValidHttpMethod, isPositiveInteger, HTTP_METHODS } = require("../../utilidades/validaciones");
 
-class CreateEndpointDto extends BaseDto {
+// POST /api/endpoints
+class CreateEndpointRequestDto extends BaseDto {
   constructor({ name, path, method, description } = {}) {
     super();
     this.name = String(name || "").trim();
@@ -19,4 +20,15 @@ class CreateEndpointDto extends BaseDto {
   }
 }
 
-module.exports = { CreateEndpointDto };
+// DELETE /api/endpoints/:id
+class EndpointIdRequestDto extends BaseDto {
+  constructor({ id } = {}) {
+    super();
+    this.id = Number(id);
+  }
+  validate() {
+    return isPositiveInteger(this.id) ? [] : ["El id debe ser un número entero positivo"];
+  }
+}
+
+module.exports = { CreateEndpointRequestDto, EndpointIdRequestDto };
