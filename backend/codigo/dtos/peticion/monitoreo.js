@@ -1,27 +1,27 @@
-// DTOs de petición de /api/endpoints: limpian y validan lo que envía el cliente.
+// DTOs de petición de /api/monitoring: limpian y validan lo que envía el cliente.
 const BaseDto = require("./base");
 const { isValidHttpMethod, isPositiveInteger, HTTP_METHODS } = require("../../utilidades/validaciones");
 
-// POST /api/endpoints
-class CreateEndpointRequestDto extends BaseDto {
-  constructor({ name, path, method, description } = {}) {
+// POST /api/monitoring/endpoints
+class CreateMonitoredEndpointRequestDto extends BaseDto {
+  constructor({ name, method, path, description } = {}) {
     super();
     this.name = String(name || "").trim();
-    this.path = String(path || "").trim();
     this.method = String(method || "").trim().toUpperCase();
+    this.path = String(path || "").trim();
     this.description = description ? String(description).trim() : null;
   }
   validate() {
     const errors = [];
     if (!this.name) errors.push("El nombre es obligatorio");
-    if (!this.path.startsWith("/")) errors.push("La ruta debe comenzar con /");
     if (!isValidHttpMethod(this.method)) errors.push(`El método debe ser uno de: ${HTTP_METHODS.join(", ")}`);
+    if (!this.path.startsWith("/api/")) errors.push("La ruta debe empezar por /api/");
     return errors;
   }
 }
 
-// DELETE /api/endpoints/:id
-class EndpointIdRequestDto extends BaseDto {
+// DELETE /api/monitoring/endpoints/:id
+class MonitoredEndpointIdRequestDto extends BaseDto {
   constructor({ id } = {}) {
     super();
     this.id = Number(id);
@@ -31,4 +31,4 @@ class EndpointIdRequestDto extends BaseDto {
   }
 }
 
-module.exports = { CreateEndpointRequestDto, EndpointIdRequestDto };
+module.exports = { CreateMonitoredEndpointRequestDto, MonitoredEndpointIdRequestDto };

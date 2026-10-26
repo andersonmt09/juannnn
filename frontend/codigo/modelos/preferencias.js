@@ -1,15 +1,15 @@
 // Modelo de las preferencias del usuario en este navegador (tema claro u oscuro).
-import { STORAGE_KEYS } from "../configuracion/api.js";
 import { storage } from "../utilidades/almacenamiento.js";
 
+const THEME_KEY = "axon_theme";
 const THEMES = ["dark", "light"];
 
 export const preferences = {
   getTheme() {
-    const theme = storage.get(STORAGE_KEYS.THEME);
+    const theme = storage.get(THEME_KEY);
     return THEMES.includes(theme) ? theme : "dark";
   },
   setTheme(theme) {
-    storage.set(STORAGE_KEYS.THEME, theme);
+    storage.set(THEME_KEY, theme);
   },
 };

@@ -53,7 +53,7 @@ export function renderDashboardView(container, { userName, dashboard }, { onExpo
       summaryCard("Usuarios totales", s.usersTotal, "users"),
       summaryCard("Usuarios activos", s.usersActive, "check"),
       summaryCard("Administradores", s.usersAdmin, "shield"),
-      summaryCard("Endpoints registrados", s.endpoints, "link"),
+      summaryCard("Endpoints monitoreados", s.monitoredEndpoints, "link"),
       summaryCard("Peticiones (24 h)", s.requestsLast24h, "chart"),
       summaryCard("Latencia promedio", `${s.avgLatencyMs} ms`, "bolt"),
     ]),

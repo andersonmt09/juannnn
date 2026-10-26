@@ -1,16 +1,15 @@
 {
   "name": "axon-stack-flow",
-  "version": "2.0.0",
-  "description": "Gestión de usuarios con inicio de sesión en dos pasos y monitoreo de API",
+  "version": "3.0.0",
+  "description": "Gestión de usuarios con inicio de sesión en dos pasos y monitoreo de la API",
   "private": true,
   "main": "backend/codigo/arranque.js",
   "scripts": {
-    "backend": "node backend/codigo/arranque.js",
-    "backend:dev": "node --watch backend/codigo/arranque.js",
-    "frontend": "node frontend/automatizacion/servidor-local.js",
+    "start": "node backend/codigo/arranque.js",
+    "dev": "node --watch backend/codigo/arranque.js",
     "crear-admin": "node backend/scripts/crear-admin.js",
-    "test": "node --test backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/dtos.test.js backend/pruebas/integracion/api.test.js",
-    "pruebas:unitarias": "node --test backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/dtos.test.js",
+    "test": "node --test backend/pruebas/unitarias/dtos.test.js backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/servicios.test.js backend/pruebas/integracion/api.test.js",
+    "pruebas:unitarias": "node --test backend/pruebas/unitarias/dtos.test.js backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/servicios.test.js",
     "pruebas:integracion": "node --test backend/pruebas/integracion/api.test.js"
   },
   "engines": {
@@ -18,7 +17,6 @@
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "express-rate-limit": "^7.4.0",

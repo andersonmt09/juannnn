@@ -2,30 +2,20 @@
 const BaseDto = require("./base");
 const { isValidEmail, normalizeEmail, isPositiveInteger } = require("../../utilidades/validaciones");
 const { ROLES } = require("../../constantes/roles");
-const { SECURITY } = require("../../constantes/seguridad");
+const { SECURITY, PAGINATION } = require("../../constantes/seguridad");
 
 const toRole = (value) => (value === ROLES.ADMIN ? ROLES.ADMIN : ROLES.USER);
 const ID_ERROR = "El id debe ser un número entero positivo";
+const NAME_ERROR = "El nombre debe tener al menos 2 caracteres";
+const EMAIL_ERROR = "El correo electrónico no es válido";
 const PASSWORD_ERROR = `La contraseña debe tener al menos ${SECURITY.PASSWORD_MIN_LENGTH} caracteres`;
 
-// GET /api/users?page=&limit=&all=
+// GET /api/users?page=&limit=
 class ListUsersRequestDto extends BaseDto {
-  constructor({ page, limit, all } = {}) {
+  constructor({ page, limit } = {}) {
     super();
     this.page = Math.max(1, Number(page) || 1);
-    this.limit = Math.min(200, Math.max(1, Number(limit) || 50));
-    this.includeInactive = all === "true" || all === true;
-  }
-}
-
-// GET /api/users/:id y DELETE /api/users/:id
-class UserIdRequestDto extends BaseDto {
-  constructor({ id } = {}) {
-    super();
-    this.id = Number(id);
-  }
-  validate() {
-    return isPositiveInteger(this.id) ? [] : [ID_ERROR];
+    this.limit = Math.min(PAGINATION.MAX_LIMIT, Math.max(1, Number(limit) || PAGINATION.DEFAULT_LIMIT));
   }
 }
 
@@ -40,8 +30,8 @@ class CreateUserRequestDto extends BaseDto {
   }
   validate() {
     const errors = [];
-    if (this.name.length < 2) errors.push("El nombre debe tener al menos 2 caracteres");
-    if (!isValidEmail(this.email)) errors.push("El correo electrónico no es válido");
+    if (this.name.length < 2) errors.push(NAME_ERROR);
+    if (!isValidEmail(this.email)) errors.push(EMAIL_ERROR);
     if (this.password.length < SECURITY.PASSWORD_MIN_LENGTH) errors.push(PASSWORD_ERROR);
     return errors;
   }
@@ -59,8 +49,8 @@ class UpdateUserRequestDto extends BaseDto {
   validate() {
     const errors = [];
     if (!isPositiveInteger(this.id)) errors.push(ID_ERROR);
-    if (this.name !== undefined && this.name.length < 2) errors.push("El nombre debe tener al menos 2 caracteres");
-    if (this.email !== undefined && !isValidEmail(this.email)) errors.push("El correo electrónico no es válido");
+    if (this.name !== undefined && this.name.length < 2) errors.push(NAME_ERROR);
+    if (this.email !== undefined && !isValidEmail(this.email)) errors.push(EMAIL_ERROR);
     return errors;
   }
   changes() {
@@ -68,11 +58,12 @@ class UpdateUserRequestDto extends BaseDto {
   }
 }
 
-// PATCH /api/users/:id/password
+// PATCH /api/users/:id/password — currentPassword es obligatoria cuando el usuario cambia la suya.
 class ChangePasswordRequestDto extends BaseDto {
-  constructor({ id, password } = {}) {
+  constructor({ id, currentPassword, password } = {}) {
     super();
     this.id = Number(id);
+    this.currentPassword = currentPassword || "";
     this.password = password || "";
   }
   validate() {
@@ -83,10 +74,21 @@ class ChangePasswordRequestDto extends BaseDto {
   }
 }
 
+// DELETE /api/users/:id
+class UserIdRequestDto extends BaseDto {
+  constructor({ id } = {}) {
+    super();
+    this.id = Number(id);
+  }
+  validate() {
+    return isPositiveInteger(this.id) ? [] : [ID_ERROR];
+  }
+}
+
 module.exports = {
   ListUsersRequestDto,
-  UserIdRequestDto,
   CreateUserRequestDto,
   UpdateUserRequestDto,
   ChangePasswordRequestDto,
+  UserIdRequestDto,
 };

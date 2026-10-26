@@ -1,7 +1,7 @@
 /* Estructura de las páginas privadas: menú lateral y contenido */
 .shell { display: flex; min-height: 100vh; }
 .sidebar {
-  width: 252px; background: var(--bg-soft); border-right: 1px solid var(--border);
+  width: 252px; flex-shrink: 0; background: var(--bg-soft); border-right: 1px solid var(--border);
   padding: 24px 16px; display: flex; flex-direction: column; gap: 22px;
   position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
@@ -31,7 +31,7 @@
 .user-block .name { font-size: 13px; font-weight: 600; line-height: 1.2; }
 .user-block .role { font-size: 11px; color: var(--muted); text-transform: capitalize; }
 
-.main { flex: 1; padding: 32px 36px; max-width: 1280px; width: 100%; }
+.main { flex: 1; min-width: 0; padding: 32px 36px; max-width: 1280px; width: 100%; }
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
 .page-header h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.2px; }
 .page-subtitle { color: var(--muted); font-size: 13.5px; margin-top: 3px; }

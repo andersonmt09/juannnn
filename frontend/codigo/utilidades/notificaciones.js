@@ -3,7 +3,7 @@ import { icon } from "./iconos.js";
 
 const ICON_BY_TYPE = { success: "check", error: "alert", info: "logo" };
 
-export function showToast(message, type = "info") {
+function showToast(message, type = "info") {
   const container = document.getElementById("toast-container");
   const toast = document.createElement("div");
   toast.className = `toast toast-${type}`;

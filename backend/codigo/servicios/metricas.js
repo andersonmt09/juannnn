@@ -1,13 +1,13 @@
-// Datos del dashboard: usuarios, endpoints y estadísticas de peticiones.
+// Datos del panel: usuarios, endpoints monitoreados y estadísticas de peticiones.
 const User = require("../modelos/usuario");
-const Endpoint = require("../modelos/endpoint");
+const MonitoredEndpoint = require("../modelos/endpoint-monitoreado");
 const RequestLog = require("../modelos/registro-peticion");
 const { ROLES } = require("../constantes/roles");
 
 async function getDashboard() {
-  const [roles, endpointCount, logs, recentLogs] = await Promise.all([
+  const [roles, endpoints, logs, recentRequests] = await Promise.all([
     User.countByRole(),
-    Endpoint.count(),
+    MonitoredEndpoint.findAll(),
     RequestLog.getSummary(),
     RequestLog.findRecent(10),
   ]);
@@ -22,14 +22,14 @@ async function getDashboard() {
       usersActive: admins + users,
       usersAdmin: admins,
       usersInactive: inactive,
-      endpoints: endpointCount,
+      monitoredEndpoints: endpoints.length,
       requestsTotal: logs.total,
       requestsLast24h: logs.last24h,
       avgLatencyMs: logs.avgLatencyMs,
     },
     requestsByStatus: logs.byStatus,
     requestsByMethod: logs.byMethod,
-    recentRequests: recentLogs,
+    recentRequests,
   };
 }
 

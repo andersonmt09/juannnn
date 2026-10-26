@@ -5,7 +5,7 @@ import { icon } from "../utilidades/iconos.js";
 const MENU = [
   { route: "#/dashboard", icon: "chart", label: "Dashboard" },
   { route: "#/users", icon: "users", label: "Usuarios", adminOnly: true },
-  { route: "#/endpoints", icon: "link", label: "Endpoints" },
+  { route: "#/monitoring", icon: "link", label: "Monitoreo" },
   { route: "#/profile", icon: "shield", label: "Mi perfil" },
 ];
 

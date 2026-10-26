@@ -5,18 +5,22 @@ import { pageHeader } from "../componentes/encabezado.js";
 /**
  * @param {HTMLElement} container
  * @param {{ user: { name: string, email: string, role: string } }} data
- * @param {{ onChangePassword: (password: string) => void }} handlers
+ * @param {{ onChangePassword: (data: { currentPassword: string, password: string, confirmPassword: string }) => void }} handlers
  */
 export function renderProfileView(container, { user }, { onChangePassword }) {
   const form = el("form", {}, [
+    el("label", { for: "profile-current-password" }, ["Contraseña actual"]),
+    el("input", { id: "profile-current-password", name: "currentPassword", type: "password", required: true, autocomplete: "current-password" }),
     el("label", { for: "profile-password" }, ["Nueva contraseña (mínimo 6 caracteres)"]),
     el("input", { id: "profile-password", name: "password", type: "password", required: true, minlength: "6", autocomplete: "new-password" }),
+    el("label", { for: "profile-confirm-password" }, ["Confirmar nueva contraseña"]),
+    el("input", { id: "profile-confirm-password", name: "confirmPassword", type: "password", required: true, minlength: "6", autocomplete: "new-password" }),
     el("button", { type: "submit", class: "btn btn-primary" }, ["Actualizar contraseña"]),
   ]);
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    onChangePassword(new FormData(form).get("password"));
+    onChangePassword(Object.fromEntries(new FormData(form)));
   });
 
   container.replaceChildren(

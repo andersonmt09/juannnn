@@ -9,9 +9,10 @@ const {
   UpdateUserRequestDto,
   ChangePasswordRequestDto,
 } = require("../../codigo/dtos/peticion/usuarios");
-const { CreateEndpointRequestDto } = require("../../codigo/dtos/peticion/endpoints");
+const { CreateMonitoredEndpointRequestDto, MonitoredEndpointIdRequestDto } = require("../../codigo/dtos/peticion/monitoreo");
 const { UserDto, UserListResponseDto } = require("../../codigo/dtos/respuesta/usuarios");
 const { SessionResponseDto, VerificationRequiredResponseDto } = require("../../codigo/dtos/respuesta/autenticacion");
+const { MonitoredEndpointDto } = require("../../codigo/dtos/respuesta/monitoreo");
 const { MessageResponseDto, ErrorResponseDto } = require("../../codigo/dtos/respuesta/comunes");
 const { HealthResponseDto } = require("../../codigo/dtos/respuesta/salud");
 
@@ -57,16 +58,20 @@ test("UpdateUserRequestDto valida el :id e ignora los campos no enviados", () =>
 test("UserIdRequestDto y ChangePasswordRequestDto rechazan ids inválidos", () => {
   assert.equal(new UserIdRequestDto({ id: "0" }).validate().length, 1);
   assert.equal(new ChangePasswordRequestDto({ id: "x", password: "123" }).validate().length, 2);
+  assert.equal(new ChangePasswordRequestDto({ id: "3", currentPassword: "vieja1", password: "nueva1" }).currentPassword, "vieja1");
 });
 
-test("ListUsersRequestDto convierte y limita page y limit", () => {
-  const dto = new ListUsersRequestDto({ page: "0", limit: "999", all: "true" });
-  assert.deepEqual({ page: dto.page, limit: dto.limit, includeInactive: dto.includeInactive }, { page: 1, limit: 200, includeInactive: true });
+test("ListUsersRequestDto usa 20 por defecto y no pasa de 100", () => {
+  assert.deepEqual({ ...new ListUsersRequestDto({}) }, { page: 1, limit: 20 });
+  assert.deepEqual({ ...new ListUsersRequestDto({ page: "0", limit: "999" }) }, { page: 1, limit: 100 });
 });
 
-test("CreateEndpointRequestDto valida ruta y método HTTP", () => {
-  assert.equal(new CreateEndpointRequestDto({ name: "X", path: "/api/x", method: "get" }).validate().length, 0);
-  assert.equal(new CreateEndpointRequestDto({ name: "X", path: "api", method: "FETCH" }).validate().length, 2);
+test("CreateMonitoredEndpointRequestDto valida ruta /api/ y método HTTP", () => {
+  const dto = new CreateMonitoredEndpointRequestDto({ name: "Login", path: "/api/auth/login", method: "post" });
+  assert.equal(dto.method, "POST");
+  assert.equal(dto.validate().length, 0);
+  assert.equal(new CreateMonitoredEndpointRequestDto({ name: "X", path: "/otra", method: "FETCH" }).validate().length, 2);
+  assert.equal(new MonitoredEndpointIdRequestDto({ id: "-1" }).validate().length, 1);
 });
 
 // ---------- Respuesta ----------
@@ -81,10 +86,16 @@ test("SessionResponseDto entrega tokens y usuario público", () => {
   assert.equal("passwordHash" in dto.user, false);
 });
 
-test("UserListResponseDto arma data y meta", () => {
-  const dto = new UserListResponseDto({ users: [user], total: 1, page: 1, limit: 50 });
-  assert.deepEqual(dto.meta, { total: 1, page: 1, limit: 50 });
-  assert.equal(dto.data.length, 1);
+test("UserListResponseDto arma data y meta con el total de páginas", () => {
+  const dto = new UserListResponseDto({ users: [user], total: 45, page: 2, limit: 20 });
+  assert.deepEqual(dto.meta, { total: 45, page: 2, limit: 20, totalPages: 3 });
+  assert.equal(new UserListResponseDto({ users: [], total: 0, page: 1, limit: 20 }).meta.totalPages, 1);
+});
+
+test("MonitoredEndpointDto pone las estadísticas en cero si aún no hay peticiones", () => {
+  const endpoint = { id: 1, name: "Login", method: "POST", path: "/api/auth/login" };
+  assert.deepEqual(new MonitoredEndpointDto(endpoint).stats, { requests: 0, errors: 0, avgLatencyMs: 0, lastRequestAt: null });
+  assert.equal(new MonitoredEndpointDto(endpoint, { total: 8, errors: 2, avgLatencyMs: 12 }).stats.requests, 8);
 });
 
 test("Respuestas comunes y de estado tienen el formato esperado", () => {

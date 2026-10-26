@@ -1,17 +1,30 @@
-// Agrupa todas las rutas de la API bajo /api
+// Agrupa todas las rutas de la API bajo /api y expone la lista de endpoints que existen.
 const { Router } = require("express");
-const healthRoutes = require("./salud");
-const authRoutes = require("./autenticacion");
-const userRoutes = require("./usuarios");
-const endpointRoutes = require("./endpoints");
-const metricRoutes = require("./metricas");
+
+// [prefijo, router]: para ver todos los endpoints de la API, empieza aquí.
+const MODULES = [
+  ["/health", require("./salud")],
+  ["/auth", require("./autenticacion")],
+  ["/users", require("./usuarios")],
+  ["/monitoring", require("./monitoreo")],
+  ["/metrics", require("./metricas")],
+];
 
 const router = Router();
+for (const [prefix, moduleRouter] of MODULES) router.use(prefix, moduleRouter);
 
-router.use("/health", healthRoutes);
-router.use("/auth", authRoutes);
-router.use("/users", userRoutes);
-router.use("/endpoints", endpointRoutes);
-router.use("/metrics", metricRoutes);
+// [{ method: "POST", path: "/api/auth/login" }, ...] — lo usa el monitoreo para validar rutas reales.
+function listApiRoutes() {
+  return MODULES.flatMap(([prefix, moduleRouter]) =>
+    moduleRouter.stack
+      .filter((layer) => layer.route)
+      .flatMap((layer) =>
+        Object.keys(layer.route.methods).map((method) => ({
+          method: method.toUpperCase(),
+          path: ("/api" + prefix + layer.route.path).replace(/\/$/, ""),
+        }))
+      )
+  );
+}
 
-module.exports = router;
+module.exports = { router, listApiRoutes };

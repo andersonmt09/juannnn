@@ -1,11 +1,12 @@
 // Cliente HTTP hacia el backend. Agrega el token y lo renueva una vez si expira.
 // Si la sesión ya no es válida, avisa con el evento SESSION_EXPIRED_EVENT (lo atiende el enrutador).
-import { APP_CONFIG } from "../configuracion/api.js";
 import { session } from "../modelos/sesion.js";
+
+const API_BASE_URL = "/api"; // el backend sirve el frontend: misma dirección
 
 export const SESSION_EXPIRED_EVENT = "session:expired";
 
-export class ApiError extends Error {
+class ApiError extends Error {
   constructor(message, status, data) {
     super(message);
     this.status = status;
@@ -17,7 +18,7 @@ async function refreshSession() {
   const refreshToken = session.getRefreshToken();
   if (!refreshToken) return false;
   try {
-    const response = await fetch(`${APP_CONFIG.API_BASE_URL}/auth/refresh-token`, {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
@@ -37,7 +38,7 @@ async function request(method, path, body, canRetry = true) {
 
   let response;
   try {
-    response = await fetch(`${APP_CONFIG.API_BASE_URL}${path}`, {
+    response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,

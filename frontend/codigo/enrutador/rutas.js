@@ -4,7 +4,7 @@ import { showRegister } from "../controladores/registro.js";
 import { showVerify } from "../controladores/verificacion.js";
 import { showDashboard } from "../controladores/panel.js";
 import { showUsers } from "../controladores/usuarios.js";
-import { showEndpoints } from "../controladores/endpoints.js";
+import { showMonitoring } from "../controladores/monitoreo.js";
 import { showProfile } from "../controladores/perfil.js";
 
 export const ROUTES = {
@@ -13,7 +13,7 @@ export const ROUTES = {
   "#/verify":    { controller: showVerify,    public: true },
   "#/dashboard": { controller: showDashboard },
   "#/users":     { controller: showUsers,     adminOnly: true },
-  "#/endpoints": { controller: showEndpoints },
+  "#/monitoring": { controller: showMonitoring },
   "#/profile":   { controller: showProfile },
 };
 

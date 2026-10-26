@@ -36,7 +36,6 @@ form { display: flex; flex-direction: column; }
 .full { width: 100%; }
 .hidden { display: none !important; }
 .muted { color: var(--muted); }
-.text-soft { color: var(--text-soft); }
 .small { font-size: 12px; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 

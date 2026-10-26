@@ -1,8 +1,9 @@
-// Vista de gestión de usuarios (#/users). Dibuja la tabla y el formulario; las acciones las decide el controlador.
+// Vista de gestión de usuarios (#/users). Dibuja la tabla, la paginación y el formulario; las acciones las decide el controlador.
 import { el } from "../utilidades/dom.js";
 import { pageHeader } from "../componentes/encabezado.js";
 import { createModal } from "../componentes/modal.js";
 import { emptyState } from "../componentes/estado-vacio.js";
+import { pagination } from "../componentes/paginacion.js";
 
 /**
  * @param {HTMLElement} container
@@ -11,6 +12,7 @@ import { emptyState } from "../componentes/estado-vacio.js";
  *   onEdit: (user: object) => void,
  *   onDelete: (user: object) => void,
  *   onSave: (data: { name: string, email: string, role: string, password: string }) => void,
+ *   onPageChange: (page: number) => void,
  *   onExport: () => void,
  * }} handlers
  */
@@ -18,6 +20,7 @@ export function renderUsersView(container, handlers) {
   const tablePanel = el("div", { class: "panel" }, [el("p", { class: "muted" }, ["Cargando..."])]);
 
   const passwordLabel = el("label", { for: "user-password" }, ["Contraseña"]);
+  const passwordInput = el("input", { id: "user-password", name: "password", type: "password", minlength: "6", autocomplete: "new-password" });
   const form = el("form", {}, [
     el("label", { for: "user-name" }, ["Nombre"]),
     el("input", { id: "user-name", name: "name", required: true, minlength: "2" }),
@@ -29,7 +32,7 @@ export function renderUsersView(container, handlers) {
       el("option", { value: "admin" }, ["Administrador"]),
     ]),
     passwordLabel,
-    el("input", { id: "user-password", name: "password", type: "password", minlength: "6" }),
+    passwordInput,
     el("div", { class: "row" }, [
       el("button", { type: "submit", class: "btn btn-primary" }, ["Guardar"]),
       el("button", { type: "button", class: "btn", onclick: () => modal.close() }, ["Cancelar"]),
@@ -52,7 +55,7 @@ export function renderUsersView(container, handlers) {
   );
 
   return {
-    showUsers(users, currentUserId) {
+    showUsers(users, meta, currentUserId) {
       if (!users.length) {
         tablePanel.replaceChildren(emptyState("Sin usuarios", "Crea el primer usuario."));
         return;
@@ -67,30 +70,36 @@ export function renderUsersView(container, handlers) {
           el("button", { class: "btn btn-sm", onclick: () => handlers.onEdit(u) }, ["Editar"]),
           el("button", {
             class: "btn btn-sm btn-danger",
-            disabled: u.id === currentUserId || u.isSample,
-            title: u.isSample ? "Usuario demo protegido" : undefined,
+            disabled: u.id === currentUserId,
+            title: u.id === currentUserId ? "No puedes eliminar tu propio usuario" : undefined,
             onclick: () => handlers.onDelete(u),
           }, ["Eliminar"]),
         ]),
       ]));
-      tablePanel.replaceChildren(el("table", { class: "table" }, [
-        el("thead", {}, [el("tr", {}, ["ID", "Nombre", "Correo", "Rol", "Verificado", "Acciones"].map((h) => el("th", {}, [h])))]),
-        el("tbody", {}, rows),
-      ]));
+      tablePanel.replaceChildren(
+        el("table", { class: "table" }, [
+          el("thead", {}, [el("tr", {}, ["ID", "Nombre", "Correo", "Rol", "Verificado", "Acciones"].map((h) => el("th", {}, [h])))]),
+          el("tbody", {}, rows),
+        ]),
+        pagination(meta, handlers.onPageChange)
+      );
     },
 
     showError() {
       tablePanel.replaceChildren(el("p", { class: "muted" }, ["Error al cargar usuarios."]));
     },
 
-    openForm(user = null) {
+    // isSelf: la contraseña propia se cambia en "Mi perfil" (pide la actual), no aquí.
+    openForm(user = null, { isSelf = false } = {}) {
       modal.setTitle(user ? "Editar usuario" : "Nuevo usuario");
       form.reset();
       form.elements.name.value = user?.name || "";
       form.elements.email.value = user?.email || "";
       form.elements.role.value = user?.role || "user";
-      form.elements.password.required = !user;
+      passwordInput.required = !user;
       passwordLabel.textContent = user ? "Nueva contraseña (opcional)" : "Contraseña";
+      passwordLabel.classList.toggle("hidden", isSelf);
+      passwordInput.classList.toggle("hidden", isSelf);
       modal.open();
     },
 

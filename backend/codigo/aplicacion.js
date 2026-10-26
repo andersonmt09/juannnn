@@ -1,23 +1,35 @@
-// Configuración de Express: seguridad, JSON, registro de peticiones, rutas y errores.
+// Configuración de Express: seguridad, JSON, API en /api y el frontend como archivos estáticos.
+// Al servir el frontend desde el mismo servidor no hace falta CORS ni una URL del backend en el frontend.
+const path = require("path");
 const express = require("express");
-const cors = require("cors");
 const helmet = require("helmet");
-const { env } = require("./configuracion/entorno");
-const apiRoutes = require("./rutas/indice");
+const { router: apiRouter, listApiRoutes } = require("./rutas/indice");
 const requestLogger = require("./middlewares/registro-peticiones");
 const { notFound, errorHandler } = require("./middlewares/errores");
 
+const FRONTEND_DIR = path.join(__dirname, "..", "..", "frontend");
+
 const app = express();
+app.locals.apiRoutes = listApiRoutes();
 
 app.set("trust proxy", 1);
-app.use(helmet());
-app.use(cors({ origin: env.frontendOrigin.split(",").map((o) => o.trim()) }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      "script-src": ["'self'", "https://cdn.jsdelivr.net"], // Chart.js
+    },
+  },
+}));
 app.use(express.json({ limit: "1mb" }));
 
-app.use(requestLogger);
-app.use("/api", apiRoutes);
+// API
+app.use("/api", requestLogger, apiRouter);
+app.use("/api", notFound);
 
-app.use(notFound);
+// Frontend (SPA): archivos estáticos y, para cualquier otra ruta, index.html
+app.use(express.static(FRONTEND_DIR));
+app.get("*", (req, res) => res.sendFile(path.join(FRONTEND_DIR, "index.html")));
+
 app.use(errorHandler);
 
 module.exports = app;

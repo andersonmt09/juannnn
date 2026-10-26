@@ -1,4 +1,4 @@
-// Error con código HTTP. Los servicios lo lanzan y error.middleware lo convierte en respuesta.
+// Error con código HTTP. Los servicios lo lanzan y middlewares/errores.js lo convierte en respuesta.
 class HttpError extends Error {
   constructor(statusCode, message, details) {
     super(message);

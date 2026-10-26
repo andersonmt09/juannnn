@@ -1,10 +1,10 @@
 // Genera, envía y valida los códigos de 6 dígitos (registro e inicio de sesión).
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
-const VerificationCode = require("../../modelos/codigo-verificacion");
-const emailService = require("../../integraciones/correo");
-const HttpError = require("../../utilidades/error-http");
-const { SECURITY } = require("../../constantes/seguridad");
+const VerificationCode = require("../modelos/codigo-verificacion");
+const emailService = require("../integraciones/correo");
+const HttpError = require("../utilidades/error-http");
+const { SECURITY } = require("../constantes/seguridad");
 
 function generateCode() {
   return String(crypto.randomInt(0, 10 ** SECURITY.CODE_LENGTH)).padStart(SECURITY.CODE_LENGTH, "0");

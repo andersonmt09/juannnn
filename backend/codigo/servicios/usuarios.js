@@ -11,21 +11,24 @@ async function findActiveOrFail(id) {
   return user;
 }
 
-async function list({ includeInactive, page, limit }) {
-  const { users, total } = await User.findAll({ includeInactive, page, limit });
+// Impide dejar el sistema sin administradores activos.
+async function ensureAnotherAdminExists(user) {
+  if (!user.isAdmin()) return;
+  const roles = await User.countByRole();
+  if ((roles[ROLES.ADMIN] || 0) <= 1) throw HttpError.badRequest("Debe quedar al menos un administrador activo");
+}
+
+async function list({ page, limit }) {
+  const { users, total } = await User.findPage({ page, limit });
   return { users, total, page, limit };
 }
 
-async function getById(id) {
-  return findActiveOrFail(id);
-}
-
 // Los usuarios creados por un administrador quedan verificados.
-async function create({ name, email, password, role }, createdById) {
+async function create({ name, email, password, role }, requester) {
   if (await User.findByEmail(email)) throw HttpError.conflict("El correo ya está registrado");
 
   const passwordHash = await bcrypt.hash(password, SECURITY.BCRYPT_ROUNDS);
-  return User.create({ name, email, passwordHash, role, emailVerified: true, createdById });
+  return User.create({ name, email, passwordHash, role, emailVerified: true, createdById: requester.id });
 }
 
 async function update(id, changes) {
@@ -35,26 +38,32 @@ async function update(id, changes) {
     const other = await User.findByEmail(changes.email);
     if (other && other.id !== user.id) throw HttpError.conflict("El correo ya está en uso");
   }
+  if (changes.role && changes.role !== ROLES.ADMIN) await ensureAnotherAdminExists(user);
 
   return User.update(id, changes);
 }
 
-// Cada usuario cambia su propia contraseña; el administrador puede cambiar cualquiera.
-async function changePassword(id, password, requester) {
+// Para cambiar la propia contraseña hay que dar la actual. El administrador puede cambiar la de otros sin ella.
+async function changePassword(id, { currentPassword, password }, requester) {
   const user = await findActiveOrFail(id);
-  const isOwner = Number(requester.id) === Number(user.id);
-  if (!isOwner && requester.role !== ROLES.ADMIN) throw HttpError.forbidden();
+  const isOwner = requester.id === user.id;
+  if (!isOwner && !requester.isAdmin()) throw HttpError.forbidden();
+
+  if (isOwner) {
+    const valid = currentPassword && (await bcrypt.compare(currentPassword, user.passwordHash));
+    if (!valid) throw HttpError.badRequest("La contraseña actual no es correcta");
+  }
 
   await User.updatePassword(id, await bcrypt.hash(password, SECURITY.BCRYPT_ROUNDS));
 }
 
-// Eliminación lógica. No se permite borrar usuarios demo ni el propio usuario.
+// Eliminación lógica. Nadie puede eliminarse a sí mismo ni al último administrador.
 async function remove(id, requester) {
   const user = await findActiveOrFail(id);
-  if (user.isSample) throw HttpError.badRequest("Los usuarios demo no se pueden eliminar");
-  if (Number(requester.id) === Number(user.id)) throw HttpError.badRequest("No puedes eliminar tu propio usuario");
+  if (requester.id === user.id) throw HttpError.badRequest("No puedes eliminar tu propio usuario");
+  await ensureAnotherAdminExists(user);
 
   await User.softDelete(id);
 }
 
-module.exports = { list, getById, create, update, changePassword, remove };
+module.exports = { list, create, update, changePassword, remove };

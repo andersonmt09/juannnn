@@ -8,12 +8,11 @@ class UserDto {
     this.email = user.email;
     this.role = user.role;
     this.emailVerified = user.emailVerified;
-    this.isSample = user.isSample;
     this.createdDate = user.createdDate;
   }
 }
 
-// GET /api/users/:id, POST /api/users y PUT /api/users/:id → { ok, data }
+// POST /api/users y PUT /api/users/:id → { ok, data }
 class UserResponseDto {
   constructor(user) {
     this.ok = true;
@@ -21,12 +20,12 @@ class UserResponseDto {
   }
 }
 
-// GET /api/users → { ok, data: [], meta: { total, page, limit } }
+// GET /api/users → { ok, data: [], meta: { total, page, limit, totalPages } }
 class UserListResponseDto {
   constructor({ users, total, page, limit }) {
     this.ok = true;
     this.data = users.map((user) => new UserDto(user));
-    this.meta = { total, page, limit };
+    this.meta = { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) };
   }
 }
 

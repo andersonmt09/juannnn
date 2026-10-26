@@ -10,7 +10,6 @@ class User {
     this.passwordHash = row.password_hash;
     this.role = row.role;
     this.emailVerified = Boolean(row.email_verified);
-    this.isSample = Boolean(row.is_sample);
     this.createdById = row.created_by_id;
     this.createdDate = row.created_date;
     this.updatedDate = row.updated_date;
@@ -27,16 +26,19 @@ class User {
     return User.fromRow(await db.find(`/users/${id}`));
   }
 
+  // Busca también entre los inactivos: el correo es único aunque la cuenta esté eliminada.
   static async findByEmail(email) {
     const { data } = await db.get("/users", { email, includeInactive: true, limit: 1 });
     return User.fromRow(data[0]);
   }
 
-  static async findAll({ includeInactive = false, page = 1, limit = 50 } = {}) {
-    const { data, total } = await db.get("/users", { includeInactive, page, limit });
+  // Usuarios activos, paginados.
+  static async findPage({ page, limit }) {
+    const { data, total } = await db.get("/users", { page, limit });
     return { users: data.map(User.fromRow), total };
   }
 
+  // { admin, user, inactive }
   static async countByRole() {
     return db.get("/users/count-by-role");
   }
@@ -63,9 +65,8 @@ class User {
     await db.patch(`/users/${id}`, { password_hash: passwordHash });
   }
 
-  static async markEmailVerified(email) {
-    const user = await User.findByEmail(email);
-    if (user) await db.patch(`/users/${user.id}`, { email_verified: true });
+  static async markEmailVerified(id) {
+    await db.patch(`/users/${id}`, { email_verified: true });
   }
 
   // Eliminación lógica: el registro se conserva con rol inactive.

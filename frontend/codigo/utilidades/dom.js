@@ -20,7 +20,7 @@ export function el(tag, attrs = {}, children = []) {
 }
 
 export function formatDate(value) {
-  return value ? new Date(value).toLocaleString() : "—";
+  return value ? new Date(value).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) : "—";
 }
 
 export function initials(name) {

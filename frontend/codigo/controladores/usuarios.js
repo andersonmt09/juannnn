@@ -1,23 +1,28 @@
-// Controlador de #/users (solo administradores): listar, crear, editar, eliminar y exportar usuarios.
+// Controlador de #/users (solo administradores): listar por páginas, crear, editar, eliminar y exportar usuarios.
 import { renderUsersView } from "../vistas/usuarios.js";
 import { userService } from "../servicios/usuarios.js";
 import { session } from "../modelos/sesion.js";
 import { toast } from "../utilidades/notificaciones.js";
 import { exportToCsv } from "../utilidades/csv.js";
 
+const PAGE_SIZE = 20;
 const CSV_COLUMNS = [
   ["id", "id"], ["name", "nombre"], ["email", "correo"], ["role", "rol"],
   ["emailVerified", "verificado"], ["createdDate", "creado"],
 ];
 
 export async function showUsers(container) {
-  let users = [];
+  const currentUserId = session.getUser()?.id;
+  let currentPage = 1;
   let editingUser = null;
 
-  async function loadUsers() {
+  async function loadUsers(page = currentPage) {
     try {
-      users = await userService.list();
-      view.showUsers(users, session.getUser()?.id);
+      const { data, meta } = await userService.list(page, PAGE_SIZE);
+      // Si se eliminó el último de una página, vuelve a la anterior.
+      if (!data.length && page > 1) return loadUsers(page - 1);
+      currentPage = meta.page;
+      view.showUsers(data, meta, currentUserId);
     } catch (error) {
       view.showError();
       toast.error(error.message);
@@ -25,14 +30,14 @@ export async function showUsers(container) {
   }
 
   async function save({ name, email, role, password }) {
-    if (editingUser) {
-      await userService.update(editingUser.id, { name, email, role });
-      if (password) await userService.changePassword(editingUser.id, password);
-      toast.success("Usuario actualizado");
-    } else {
+    if (!editingUser) {
       await userService.create({ name, email, role, password });
       toast.success("Usuario creado");
+      return;
     }
+    await userService.update(editingUser.id, { name, email, role });
+    if (password && editingUser.id !== currentUserId) await userService.changePassword(editingUser.id, password);
+    toast.success("Usuario actualizado");
   }
 
   const view = renderUsersView(container, {
@@ -42,7 +47,7 @@ export async function showUsers(container) {
     },
     onEdit(user) {
       editingUser = user;
-      view.openForm(user);
+      view.openForm(user, { isSelf: user.id === currentUserId });
     },
     async onSave(data) {
       try {
@@ -63,8 +68,15 @@ export async function showUsers(container) {
         toast.error(error.message);
       }
     },
-    onExport() {
-      exportToCsv(users, "axon-usuarios.csv", CSV_COLUMNS);
+    onPageChange(page) {
+      loadUsers(page);
+    },
+    async onExport() {
+      try {
+        exportToCsv(await userService.listAll(), "axon-usuarios.csv", CSV_COLUMNS);
+      } catch (error) {
+        toast.error(error.message);
+      }
     },
   });
 

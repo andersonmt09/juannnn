@@ -5,7 +5,6 @@ require("dotenv").config({ path: path.join(__dirname, "..", "..", ".env") });
 const env = {
   port: Number(process.env.PORT) || 4000,
   nodeEnv: process.env.NODE_ENV || "development",
-  frontendOrigin: process.env.FRONTEND_ORIGIN || "http://localhost:5500,http://127.0.0.1:5500",
 
   // La base de datos es externa: el backend solo conoce la dirección de su API.
   databaseApi: {
@@ -16,7 +15,7 @@ const env = {
 
   jwt: {
     secret: process.env.JWT_SECRET,
-    expiresIn: process.env.JWT_EXPIRES_IN || "8h",
+    expiresIn: process.env.JWT_EXPIRES_IN || "15m",
     refreshSecret: process.env.JWT_REFRESH_SECRET,
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
   },

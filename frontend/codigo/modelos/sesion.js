@@ -1,43 +1,50 @@
-// Modelo de la sesión: tokens, usuario actual y verificación pendiente.
-import { STORAGE_KEYS } from "../configuracion/api.js";
+// Modelo de la sesión: tokens, usuario actual y verificación pendiente (guardados en localStorage).
 import { storage } from "../utilidades/almacenamiento.js";
 
+const KEYS = Object.freeze({
+  ACCESS_TOKEN: "axon_access_token",
+  REFRESH_TOKEN: "axon_refresh_token",
+  USER: "axon_user",
+  PENDING_EMAIL: "axon_pending_email",
+  PENDING_PURPOSE: "axon_pending_purpose",
+});
+
 export const session = {
-  getAccessToken: () => storage.get(STORAGE_KEYS.ACCESS_TOKEN),
-  getRefreshToken: () => storage.get(STORAGE_KEYS.REFRESH_TOKEN),
+  getAccessToken: () => storage.get(KEYS.ACCESS_TOKEN),
+  getRefreshToken: () => storage.get(KEYS.REFRESH_TOKEN),
 
   getUser() {
-    try { return JSON.parse(storage.get(STORAGE_KEYS.USER) || "null"); } catch { return null; }
+    try { return JSON.parse(storage.get(KEYS.USER) || "null"); } catch { return null; }
   },
 
   isLoggedIn() { return Boolean(this.getAccessToken() && this.getUser()); },
   isAdmin() { return this.getUser()?.role === "admin"; },
 
   save({ accessToken, refreshToken, user }) {
-    if (accessToken) storage.set(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-    if (refreshToken) storage.set(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
-    if (user) storage.set(STORAGE_KEYS.USER, JSON.stringify(user));
+    if (accessToken) storage.set(KEYS.ACCESS_TOKEN, accessToken);
+    if (refreshToken) storage.set(KEYS.REFRESH_TOKEN, refreshToken);
+    if (user) storage.set(KEYS.USER, JSON.stringify(user));
   },
 
   clear() {
-    storage.remove(STORAGE_KEYS.ACCESS_TOKEN);
-    storage.remove(STORAGE_KEYS.REFRESH_TOKEN);
-    storage.remove(STORAGE_KEYS.USER);
+    storage.remove(KEYS.ACCESS_TOKEN);
+    storage.remove(KEYS.REFRESH_TOKEN);
+    storage.remove(KEYS.USER);
   },
 
   // Verificación pendiente: entre el registro o el inicio de sesión y la pantalla del código.
   setPendingVerification(email, purpose) {
-    storage.set(STORAGE_KEYS.PENDING_EMAIL, email);
-    storage.set(STORAGE_KEYS.PENDING_PURPOSE, purpose);
+    storage.set(KEYS.PENDING_EMAIL, email);
+    storage.set(KEYS.PENDING_PURPOSE, purpose);
   },
   getPendingVerification() {
     return {
-      email: storage.get(STORAGE_KEYS.PENDING_EMAIL) || "",
-      purpose: storage.get(STORAGE_KEYS.PENDING_PURPOSE) || "login",
+      email: storage.get(KEYS.PENDING_EMAIL) || "",
+      purpose: storage.get(KEYS.PENDING_PURPOSE) || "login",
     };
   },
   clearPendingVerification() {
-    storage.remove(STORAGE_KEYS.PENDING_EMAIL);
-    storage.remove(STORAGE_KEYS.PENDING_PURPOSE);
+    storage.remove(KEYS.PENDING_EMAIL);
+    storage.remove(KEYS.PENDING_PURPOSE);
   },
 };

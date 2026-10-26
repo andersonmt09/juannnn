@@ -55,3 +55,9 @@ test("una ruta inexistente devuelve 404", async () => {
   const { status } = await request("GET", "/no-existe");
   assert.equal(status, 404);
 });
+
+test("el frontend se sirve desde el mismo servidor", async () => {
+  const response = await fetch(baseUrl.replace(/\/api$/, "/"));
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /<html/i);
+});
