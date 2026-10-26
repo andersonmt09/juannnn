@@ -89,6 +89,7 @@ export async function showMonitoring(container) {
       try {
         await monitoringApi.removeEndpoint(endpoint.id);
         ticket++;
+        selected = null;
         view.closeDetail();
         toast.success("Endpoint quitado del monitoreo");
         await loadEndpoints();

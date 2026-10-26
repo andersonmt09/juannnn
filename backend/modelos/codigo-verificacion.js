@@ -32,8 +32,10 @@ class VerificationCode {
     return VerificationCode.fromRow(await db.find("/verification-codes/active", { email, purpose }));
   }
 
+  // Suma un intento y devuelve el total ya incrementado (la API externa lo hace de forma atómica).
   static async incrementAttempts(id) {
-    await db.post(`/verification-codes/${id}/attempts`);
+    const row = await db.post(`/verification-codes/${id}/attempts`);
+    return Number(row?.attempts);
   }
 
   static async markUsed(id) {

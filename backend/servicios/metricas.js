@@ -3,6 +3,7 @@ const User = require("../modelos/usuario");
 const MonitoredEndpoint = require("../modelos/endpoint-monitoreado");
 const RequestLog = require("../modelos/registro-peticion");
 const Database = require("../modelos/base-datos");
+const eventService = require("./eventos");
 const { env, ROLES, HttpError } = require("../configuracion");
 
 async function getDashboard() {
@@ -25,7 +26,7 @@ async function getDashboard() {
 
   return {
     summary: {
-      usersTotal: admins + users + inactive,
+      usersTotal: admins + users, // solo cuentas activas
       usersActive: admins + users,
       usersAdmin: admins,
       usersInactive: inactive,
@@ -69,8 +70,7 @@ async function checkHealth() {
 // Estado de cada servicio: base de datos, API, tiempo real y correo.
 async function getServices() {
   const { available, latencyMs } = await Database.ping();
-  // Se carga al usarse para no crear una dependencia circular con los eventos.
-  const clients = require("./eventos").countClients();
+  const clients = eventService.countClients();
 
   return [
     {

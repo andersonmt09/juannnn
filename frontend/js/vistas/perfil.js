@@ -29,8 +29,10 @@ export function renderProfileView(container, { user }, { onChangePassword }) {
 
   // ---- Contraseña ----
   const current = passwordField({ id: "profile-current-password", name: "currentPassword", label: "Contraseña actual", autocomplete: "current-password" });
-  const next = passwordField({ id: "profile-password", name: "password", label: "Nueva contraseña", autocomplete: "new-password", hint: "Mínimo 6 caracteres", minlength: 6 });
-  const confirm = passwordField({ id: "profile-confirm-password", name: "confirmPassword", label: "Confirmar nueva contraseña", autocomplete: "new-password", minlength: 6 });
+  const next = passwordField({ id: "profile-password", name: "password", label: "Nueva contraseña", autocomplete: "new-password", hint: "Entre 8 y 72 caracteres", minlength: 8 });
+  next.input.maxLength = 72;
+  const confirm = passwordField({ id: "profile-confirm-password", name: "confirmPassword", label: "Confirmar nueva contraseña", autocomplete: "new-password", minlength: 8 });
+  confirm.input.maxLength = 72;
   const submit = el("button", { type: "submit", class: "btn btn-primary" }, ["Guardar contraseña"]);
   const form = el("form", {}, [current, next, confirm, el("div", { class: "row" }, [submit])]);
   form.querySelector(".row").style.marginTop = "var(--sp-5)";

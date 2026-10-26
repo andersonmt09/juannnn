@@ -34,7 +34,9 @@ async function request(method, path, { query, body, allowNotFound = false } = {}
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new HttpError(502, data?.message || `La base de datos externa respondió ${response.status}`);
+    // No se reenvía el mensaje externo al cliente.
+    if (response.status === 409) throw new HttpError(409, "El recurso ya existe");
+    throw new HttpError(502, "La base de datos externa respondió con un error");
   }
   return data;
 }

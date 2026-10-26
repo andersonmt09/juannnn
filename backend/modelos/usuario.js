@@ -3,6 +3,9 @@ const bcrypt = require("bcryptjs");
 const { db } = require("../externos");
 const { ROLES } = require("../configuracion");
 
+// Hash fijo de una contraseña cualquiera: se compara cuando el correo no existe.
+const DUMMY_HASH = "$2a$10$1MVaMj1bzwHmRn7aveW3S.Elz4Um5fPWL2DbSLq2VmxLCVplq9ika";
+
 class User {
   constructor(row) {
     this.id = Number(row.id);
@@ -42,7 +45,11 @@ class User {
   // validarCredenciales(usu, contra) del diagrama de secuencia: User si coinciden, null si no ("( )").
   static async validateCredentials(email, password) {
     const user = await User.findByEmail(email);
-    return user && (await user.matchesPassword(password)) ? user : null;
+    if (!user) {
+      await bcrypt.compare(password, DUMMY_HASH); // mismo costo que con un usuario real (tiempo constante)
+      return null;
+    }
+    return (await user.matchesPassword(password)) ? user : null;
   }
 
   // Usuarios activos, paginados.

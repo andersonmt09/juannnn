@@ -1,7 +1,7 @@
 // Vista de /api/monitoring: lo que entra (DTOs de petición) y lo que sale (DTOs de respuesta).
 const { BaseRequestDto } = require("./comunes");
 const { RequestLogDto } = require("./metricas");
-const { HTTP_METHODS, isValidHttpMethod, isPositiveInteger } = require("../configuracion");
+const { HTTP_METHODS, SECURITY, isValidHttpMethod, isPositiveInteger } = require("../configuracion");
 
 // ---------- Petición (req) ----------
 
@@ -17,6 +17,11 @@ class CreateMonitoredEndpointRequestDto extends BaseRequestDto {
   validate() {
     const errors = [];
     if (!this.name) errors.push("El nombre es obligatorio");
+    if (this.name.length > SECURITY.NAME_MAX_LENGTH) errors.push(`El nombre no puede superar ${SECURITY.NAME_MAX_LENGTH} caracteres`);
+    if (this.description && this.description.length > SECURITY.DESCRIPTION_MAX_LENGTH) {
+      errors.push(`La descripción no puede superar ${SECURITY.DESCRIPTION_MAX_LENGTH} caracteres`);
+    }
+    if (this.path.length > SECURITY.DESCRIPTION_MAX_LENGTH) errors.push("La ruta es demasiado larga");
     if (!isValidHttpMethod(this.method)) errors.push(`El método debe ser uno de: ${HTTP_METHODS.join(", ")}`);
     if (!this.path.startsWith("/api/")) errors.push("La ruta debe empezar por /api/");
     return errors;
@@ -49,7 +54,7 @@ class MonitoredEndpointDto {
     this.stats = {
       requests: stats?.total || 0,
       errors: stats?.errors || 0,
-      errorRate: stats?.total ? Math.round((stats.errors / stats.total) * 100) / 100 : 0,
+      errorRate: stats?.errorRate || 0, // lo calcula el servicio
       avgLatencyMs: stats?.avgLatencyMs || 0,
       lastRequestAt: stats?.lastRequestAt || null,
     };
@@ -74,11 +79,12 @@ class MonitoredEndpointResponseDto {
 
 // GET /api/monitoring/endpoints/:id → { ok, data: { ...MonitoredEndpointDto, recentRequests: RequestLogDto[] } }
 class MonitoredEndpointDetailResponseDto {
-  constructor({ endpoint, stats, status, recentRequests }) {
+  constructor({ endpoint, stats, status, recentRequests }, { isAdmin = false } = {}) {
     this.ok = true;
     this.data = {
       ...new MonitoredEndpointDto(endpoint, stats, status),
-      recentRequests: recentRequests.map((log) => new RequestLogDto(log)),
+      // La IP de origen solo la ve el administrador.
+      recentRequests: recentRequests.map((log) => new RequestLogDto(log, { includeSource: isAdmin })),
     };
   }
 }

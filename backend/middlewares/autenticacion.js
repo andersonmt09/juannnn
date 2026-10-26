@@ -2,7 +2,7 @@
 const rateLimit = require("express-rate-limit");
 const authService = require("../servicios/autenticacion");
 const { ErrorResponseDto } = require("../vistas/comunes");
-const { HttpError, SECURITY } = require("../configuracion");
+const { HttpError, SECURITY, normalizeEmail } = require("../configuracion");
 
 // Exige un token de acceso válido (Authorization: Bearer <token>) de un usuario que siga activo.
 // Deja el usuario en req.user, con su rol actual tomado de la base de datos.
@@ -40,29 +40,46 @@ function authorize(...roles) {
   };
 }
 
+// Fábrica de límites. Por defecto cuenta por IP; keyGenerator permite contar por otra clave (p. ej. el correo).
+// skipSuccessful: true no cuenta las respuestas exitosas (solo los intentos fallidos).
+function createRateLimiter({ max = SECURITY.RATE_LIMIT_MAX_ATTEMPTS, windowMs = SECURITY.RATE_LIMIT_WINDOW_MS, skipSuccessful = false, keyGenerator } = {}) {
+  return rateLimit({
+    windowMs,
+    limit: max,
+    skipSuccessfulRequests: skipSuccessful,
+    standardHeaders: true,
+    legacyHeaders: false,
+    ...(keyGenerator && { keyGenerator }),
+    handler: (req, res) => {
+      res.status(429).json(new ErrorResponseDto("Demasiados intentos. Intenta de nuevo en 15 minutos."));
+    },
+  });
+}
+
+// Clave por correo normalizado (si el cuerpo no trae un correo de texto, cae a la IP).
+const emailKey = (req) => normalizeEmail(req.body?.email) || `ip:${req.ip}`;
+
 // Máximo 5 intentos fallidos por IP cada 15 minutos en las rutas de autenticación.
-const authRateLimiter = rateLimit({
-  windowMs: SECURITY.RATE_LIMIT_WINDOW_MS,
-  limit: SECURITY.RATE_LIMIT_MAX_ATTEMPTS,
-  skipSuccessfulRequests: true,
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    res.status(429).json(new ErrorResponseDto("Demasiados intentos. Intenta de nuevo en 15 minutos."));
-  },
-});
+const authRateLimiter = createRateLimiter({ skipSuccessful: true });
 
-// Máximo 5 solicitudes de código de recuperación por IP cada 15 minutos (cuenta también las exitosas,
-// porque forgot siempre responde 200).
-const passwordResetLimiter = rateLimit({
-  windowMs: SECURITY.RATE_LIMIT_WINDOW_MS,
-  limit: SECURITY.RATE_LIMIT_MAX_ATTEMPTS,
-  skipSuccessfulRequests: false,
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    res.status(429).json(new ErrorResponseDto("Demasiados intentos. Intenta de nuevo en 15 minutos."));
-  },
-});
+// El login también se limita por correo (evita repartir intentos entre varias IP).
+const loginEmailLimiter = createRateLimiter({ skipSuccessful: true, keyGenerator: emailKey });
 
-module.exports = { authenticate, authenticateFromQuery, authorize, authRateLimiter, passwordResetLimiter };
+// Solicitudes de código de recuperación: cuenta también las exitosas, porque forgot siempre responde 200.
+const passwordResetLimiter = createRateLimiter();
+
+// Reenvío de códigos: máx. 5 cada 15 min por IP y por correo, contando también las exitosas.
+const resendIpLimiter = createRateLimiter({ max: SECURITY.RESEND_MAX_PER_WINDOW });
+const resendEmailLimiter = createRateLimiter({ max: SECURITY.RESEND_MAX_PER_WINDOW, keyGenerator: emailKey });
+
+module.exports = {
+  authenticate,
+  authenticateFromQuery,
+  authorize,
+  createRateLimiter,
+  authRateLimiter,
+  loginEmailLimiter,
+  passwordResetLimiter,
+  resendIpLimiter,
+  resendEmailLimiter,
+};

@@ -27,7 +27,7 @@ export function showVerify(container) {
     location.hash = session.isAdmin() ? "#/dashboard" : "#/monitoring";
   }
 
-  const view = renderVerifyView(container, { email, isRegistration }, {
+  const view = renderVerifyView(container, { email, isRegistration, expiresAt: session.getCodeExpiry() }, {
     async onSubmit(code) {
       view.setLoading(true);
       try {
@@ -43,7 +43,8 @@ export function showVerify(container) {
       try {
         await (isRegistration ? authApi.resendRegistrationCode(email) : authApi.resendLoginCode(email));
         toast.success("Si el correo existe, te enviamos un código nuevo");
-        view.restartTimers();
+        session.restartCodeExpiry();
+        view.restartTimers(session.getCodeExpiry());
       } catch (error) {
         toast.error(error.message);
       }

@@ -4,6 +4,7 @@ const { env, HttpError } = require("../configuracion");
 
 // 404 con la ruta (sin query string) y el método.
 function notFound(req, res, next) {
+  res.locals.notFound = true; // el registro de peticiones no guarda rutas inexistentes
   const error = HttpError.notFound("Endpoint no encontrado");
   error.path = req.originalUrl.split("?")[0];
   error.method = req.method;

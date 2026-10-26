@@ -39,15 +39,16 @@ class RequestLogIdRequestDto extends BaseRequestDto {
 // ---------- Respuesta (res) ----------
 
 // Una petición registrada (actividad reciente).
+// La IP (source) solo se incluye cuando se pide (administradores).
 class RequestLogDto {
-  constructor(log) {
+  constructor(log, { includeSource = false } = {}) {
     this.id = log.id;
     this.method = log.method;
     this.path = log.path;
     this.route = log.route;
     this.statusCode = log.statusCode;
     this.latencyMs = log.latencyMs;
-    this.source = log.source;
+    if (includeSource) this.source = log.source;
     this.createdAt = log.createdAt;
   }
 }
@@ -57,7 +58,7 @@ class RequestLogDetailResponseDto {
   constructor({ log, user }) {
     this.ok = true;
     this.data = {
-      ...new RequestLogDto(log),
+      ...new RequestLogDto(log, { includeSource: true }),
       userId: log.userId ?? null,
       user: user ? { id: user.id, name: user.name, email: user.email } : null,
     };
@@ -72,7 +73,7 @@ class DashboardResponseDto {
       summary,
       requestsByStatus,
       requestsByMethod,
-      recentRequests: recentRequests.map((log) => new RequestLogDto(log)),
+      recentRequests: recentRequests.map((log) => new RequestLogDto(log, { includeSource: true })),
     };
   }
 }
@@ -81,7 +82,7 @@ class DashboardResponseDto {
 class RequestLogListResponseDto {
   constructor({ logs, total, page, limit }) {
     this.ok = true;
-    this.data = logs.map((log) => new RequestLogDto(log));
+    this.data = logs.map((log) => new RequestLogDto(log, { includeSource: true }));
     this.meta = { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) };
   }
 }

@@ -12,7 +12,7 @@ const stream = (req, res) => {
   res.flushHeaders();
   res.write("retry: 5000\n\n");
 
-  const clientId = eventService.subscribe(res, req.user);
+  const clientId = eventService.subscribe(res, req.user, req.dto.token);
   res.write(`event: stream:connected\ndata: ${JSON.stringify(new ConnectedEventDto({ clientId }))}\n\n`);
 
   req.on("close", () => eventService.unsubscribe(clientId));

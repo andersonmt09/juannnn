@@ -7,14 +7,15 @@ const { HttpError } = require("../configuracion");
 
 const round = (ms) => Math.round(ms * 100) / 100;
 
-// Cada operación llama a un modelo distinto y devuelve sus datos.
+// Cada operación tiene dos partes: query (llama a un modelo) y shape (da forma a la respuesta).
+// La capa Backend mide la validación/preparación y el shape; la llamada al modelo cuenta como BD.
 const OPERATIONS = {
-  users: () => User.countByRole(),
-  endpoints: async () => {
-    const items = await MonitoredEndpoint.findAll();
-    return { total: items.length, items: items.map((e) => ({ method: e.method, path: e.path, name: e.name })) };
+  users: { query: () => User.countByRole(), shape: (roles) => ({ ...roles }) },
+  endpoints: {
+    query: () => MonitoredEndpoint.findAll(),
+    shape: (items) => ({ total: items.length, items: items.map((e) => ({ method: e.method, path: e.path, name: e.name })) }),
   },
-  requests: () => RequestLog.getSummary(),
+  requests: { query: () => RequestLog.getSummary(), shape: (summary) => ({ ...summary }) },
 };
 
 // receivedAt: performance.now() tomado al entrar la petición (el controlador lo pasa).
@@ -22,16 +23,22 @@ async function run({ operation, forceError }, receivedAt = performance.now()) {
   const startedAt = new Date().toISOString();
   const apiEnd = performance.now();
 
-  // Backend: preparación de la lógica
-  const backendStart = performance.now();
-  const execute = OPERATIONS[operation];
-  const backendMs = performance.now() - backendStart;
+  // Backend: validar la operación y preparar la consulta (antes de la BD)
+  const prepStart = performance.now();
+  const operationDef = Object.hasOwn(OPERATIONS, operation) ? OPERATIONS[operation] : null;
+  if (!operationDef) throw HttpError.badRequest("Operación no soportada");
+  const prepMs = performance.now() - prepStart;
 
   // Base de datos: llamada al modelo (o fallo simulado)
   const dbStart = performance.now();
   if (forceError) throw new HttpError(500, "Fallo simulado en la capa de base de datos");
-  const data = await execute();
+  const raw = await operationDef.query();
   const databaseMs = performance.now() - dbStart;
+
+  // Backend: dar forma a la respuesta con el resultado de la BD
+  const shapeStart = performance.now();
+  const data = operationDef.shape(raw);
+  const backendMs = prepMs + (performance.now() - shapeStart);
 
   const layers = {
     client: { detail: "Navegador: el frontend completa su tiempo de red", durationMs: 0 },

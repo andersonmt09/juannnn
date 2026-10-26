@@ -12,20 +12,21 @@ const CONNECTION_TONE = { CONNECTED: "live", CONNECTING: "warning", DISCONNECTED
 
 /**
  * @param {HTMLElement} container
- * @param {{ showHistory: boolean }} data
  * @param {{
  *   onSelectRequest: (request: object) => void,
- *   onPing: () => void, onTogglePause: () => void, onClear: () => void,
+ *   onPing: () => void, onReconnect: () => void, onTogglePause: () => void, onClear: () => void,
  *   onFilterChange: (filters: { statusClass: string, method: string }) => void,
  *   onPageChange: (page: number) => void, onExportPage: () => void, onRetryHistory: () => void,
  * }} handlers
  */
-export function renderActivityView(container, { showHistory }, handlers) {
+export function renderActivityView(container, handlers) {
   const drawer = detailDrawer({ title: "Detalle de la petición" });
 
   // ---- KPI ----
   const connection = kpiCard({ label: "Conexión", value: STREAM_LABELS.DISCONNECTED, icon: "radio", tone: "danger", hint: "Tiempo real (SSE)" });
   connection.querySelector(".kpi-value").style.fontSize = "var(--fs-2xl)";
+  const reconnectButton = el("button", { type: "button", class: "btn btn-secondary btn-sm hidden", onclick: handlers.onReconnect }, [icon("refresh"), "Reconectar"]);
+  connection.append(reconnectButton);
   const received = kpiCard({ label: "Eventos recibidos", value: "0", icon: "activity", tone: "accent", hint: "desde que abriste la sesión" });
   const last = kpiCard({ label: "Último evento", value: "—", icon: "clock", tone: "accent", hint: "Aún no llegan eventos" });
   last.querySelector(".kpi-value").style.fontSize = "var(--fs-2xl)";
@@ -54,29 +55,27 @@ export function renderActivityView(container, { showHistory }, handlers) {
     consoleCard,
   ];
 
-  // ---- Historial (solo admin) ----
+  // ---- Historial ----
   let filters = { statusClass: "", method: "" };
   const historyBody = el("div", {}, [skeleton(5)]);
-  if (showHistory) {
-    const statusFilter = segmented({
-      name: "history-status", options: STATUS_FILTERS, value: "",
-      onChange: (value) => { filters = { ...filters, statusClass: value }; handlers.onFilterChange(filters); },
-    });
-    const methodSelect = el("select", { class: "input", "aria-label": "Filtrar por método", style: "width:auto;min-width:140px" }, [
-      el("option", { value: "" }, ["Todos los métodos"]),
-      ...METHODS.map((m) => el("option", { value: m }, [m])),
-    ]);
-    methodSelect.addEventListener("change", () => { filters = { ...filters, method: methodSelect.value }; handlers.onFilterChange(filters); });
+  const statusFilter = segmented({
+    name: "history-status", options: STATUS_FILTERS, value: "",
+    onChange: (value) => { filters = { ...filters, statusClass: value }; handlers.onFilterChange(filters); },
+  });
+  const methodSelect = el("select", { class: "input", "aria-label": "Filtrar por método", style: "width:auto;min-width:140px" }, [
+    el("option", { value: "" }, ["Todos los métodos"]),
+    ...METHODS.map((m) => el("option", { value: m }, [m])),
+  ]);
+  methodSelect.addEventListener("change", () => { filters = { ...filters, method: methodSelect.value }; handlers.onFilterChange(filters); });
 
-    nodes.push(el("section", { class: "card" }, [
-      el("div", { class: "card-header" }, [
-        el("h2", {}, ["Historial de peticiones"]),
-        el("button", { type: "button", class: "btn btn-secondary btn-sm", onclick: handlers.onExportPage }, [icon("download"), "Exportar CSV"]),
-      ]),
-      el("div", { class: "row", style: "margin-bottom:var(--sp-4)" }, [statusFilter, methodSelect]),
-      historyBody,
-    ]));
-  }
+  nodes.push(el("section", { class: "card" }, [
+    el("div", { class: "card-header" }, [
+      el("h2", {}, ["Historial de peticiones"]),
+      el("button", { type: "button", class: "btn btn-secondary btn-sm", onclick: handlers.onExportPage }, [icon("download"), "Exportar CSV"]),
+    ]),
+    el("div", { class: "row", style: "margin-bottom:var(--sp-4)" }, [statusFilter, methodSelect]),
+    historyBody,
+  ]));
 
   container.replaceChildren(...nodes);
 
@@ -117,6 +116,7 @@ export function renderActivityView(container, { showHistory }, handlers) {
       const hint = connection.querySelector(".kpi-hint");
       hint.replaceChildren(statusDot(status.toLowerCase()), " Tiempo real (SSE)");
       hint.classList.add("row");
+      reconnectButton.classList.toggle("hidden", status !== "DISCONNECTED");
     },
 
     setReceived(count) {

@@ -42,10 +42,6 @@ async function startLoginVerification(user) {
   return { email: user.email };
 }
 
-async function login(credentials) {
-  return startLoginVerification(await validateCredentials(credentials));
-}
-
 // Paso 2: valida el código y entrega los tokens.
 async function verifyLogin({ email, code }) {
   await verifyCode({ email, code, purpose: CODE_PURPOSE.LOGIN });
@@ -53,7 +49,22 @@ async function verifyLogin({ email, code }) {
   return issueSession(user);
 }
 
+// Enfriamiento en memoria por correo y propósito: { clave -> hora del último envío }.
+const lastResend = new Map();
+
+function enforceResendCooldown(email, purpose) {
+  const now = Date.now();
+  for (const [key, time] of lastResend) {
+    if (now - time >= SECURITY.RESEND_COOLDOWN_MS) lastResend.delete(key); // limpia los vencidos
+  }
+  const key = `${purpose}:${email}`;
+  if (lastResend.has(key)) throw HttpError.tooManyRequests("Espera unos segundos antes de pedir otro código");
+  lastResend.set(key, now);
+}
+
 async function resendCode({ email, purpose }) {
+  // El enfriamiento se aplica exista o no el correo, para no revelarlo.
+  enforceResendCooldown(email, purpose);
   // Respuesta genérica: no revela si el correo existe, está desactivado o ya verificado.
   const user = await User.findByEmail(email);
   if (!user || !user.isActive()) return;
@@ -65,6 +76,8 @@ async function resendCode({ email, purpose }) {
 
 // Respuesta siempre genérica: si no existe, está inactivo o sin verificar, no hace nada.
 async function requestPasswordReset({ email }) {
+  // Mismo enfriamiento que el reenvío: evita inundar de correos a una cuenta.
+  enforceResendCooldown(email, CODE_PURPOSE.PASSWORD_RESET);
   const user = await User.findByEmail(email);
   if (!user || !user.isActive() || !user.emailVerified) return;
   await issueCode({ userId: user.id, email, purpose: CODE_PURPOSE.PASSWORD_RESET });
@@ -128,17 +141,20 @@ async function issueCode({ userId, email, purpose }) {
   await mail.sendVerificationCode(email, code, purpose);
 }
 
+const INVALID_CODE_MESSAGE = "Código inválido o expirado"; // igual si no existe o es incorrecto
+
 // Comprueba el código; si es correcto lo marca como usado.
 async function verifyCode({ email, purpose, code }) {
   const record = await VerificationCode.findActive(email, purpose);
-  if (!record) throw HttpError.unauthorized("Código inválido o expirado");
-  if (record.attempts >= SECURITY.CODE_MAX_ATTEMPTS) {
+  if (!record) throw HttpError.unauthorized(INVALID_CODE_MESSAGE);
+
+  // Primero se cuenta el intento (atómico en la API) y luego se compara: así las peticiones en paralelo no se saltan el límite.
+  const attempts = await VerificationCode.incrementAttempts(record.id);
+  if (!Number.isFinite(attempts) || attempts > SECURITY.CODE_MAX_ATTEMPTS) {
     throw HttpError.tooManyRequests("Demasiados intentos para este código. Solicita uno nuevo.");
   }
-
-  await VerificationCode.incrementAttempts(record.id);
   const matches = await bcrypt.compare(code, record.codeHash);
-  if (!matches) throw HttpError.unauthorized("Código incorrecto");
+  if (!matches) throw HttpError.unauthorized(INVALID_CODE_MESSAGE);
 
   await VerificationCode.markUsed(record.id);
 }
@@ -148,7 +164,6 @@ module.exports = {
   verifyRegistration,
   validateCredentials,
   startLoginVerification,
-  login,
   verifyLogin,
   requestPasswordReset,
   resetPassword,

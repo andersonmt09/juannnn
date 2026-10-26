@@ -8,7 +8,8 @@ const key = (method, path) => `${method} ${path}`;
 
 async function statsIndex() {
   const stats = await RequestLog.getStatsByRoute();
-  return new Map(stats.map((s) => [key(s.method, s.route), s]));
+  // errorRate (0 a 1, 2 decimales) se calcula aquí una sola vez.
+  return new Map(stats.map((s) => [key(s.method, s.route), { ...s, errorRate: Math.round(errorRate(s) * 100) / 100 }]));
 }
 
 const FAILING_ERROR_RATE = 0.2;

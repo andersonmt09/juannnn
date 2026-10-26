@@ -1,6 +1,6 @@
 // Controlador de /api/monitoring: recibe la petición ya validada (req.dto), llama al servicio y responde con la vista.
 const monitoringService = require("../servicios/monitoreo");
-const { asyncHandler } = require("../configuracion");
+const { asyncHandler, ROLES } = require("../configuracion");
 const { MessageResponseDto } = require("../vistas/comunes");
 const {
   MonitoredEndpointListResponseDto,
@@ -21,7 +21,10 @@ const list = asyncHandler(async (req, res) => {
 });
 
 const getById = asyncHandler(async (req, res) => {
-  res.json(new MonitoredEndpointDetailResponseDto(await monitoringService.getById(req.dto.id)));
+  res.json(new MonitoredEndpointDetailResponseDto(
+    await monitoringService.getById(req.dto.id),
+    { isAdmin: req.user.role === ROLES.ADMIN },
+  ));
 });
 
 const create = asyncHandler(async (req, res) => {

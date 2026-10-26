@@ -10,6 +10,13 @@ async function findActiveOrFail(id) {
   return user;
 }
 
+// 409 si el correo ya existe (también en cuentas eliminadas: el correo es único).
+async function ensureEmailFree(email, ownId) {
+  const other = await User.findByEmail(email);
+  if (!other || other.id === ownId) return;
+  throw HttpError.conflict(other.isActive() ? "El correo ya está registrado" : "El correo pertenece a una cuenta eliminada");
+}
+
 // Impide dejar el sistema sin administradores activos.
 async function ensureAnotherAdminExists(user) {
   if (!user.isAdmin()) return;
@@ -30,7 +37,7 @@ async function getById(id, requester) {
 
 // Los usuarios creados por un administrador quedan verificados.
 async function create({ name, email, password, role }, requester) {
-  if (await User.findByEmail(email)) throw HttpError.conflict("El correo ya está registrado");
+  await ensureEmailFree(email);
 
   const passwordHash = await bcrypt.hash(password, SECURITY.BCRYPT_ROUNDS);
   return User.create({ name, email, passwordHash, role, emailVerified: true, createdById: requester?.id ?? null });
@@ -42,10 +49,7 @@ async function update(id, changes, requester) {
     throw HttpError.badRequest("No puedes cambiar tu propio rol");
   }
 
-  if (changes.email && changes.email !== user.email) {
-    const other = await User.findByEmail(changes.email);
-    if (other && other.id !== user.id) throw HttpError.conflict("El correo ya está en uso");
-  }
+  if (changes.email && changes.email !== user.email) await ensureEmailFree(changes.email, user.id);
   if (changes.role && changes.role !== ROLES.ADMIN) await ensureAnotherAdminExists(user);
 
   return User.update(id, changes);
@@ -54,9 +58,10 @@ async function update(id, changes, requester) {
 // Para cambiar la propia contraseña hay que dar la actual. El administrador puede cambiar la de otros sin ella.
 // Devuelve la sesión nueva si es la propia; null si la cambió un administrador a otro usuario.
 async function changePassword(id, { currentPassword, password }, requester) {
-  const user = await findActiveOrFail(id);
-  const isOwner = requester.id === user.id;
+  // Primero el permiso (403) y después la existencia (404).
+  const isOwner = requester.id === id;
   if (!isOwner && !requester.isAdmin()) throw HttpError.forbidden();
+  const user = await findActiveOrFail(id);
 
   if (isOwner) {
     const valid = currentPassword && (await bcrypt.compare(currentPassword, user.passwordHash));

@@ -36,8 +36,10 @@ export function renderForgotPasswordView(container, { onRequestCode, onReset, on
     inputmode: "numeric", autocomplete: "one-time-code", placeholder: "······", "aria-label": "Código de 6 dígitos",
   });
   codeInput.addEventListener("input", () => { codeInput.value = codeInput.value.replace(/\D/g, "").slice(0, 6); });
-  const password = passwordField({ id: "reset-password", name: "password", label: "Contraseña nueva", autocomplete: "new-password", hint: "Mínimo 6 caracteres", minlength: 6 });
-  const confirm = passwordField({ id: "reset-confirm", name: "confirmPassword", label: "Confirmar contraseña", autocomplete: "new-password", minlength: 6 });
+  const password = passwordField({ id: "reset-password", name: "password", label: "Contraseña nueva", autocomplete: "new-password", hint: "Entre 8 y 72 caracteres", minlength: 8 });
+  password.input.maxLength = 72;
+  const confirm = passwordField({ id: "reset-confirm", name: "confirmPassword", label: "Confirmar contraseña", autocomplete: "new-password", minlength: 8 });
+  confirm.input.maxLength = 72;
   const resetBtn = el("button", { type: "submit", class: "btn btn-primary btn-block" }, [el("span", {}, ["Cambiar contraseña"])]);
   const resend = el("button", { type: "button", class: "btn btn-ghost btn-sm" }, ["Reenviar código"]);
   const sentTo = el("strong", {});

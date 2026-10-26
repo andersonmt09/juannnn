@@ -52,7 +52,7 @@ let cleanup = null;     // limpieza de la pantalla actual
 let navigation = 0;     // número de navegación, para ignorar controladores lentos
 
 function runCleanup() {
-  try { cleanup?.(); } catch { /* una limpieza rota no debe bloquear la navegación */ }
+  try { cleanup?.(); } catch (error) { console.error("Error al limpiar la pantalla:", error); }
   cleanup = null;
 }
 
@@ -63,7 +63,7 @@ function mount(controller, container) {
     if (typeof result !== "function") return;
     if (current === navigation) cleanup = result;
     else result(); // el usuario ya cambió de pantalla
-  }).catch(() => { /* cada controlador muestra sus propios errores */ });
+  }).catch((error) => { console.error("Error en la pantalla:", error); });
 }
 
 function navigate() {

@@ -1,8 +1,9 @@
 // Modelo del tiempo real: conexión SSE a /api/events/stream (solo administradores) y su estado.
 // Los oyentes reciben { name, data, at }. Nombres: stream:connected, stream:heartbeat,
-// api:activity, stream:status (cambió la conexión) y stream:pong (resultado de ping()).
+// api:activity, stream:closed (el servidor cerró), stream:status (cambió la conexión)
+// y stream:pong (resultado de ping()).
 import { session } from "./sesion.js";
-import { ensureFreshSession, eventApi } from "./api.js";
+import { ensureFreshSession, eventApi, REFRESH } from "./api.js";
 
 const STREAM_URL = "/api/events/stream";
 const SERVER_EVENTS = ["stream:connected", "stream:heartbeat", "api:activity"];
@@ -51,9 +52,19 @@ function scheduleReconnect() {
   retryTimer = setTimeout(async () => {
     retryTimer = null;
     if (!wanted) return;
-    await ensureFreshSession(); // el token pudo vencer mientras estaba caído
+    const result = await ensureFreshSession(); // el token pudo vencer mientras estaba caído
+    if (result === REFRESH.INVALID) { wanted = false; return; } // sesión inválida: no se reabre
     if (wanted) open();
   }, RETRY_MS);
+}
+
+// El servidor avisa que cierra el stream (token vencido, tope de conexiones...).
+// No se reabre solo: se revisa la sesión y queda desconectado hasta stream.reconnect().
+async function onClosedByServer(message) {
+  onServerEvent("stream:closed", message);
+  closeSource();
+  setStatus(STATUS.DISCONNECTED);
+  await ensureFreshSession();
 }
 
 function open() {
@@ -69,8 +80,10 @@ function open() {
     setStatus(STATUS.CONNECTED);
   };
   for (const name of SERVER_EVENTS) source.addEventListener(name, (message) => onServerEvent(name, message));
+  source.addEventListener("stream:closed", onClosedByServer);
 
   source.onerror = () => {
+    if (!source) return; // ya se cerró a propósito
     setStatus(STATUS.DISCONNECTED);
     // CLOSED: el navegador desistió (p. ej. 401). Se renueva la sesión y se reintenta.
     // CONNECTING: el navegador reintenta solo y onopen devolverá a CONNECTED.
@@ -88,6 +101,19 @@ export const stream = {
     wanted = true;
     retries = 0;
     if (!source) open();
+  },
+
+  // Reconexión manual (botón "Reconectar"): renueva la sesión y abre de nuevo.
+  async reconnect() {
+    wanted = true;
+    retries = 0;
+    clearTimeout(retryTimer);
+    retryTimer = null;
+    closeSource();
+    setStatus(STATUS.CONNECTING);
+    const result = await ensureFreshSession();
+    if (result === REFRESH.INVALID) { wanted = false; setStatus(STATUS.DISCONNECTED); return; }
+    if (wanted) open();
   },
 
   disconnect() {

@@ -1,7 +1,7 @@
 // Vista de /api/auth: lo que entra (DTOs de petición) y lo que sale (DTOs de respuesta).
-const { BaseRequestDto } = require("./comunes");
+const { BaseRequestDto, cleanText, nameErrors, emailErrors, passwordErrors, codeErrors } = require("./comunes");
 const { UserDto } = require("./usuarios");
-const { SECURITY, isValidEmail, normalizeEmail } = require("../configuracion");
+const { normalizeEmail } = require("../configuracion");
 
 // ---------- Petición (req) ----------
 
@@ -9,18 +9,12 @@ const { SECURITY, isValidEmail, normalizeEmail } = require("../configuracion");
 class RegisterRequestDto extends BaseRequestDto {
   constructor({ name, email, password } = {}) {
     super();
-    this.name = String(name || "").trim();
+    this.name = cleanText(name);
     this.email = normalizeEmail(email);
-    this.password = password || "";
+    this.password = password;
   }
   validate() {
-    const errors = [];
-    if (this.name.length < 2) errors.push("El nombre debe tener al menos 2 caracteres");
-    if (!isValidEmail(this.email)) errors.push("El correo electrónico no es válido");
-    if (this.password.length < SECURITY.PASSWORD_MIN_LENGTH) {
-      errors.push(`La contraseña debe tener al menos ${SECURITY.PASSWORD_MIN_LENGTH} caracteres`);
-    }
-    return errors;
+    return [...nameErrors(this.name), ...emailErrors(this.email), ...passwordErrors(this.password)];
   }
 }
 
@@ -30,18 +24,16 @@ class CredentialsRequestDto extends BaseRequestDto {
   constructor({ email, password } = {}) {
     super();
     this.email = normalizeEmail(email);
-    this.password = password || "";
+    this.password = password;
   }
   validate() {
-    const errors = [];
-    if (!isValidEmail(this.email)) errors.push("El correo electrónico no es válido");
-    if (!this.password) errors.push("La contraseña es obligatoria");
+    const errors = emailErrors(this.email);
+    if (typeof this.password !== "string") errors.push("La contraseña debe ser texto");
+    else if (!this.password) errors.push("La contraseña es obligatoria");
+    else if (this.password.length > 1000) errors.push("La contraseña es demasiado larga");
     return errors;
   }
 }
-
-// Alias para no romper el nombre anterior.
-const LoginRequestDto = CredentialsRequestDto;
 
 // POST /api/auth/password/forgot
 class ForgotPasswordRequestDto extends BaseRequestDto {
@@ -50,7 +42,7 @@ class ForgotPasswordRequestDto extends BaseRequestDto {
     this.email = normalizeEmail(email);
   }
   validate() {
-    return isValidEmail(this.email) ? [] : ["El correo electrónico no es válido"];
+    return emailErrors(this.email);
   }
 }
 
@@ -59,17 +51,11 @@ class ResetPasswordRequestDto extends BaseRequestDto {
   constructor({ email, code, password } = {}) {
     super();
     this.email = normalizeEmail(email);
-    this.code = String(code || "").trim();
-    this.password = password || "";
+    this.code = cleanText(code);
+    this.password = password;
   }
   validate() {
-    const errors = [];
-    if (!isValidEmail(this.email)) errors.push("El correo electrónico no es válido");
-    if (!/^\d{6}$/.test(this.code)) errors.push("El código debe tener 6 dígitos");
-    if (this.password.length < SECURITY.PASSWORD_MIN_LENGTH) {
-      errors.push(`La contraseña debe tener al menos ${SECURITY.PASSWORD_MIN_LENGTH} caracteres`);
-    }
-    return errors;
+    return [...emailErrors(this.email), ...codeErrors(this.code), ...passwordErrors(this.password)];
   }
 }
 
@@ -78,13 +64,10 @@ class VerifyCodeRequestDto extends BaseRequestDto {
   constructor({ email, code } = {}) {
     super();
     this.email = normalizeEmail(email);
-    this.code = String(code || "").trim();
+    this.code = cleanText(code);
   }
   validate() {
-    const errors = [];
-    if (!isValidEmail(this.email)) errors.push("El correo electrónico no es válido");
-    if (!/^\d{6}$/.test(this.code)) errors.push("El código debe tener 6 dígitos");
-    return errors;
+    return [...emailErrors(this.email), ...codeErrors(this.code)];
   }
 }
 
@@ -95,7 +78,7 @@ class ResendCodeRequestDto extends BaseRequestDto {
     this.email = normalizeEmail(email);
   }
   validate() {
-    return isValidEmail(this.email) ? [] : ["El correo electrónico no es válido"];
+    return emailErrors(this.email);
   }
 }
 
@@ -103,10 +86,10 @@ class ResendCodeRequestDto extends BaseRequestDto {
 class RefreshTokenRequestDto extends BaseRequestDto {
   constructor({ refreshToken } = {}) {
     super();
-    this.refreshToken = refreshToken || "";
+    this.refreshToken = refreshToken;
   }
   validate() {
-    return this.refreshToken ? [] : ["El refresh token es obligatorio"];
+    return typeof this.refreshToken === "string" && this.refreshToken ? [] : ["El refresh token es obligatorio"];
   }
 }
 
@@ -142,7 +125,6 @@ class SessionResponseDto {
 module.exports = {
   RegisterRequestDto,
   CredentialsRequestDto,
-  LoginRequestDto,
   ForgotPasswordRequestDto,
   ResetPasswordRequestDto,
   VerifyCodeRequestDto,

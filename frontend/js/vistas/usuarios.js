@@ -22,7 +22,7 @@ export function renderUsersView(container, handlers) {
   const tableCard = el("div", { class: "card" }, [skeleton(5)]);
 
   // ---- Formulario del modal ----
-  const nameInput = el("input", { id: "user-name", name: "name", class: "input", required: true, minlength: "2", autocomplete: "off" });
+  const nameInput = el("input", { id: "user-name", name: "name", class: "input", required: true, minlength: "2", maxlength: "100", autocomplete: "off" });
   const emailInput = el("input", { id: "user-email", name: "email", class: "input", type: "email", required: true, autocomplete: "off" });
   const roleSelect = el("select", { id: "user-role", name: "role", class: "input" }, [
     el("option", { value: "user" }, ["Usuario"]),
@@ -30,8 +30,8 @@ export function renderUsersView(container, handlers) {
   ]);
   const roleHint = el("div", { class: "field-hint hidden" }, ["No puedes cambiar tu propio rol"]);
   const passwordLabel = el("label", { class: "field-label", for: "user-password" }, ["Contraseña"]);
-  const passwordInput = el("input", { id: "user-password", name: "password", class: "input", type: "password", minlength: "6", autocomplete: "new-password" });
-  const passwordHint = el("div", { class: "field-hint" }, ["Mínimo 6 caracteres"]);
+  const passwordInput = el("input", { id: "user-password", name: "password", class: "input", type: "password", minlength: "8", maxlength: "72", autocomplete: "new-password" });
+  const passwordHint = el("div", { class: "field-hint" }, ["Entre 8 y 72 caracteres"]);
   const passwordField = el("div", { class: "field" }, [passwordLabel, passwordInput, passwordHint]);
 
   const form = el("form", { id: "user-form" }, [

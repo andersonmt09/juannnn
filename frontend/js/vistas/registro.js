@@ -9,17 +9,21 @@ import { buildAuthShell } from "./inicio-sesion.js";
  */
 export function renderRegisterView(container, { onSubmit }) {
   const submit = el("button", { type: "submit", class: "btn btn-primary btn-block" }, [el("span", {}, ["Crear cuenta"])]);
+  const password = passwordField({ id: "reg-password", name: "password", label: "Contraseña", autocomplete: "new-password", hint: "Entre 8 y 72 caracteres", minlength: 8 });
+  password.input.maxLength = 72;
+  const confirm = passwordField({ id: "reg-confirm", name: "confirmPassword", label: "Confirmar contraseña", autocomplete: "new-password" });
+  confirm.input.maxLength = 72;
   const form = el("form", {}, [
     el("div", { class: "field" }, [
       el("label", { class: "field-label", for: "reg-name" }, ["Nombre completo"]),
-      el("input", { id: "reg-name", name: "name", class: "input", required: true, minlength: "2", autocomplete: "name", placeholder: "Tu nombre" }),
+      el("input", { id: "reg-name", name: "name", class: "input", required: true, minlength: "2", maxlength: "100", autocomplete: "name", placeholder: "Tu nombre" }),
     ]),
     el("div", { class: "field" }, [
       el("label", { class: "field-label", for: "reg-email" }, ["Correo electrónico"]),
       el("input", { id: "reg-email", name: "email", type: "email", class: "input", required: true, autocomplete: "email", placeholder: "tu@correo.com" }),
     ]),
-    passwordField({ id: "reg-password", name: "password", label: "Contraseña", autocomplete: "new-password", hint: "Mínimo 6 caracteres", minlength: 6 }),
-    passwordField({ id: "reg-confirm", name: "confirmPassword", label: "Confirmar contraseña", autocomplete: "new-password" }),
+    password,
+    confirm,
     submit,
   ]);
   form.addEventListener("submit", (event) => {

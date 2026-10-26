@@ -1,17 +1,16 @@
 // Vista de verificación con código de 6 dígitos (#/verify), para el registro y el inicio de sesión.
 import { el, icon, maskEmail } from "../utilidades.js";
 
-const EXPIRY_SECONDS = 300; // el código vence en 5:00
 const RESEND_SECONDS = 30; // espera entre reenvíos
 
 const clock = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
 /**
  * @param {HTMLElement} container
- * @param {{ email: string, isRegistration: boolean }} data
+ * @param {{ email: string, isRegistration: boolean, expiresAt: number }} data (expiresAt en ms)
  * @param {{ onSubmit: (code: string) => void, onResend: () => void }} handlers
  */
-export function renderVerifyView(container, { email, isRegistration }, { onSubmit, onResend }) {
+export function renderVerifyView(container, { email, isRegistration, expiresAt }, { onSubmit, onResend }) {
   let loading = false;
   let expired = false;
   let expiryTimer = null;
@@ -48,11 +47,11 @@ export function renderVerifyView(container, { email, isRegistration }, { onSubmi
     submit.classList.toggle("is-loading", loading);
   }
 
-  function startExpiry() {
+  function startExpiry(deadline) {
     clearInterval(expiryTimer);
     expired = false;
-    let left = EXPIRY_SECONDS;
     const tick = () => {
+      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       if (left <= 0) {
         expired = true;
         clearInterval(expiryTimer);
@@ -63,7 +62,6 @@ export function renderVerifyView(container, { email, isRegistration }, { onSubmi
         delete countdown.dataset.expired;
       }
       refreshControls();
-      left -= 1;
     };
     tick();
     expiryTimer = setInterval(tick, 1000);
@@ -105,7 +103,7 @@ export function renderVerifyView(container, { email, isRegistration }, { onSubmi
     ]),
   ]));
   input.focus();
-  startExpiry();
+  startExpiry(expiresAt);
   startCooldown();
 
   return {
@@ -115,9 +113,9 @@ export function renderVerifyView(container, { email, isRegistration }, { onSubmi
       if (!value && !expired) input.focus();
     },
     // Tras un reenvío correcto: limpia el campo y reinicia ambos contadores.
-    restartTimers() {
+    restartTimers(newExpiresAt) {
       input.value = "";
-      startExpiry();
+      startExpiry(newExpiresAt);
       startCooldown();
       input.focus();
     },

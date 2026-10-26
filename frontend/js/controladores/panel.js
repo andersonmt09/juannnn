@@ -10,11 +10,12 @@ const CSV_COLUMNS = [
   ["latencyMs", "latencia_ms"], ["createdAt", "fecha"],
 ];
 const MAX_RECENT = 10;
+const DEBOUNCE_MS = 2000; // espera entre eventos antes de recargar las métricas
 
 export function showDashboard(container) {
   let alive = true;
   let loaded = false;
-  let dashboard = null; // datos vigentes (se modifican con el stream)
+  let debounceTimer = null;
   let recent = [];
   let ticket = 0; // ignora respuestas viejas del detalle
 
@@ -49,9 +50,8 @@ export function showDashboard(container) {
     try {
       const [data, services] = await Promise.all([metricApi.getDashboard(), metricApi.getServices()]);
       if (!alive) return;
-      dashboard = data;
       recent = [...data.recentRequests];
-      view.showData({ dashboard, services, recent });
+      view.showData({ dashboard: data, services, recent });
       view.setUpdatedAt(new Date());
       loaded = true;
     } catch (error) {
@@ -65,18 +65,16 @@ export function showDashboard(container) {
     }
   }
 
-  // Simulación: se mide el tiempo total y cliente = total − servidor.
+  // Simulación: se mide el tiempo total y el modelo calcula la capa Cliente.
   view.bindSimulation(async ({ operation, forceError }) => {
     view.setRunning(true);
     const started = performance.now();
     try {
       const result = await simulationApi.run({ operation, forceError });
       const totalMs = performance.now() - started;
-      const layers = result.layers.map((layer) => ({ ...layer }));
-      layers[0].durationMs = Math.max(0, totalMs - result.totalMs);
       toast.success(`Simulación completada en ${Math.round(totalMs)} ms`);
       view.setRunning(false);
-      await view.playSimulation({ ...result, layers, totalMs });
+      await view.playSimulation(simulationApi.withClientLayer(result, totalMs));
     } catch (error) {
       view.setRunning(false);
       toast.error(`Error ${error.status || ""}: ${error.message}`.replace("Error : ", "Error: "));
@@ -84,29 +82,37 @@ export function showDashboard(container) {
     }
   });
 
-  // Cada api:activity suma a los KPI y a la tabla sin recargar.
+  // Recarga suave del panel: el servidor calcula las métricas, el cliente solo las muestra.
+  async function softReload() {
+    if (!alive || loading) return;
+    try {
+      const data = await metricApi.getDashboard();
+      if (!alive) return;
+      recent = [...data.recentRequests];
+      view.refreshData({ dashboard: data, recent });
+      view.setUpdatedAt(new Date());
+    } catch { /* el próximo evento lo intenta de nuevo */ }
+  }
+
+  // Cada api:activity agrega la fila a la tabla y pide métricas nuevas con debounce.
   const unsubscribe = stream.subscribe((event) => {
     // Al conectarse el tiempo real, se recarga para que los servicios cuenten este cliente.
     if (event.name === "stream:connected") {
       if (loading) reloadAfterLoad = true; else load();
       return;
     }
-    if (event.name !== "api:activity" || !dashboard || !event.data) return;
-    const s = dashboard.summary;
-    const hit = event.data;
-    s.avgLatencyMs = (s.avgLatencyMs * s.requestsTotal + hit.latencyMs) / (s.requestsTotal + 1);
-    s.requestsTotal += 1;
-    s.requestsLast24h += 1;
-    if (hit.statusCode >= 400) s.errorsTotal += 1;
-    s.errorRate = s.errorsTotal / s.requestsTotal;
-    recent = [hit, ...recent].slice(0, MAX_RECENT);
-    view.update(s, recent);
+    if (event.name !== "api:activity" || !loaded || !event.data) return;
+    recent = [event.data, ...recent].slice(0, MAX_RECENT);
+    view.showRecent(recent);
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(softReload, DEBOUNCE_MS);
   });
 
   load();
 
   return () => {
     alive = false;
+    clearTimeout(debounceTimer);
     unsubscribe();
     view.destroy();
   };

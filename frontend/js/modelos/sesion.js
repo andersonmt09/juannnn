@@ -10,10 +10,13 @@ const KEYS = Object.freeze({
   USER: "axon_user",
   PENDING_EMAIL: "axon_pending_email",
   PENDING_PURPOSE: "axon_pending_purpose",
+  CODE_EXPIRES_AT: "axon_code_expires_at",
 });
 
 // Para qué se pide el código de verificación (lo usan los tres controladores de acceso).
 export const VERIFICATION_PURPOSE = Object.freeze({ LOGIN: "login", REGISTRATION: "registration" });
+
+const CODE_VALID_MS = 5 * 60 * 1000; // el código vence a los 5 minutos
 
 export const session = {
   getAccessToken: () => storage.get(KEYS.ACCESS_TOKEN),
@@ -47,6 +50,15 @@ export const session = {
   setPendingVerification(email, purpose) {
     storage.set(KEYS.PENDING_EMAIL, email);
     storage.set(KEYS.PENDING_PURPOSE, purpose);
+    this.restartCodeExpiry();
+  },
+  // Hora (ms) en que vence el código; se guarda para que el contador sobreviva a recargas.
+  restartCodeExpiry() {
+    storage.set(KEYS.CODE_EXPIRES_AT, String(Date.now() + CODE_VALID_MS));
+  },
+  getCodeExpiry() {
+    const value = Number(storage.get(KEYS.CODE_EXPIRES_AT));
+    return Number.isFinite(value) && value > 0 ? value : Date.now() + CODE_VALID_MS;
   },
   getPendingVerification() {
     return {
@@ -57,6 +69,7 @@ export const session = {
   clearPendingVerification() {
     storage.remove(KEYS.PENDING_EMAIL);
     storage.remove(KEYS.PENDING_PURPOSE);
+    storage.remove(KEYS.CODE_EXPIRES_AT);
   },
 };
 

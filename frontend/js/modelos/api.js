@@ -20,16 +20,34 @@ export class ApiError extends Error {
 // Una sola renovación a la vez: si llegan varios 401 juntos, todos esperan la misma promesa.
 let refreshing = null;
 
-/** Renueva los tokens con el refresh token. Devuelve true si la sesión quedó vigente. */
+// Resultado de la renovación: vigente, inválida (401/403) o sin respuesta (red caída o 503).
+export const REFRESH = Object.freeze({ OK: "ok", INVALID: "invalid", UNAVAILABLE: "unavailable" });
+
+function expireSession() {
+  session.clear();
+  window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+}
+
+/**
+ * Renueva los tokens con el refresh token. Solo se cierra la sesión (y se avisa una vez)
+ * si el servidor responde 401/403; por red o 503 la sesión se conserva.
+ */
 export function ensureFreshSession() {
   refreshing ??= (async () => {
     const refreshToken = session.getRefreshToken();
-    if (!refreshToken) return false;
+    if (!refreshToken) {
+      if (session.getAccessToken()) expireSession();
+      return REFRESH.INVALID;
+    }
     try {
       session.save(await authApi.refreshToken(refreshToken));
-      return true;
-    } catch {
-      return false;
+      return REFRESH.OK;
+    } catch (error) {
+      if (error.status === 401 || error.status === 403) {
+        expireSession();
+        return REFRESH.INVALID;
+      }
+      return REFRESH.UNAVAILABLE;
     }
   })().finally(() => { refreshing = null; });
   return refreshing;
@@ -51,16 +69,18 @@ async function request(method, path, body, canRetry = true) {
     throw new ApiError("No se pudo conectar con la API", 0);
   }
 
-  if (response.status === 401 && token && canRetry && (await ensureFreshSession())) {
-    return request(method, path, body, false);
+  if (response.status === 401 && token && canRetry) {
+    // Si otra petición ya renovó el token, solo se reintenta con el nuevo.
+    const current = session.getAccessToken();
+    if (current && current !== token) return request(method, path, body, false);
+    const result = await ensureFreshSession();
+    if (result === REFRESH.OK) return request(method, path, body, false);
+    if (result === REFRESH.UNAVAILABLE) throw new ApiError("No se pudo renovar la sesión, intenta de nuevo", 503);
+    throw new ApiError("Tu sesión expiró", 401); // INVALID: el aviso ya se emitió una sola vez
   }
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    if (response.status === 401 && token) {
-      session.clear();
-      window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
-    }
     throw new ApiError(data?.message || "Error en la solicitud", response.status, data);
   }
   return data;
@@ -178,6 +198,13 @@ export const systemApi = {
 export const simulationApi = {
   // Devuelve { request, layers, data, totalMs }
   run: ({ operation = "users", forceError = false } = {}) => http.post("/simulations", { operation, forceError }),
+
+  // Medición (no regla de negocio): la capa Cliente es el tiempo total menos el del servidor.
+  withClientLayer(result, totalMs) {
+    const layers = result.layers.map((layer) => ({ ...layer }));
+    layers[0].durationMs = Math.max(0, totalMs - result.totalMs);
+    return { ...result, layers, totalMs };
+  },
 };
 
 // ---------- Eventos en tiempo real: ping (el stream SSE está en eventos.js) ----------

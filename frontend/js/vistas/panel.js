@@ -153,6 +153,20 @@ export function createDashboardView(container, { userName }, { onRefresh, onExpo
     return { node, runBtn, result };
   }
 
+  const buildCharts = (dashboard) => [
+    chartOrFallback("doughnut", "Estados de respuesta", statusItems(dashboard.requestsByStatus)),
+    chartOrFallback("bar", "Peticiones por método", (dashboard.requestsByMethod || []).map((m) => ({ label: m.method, value: m.count }))),
+  ];
+
+  // Actualización suave: KPI, tabla y gráficos sin tocar la simulación ni el grafo.
+  function refreshData({ dashboard, recent }) {
+    if (!kpis) return;
+    const old = charts;
+    charts = buildCharts(dashboard);
+    old.forEach((c, i) => { c.element.replaceWith(charts[i].element); c.destroy(); });
+    update(dashboard.summary, recent);
+  }
+
   function showData({ dashboard, services, recent }) {
     clearCharts();
     kpis = {
@@ -167,9 +181,8 @@ export function createDashboardView(container, { userName }, { onRefresh, onExpo
     simUi = buildSimulationCard();
     activityBox = el("div", {});
 
-    const statusChart = chartOrFallback("doughnut", "Estados de respuesta", statusItems(dashboard.requestsByStatus));
-    const methodChart = chartOrFallback("bar", "Peticiones por método", (dashboard.requestsByMethod || []).map((m) => ({ label: m.method, value: m.count })));
-    charts = [statusChart, methodChart];
+    charts = buildCharts(dashboard);
+    const [statusChart, methodChart] = charts;
 
     body.replaceChildren(
       el("div", { class: "grid-kpi" }, Object.values(kpis)),
@@ -187,6 +200,8 @@ export function createDashboardView(container, { userName }, { onRefresh, onExpo
     showLoading,
     showError,
     showData,
+    refreshData,
+    showRecent(recent) { activityBox?.replaceChildren(activityTable(recent, onSelectRequest)); },
     update,
     setRefreshing(on) { refreshBtn.classList.toggle("is-loading", on); refreshBtn.disabled = on; },
     setUpdatedAt(date) { subtitle.textContent = `Hola, ${userName || ""} · Actualizado ${TIME.format(date)}`; },

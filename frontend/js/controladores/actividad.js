@@ -2,7 +2,6 @@
 import { renderActivityView } from "../vistas/actividad.js";
 import { stream } from "../modelos/eventos.js";
 import { metricApi } from "../modelos/api.js";
-import { session } from "../modelos/sesion.js";
 import { toast, exportToCsv } from "../utilidades.js";
 
 const PAGE_SIZE = 20;
@@ -11,7 +10,6 @@ const CSV_COLUMNS = [
 ];
 
 export function showActivity(container) {
-  const isAdmin = session.isAdmin();
   let paused = false;
   let filters = { statusClass: "", method: "" };
   let currentPage = 1;
@@ -44,7 +42,7 @@ export function showActivity(container) {
     }
   }
 
-  const view = renderActivityView(container, { showHistory: isAdmin }, {
+  const view = renderActivityView(container, {
     async onSelectRequest(row) {
       if (!row.id) return;
       const mine = ++ticket;
@@ -67,6 +65,9 @@ export function showActivity(container) {
       } finally {
         view.setPinging(false);
       }
+    },
+    onReconnect() {
+      stream.reconnect();
     },
     onTogglePause() {
       paused = !paused;
@@ -98,7 +99,7 @@ export function showActivity(container) {
   });
 
   refreshKpis();
-  if (isAdmin) loadHistory(1);
+  loadHistory(1);
 
   return () => {
     active = false;

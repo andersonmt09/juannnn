@@ -4,9 +4,21 @@ require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 // ---------- Variables de entorno ----------
 
+// "false"/vacío -> false; un número -> ese número de saltos; "true" -> true; otro texto se pasa tal cual (IP o lista).
+function parseTrustProxy(raw) {
+  const value = String(raw || "").trim();
+  if (!value || value.toLowerCase() === "false") return false;
+  if (value.toLowerCase() === "true") return true;
+  if (/^\d+$/.test(value)) return Number(value);
+  return value;
+}
+
 const env = {
   port: Number(process.env.PORT) || 4000,
   nodeEnv: process.env.NODE_ENV || "development",
+
+  // Proxies de confianza para leer la IP real (req.ip). Por defecto false: se ignora X-Forwarded-For.
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
 
   // La base de datos es externa: el backend solo conoce la dirección de su API.
   databaseApi: {
@@ -39,6 +51,8 @@ function validateEnvironment() {
   if (!env.jwt.secret || env.jwt.secret.length < 16) missing.push("JWT_SECRET (mínimo 16 caracteres)");
   if (!env.jwt.refreshSecret || env.jwt.refreshSecret.length < 16) missing.push("JWT_REFRESH_SECRET (mínimo 16 caracteres)");
 
+  if (env.nodeEnv === "production" && !env.smtp.host) missing.push("SMTP_HOST (obligatorio en producción)");
+
   if (missing.length) {
     console.error("[env] Faltan variables de entorno:", missing.join(", "));
     console.error("      Copia backend/.env.example como backend/.env y complétalo.");
@@ -53,7 +67,13 @@ const ROLES = Object.freeze({ ADMIN: "admin", USER: "user", INACTIVE: "inactive"
 
 const SECURITY = Object.freeze({
   BCRYPT_ROUNDS: 10,
-  PASSWORD_MIN_LENGTH: 6,
+  PASSWORD_MIN_LENGTH: 8,
+  PASSWORD_MAX_LENGTH: 72, // bcrypt solo usa los primeros 72 bytes
+  NAME_MAX_LENGTH: 100,
+  DESCRIPTION_MAX_LENGTH: 255,
+  EMAIL_MAX_LENGTH: 254,
+  RESEND_COOLDOWN_MS: 30 * 1000,
+  RESEND_MAX_PER_WINDOW: 5,
   CODE_LENGTH: 6,
   CODE_EXPIRY_MINUTES: 5,
   CODE_MAX_ATTEMPTS: 5,
@@ -94,10 +114,11 @@ const asyncHandler = (handler) => (req, res, next) => Promise.resolve(handler(re
 
 // ---------- Validaciones ----------
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
-const isValidEmail = (value) => typeof value === "string" && EMAIL_REGEX.test(value);
-const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
+const isValidEmail = (value) => typeof value === "string" && value.length <= SECURITY.EMAIL_MAX_LENGTH && EMAIL_REGEX.test(value);
+// Si no es texto devuelve "" (así nunca pasa la validación ni lanza error).
+const normalizeEmail = (value) => (typeof value === "string" ? value.trim().toLowerCase() : "");
 const isValidHttpMethod = (value) => HTTP_METHODS.includes(String(value || "").toUpperCase());
 const isPositiveInteger = (value) => Number.isInteger(Number(value)) && Number(value) > 0;
 

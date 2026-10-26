@@ -165,8 +165,10 @@ export const toast = {
  */
 export function exportToCsv(rows, filename, columns) {
   const escape = (value) => {
-    const text = value === null || value === undefined ? "" : String(value);
-    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    let text = value === null || value === undefined ? "" : String(value);
+    // Evita inyección de fórmulas en Excel: = + - @ tab o CR al inicio
+    if (typeof value === "string" && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+    return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
   const header = columns.map(([, title]) => title).join(",");
   const body = rows.map((row) => columns.map(([field]) => escape(row[field])).join(",")).join("\n");

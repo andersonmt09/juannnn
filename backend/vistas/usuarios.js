@@ -1,12 +1,11 @@
 // Vista de /api/users: lo que entra (DTOs de petición) y lo que sale (DTOs de respuesta).
-const { BaseRequestDto } = require("./comunes");
-const { ROLES, SECURITY, PAGINATION, isValidEmail, normalizeEmail, isPositiveInteger } = require("../configuracion");
+const { BaseRequestDto, cleanText, nameErrors, emailErrors, passwordErrors } = require("./comunes");
+const { ROLES, PAGINATION, normalizeEmail, isPositiveInteger } = require("../configuracion");
 
-const toRole = (value) => (value === ROLES.ADMIN ? ROLES.ADMIN : ROLES.USER);
 const ID_ERROR = "El id debe ser un número entero positivo";
-const NAME_ERROR = "El nombre debe tener al menos 2 caracteres";
-const EMAIL_ERROR = "El correo electrónico no es válido";
-const PASSWORD_ERROR = `La contraseña debe tener al menos ${SECURITY.PASSWORD_MIN_LENGTH} caracteres`;
+const ROLE_ERROR = "El rol debe ser admin o user";
+// Solo se pueden asignar estos roles (inactive lo pone el sistema al eliminar).
+const isAssignableRole = (value) => value === ROLES.ADMIN || value === ROLES.USER;
 
 // ---------- Petición (req) ----------
 
@@ -23,16 +22,14 @@ class ListUsersRequestDto extends BaseRequestDto {
 class CreateUserRequestDto extends BaseRequestDto {
   constructor({ name, email, password, role } = {}) {
     super();
-    this.name = String(name || "").trim();
+    this.name = cleanText(name);
     this.email = normalizeEmail(email);
-    this.password = password || "";
-    this.role = toRole(role);
+    this.password = password;
+    this.role = role === undefined || role === null ? ROLES.USER : role; // por defecto "user"
   }
   validate() {
-    const errors = [];
-    if (this.name.length < 2) errors.push(NAME_ERROR);
-    if (!isValidEmail(this.email)) errors.push(EMAIL_ERROR);
-    if (this.password.length < SECURITY.PASSWORD_MIN_LENGTH) errors.push(PASSWORD_ERROR);
+    const errors = [...nameErrors(this.name), ...emailErrors(this.email), ...passwordErrors(this.password)];
+    if (!isAssignableRole(this.role)) errors.push(ROLE_ERROR);
     return errors;
   }
 }
@@ -42,15 +39,16 @@ class UpdateUserRequestDto extends BaseRequestDto {
   constructor({ id, name, email, role } = {}) {
     super();
     this.id = Number(id);
-    this.name = name !== undefined ? String(name).trim() : undefined;
+    this.name = cleanText(name);
     this.email = email !== undefined ? normalizeEmail(email) : undefined;
-    this.role = role !== undefined ? toRole(role) : undefined;
+    this.role = role;
   }
   validate() {
     const errors = [];
     if (!isPositiveInteger(this.id)) errors.push(ID_ERROR);
-    if (this.name !== undefined && this.name.length < 2) errors.push(NAME_ERROR);
-    if (this.email !== undefined && !isValidEmail(this.email)) errors.push(EMAIL_ERROR);
+    if (this.name !== undefined) errors.push(...nameErrors(this.name));
+    if (this.email !== undefined) errors.push(...emailErrors(this.email));
+    if (this.role !== undefined && !isAssignableRole(this.role)) errors.push(ROLE_ERROR);
     return errors;
   }
   changes() {
@@ -63,13 +61,14 @@ class ChangePasswordRequestDto extends BaseRequestDto {
   constructor({ id, currentPassword, password } = {}) {
     super();
     this.id = Number(id);
-    this.currentPassword = currentPassword || "";
-    this.password = password || "";
+    this.currentPassword = currentPassword === undefined ? "" : currentPassword;
+    this.password = password;
   }
   validate() {
     const errors = [];
     if (!isPositiveInteger(this.id)) errors.push(ID_ERROR);
-    if (this.password.length < SECURITY.PASSWORD_MIN_LENGTH) errors.push(PASSWORD_ERROR);
+    if (typeof this.currentPassword !== "string") errors.push("La contraseña actual debe ser texto");
+    errors.push(...passwordErrors(this.password));
     return errors;
   }
 }

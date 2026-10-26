@@ -18,6 +18,9 @@ const MODULES = [
 const router = Router();
 for (const [prefix, moduleRouter] of MODULES) router.use(prefix, moduleRouter);
 
+// El stream SSE no se puede monitorear (no se registra como petición).
+const NOT_MONITORABLE = new Set(["GET /api/events/stream"]);
+
 // [{ method: "POST", path: "/api/auth/login" }, ...] — lo usa el monitoreo para aceptar solo rutas reales.
 function listApiRoutes() {
   return MODULES.flatMap(([prefix, moduleRouter]) =>
@@ -27,7 +30,7 @@ function listApiRoutes() {
         method: method.toUpperCase(),
         path: ("/api" + prefix + layer.route.path).replace(/\/$/, ""),
       })))
-  );
+  ).filter((r) => !NOT_MONITORABLE.has(`${r.method} ${r.path}`));
 }
 
 module.exports = { router, listApiRoutes };

@@ -290,6 +290,7 @@ cp backend/.env.example backend/.env       # Windows: copy backend\.env.example 
 | Variable | Descripción |
 |---|---|
 | `PORT` | Puerto del servidor (por defecto 4000) |
+| `TRUST_PROXY` | `false` (por defecto) o el número de proxies de confianza delante del servidor |
 | `DATABASE_API_URL` | Dirección de la API de la base de datos externa |
 | `DATABASE_API_KEY` | Clave de acceso a esa API |
 | `DATABASE_API_TIMEOUT_MS` | Tiempo máximo de espera por petición (por defecto 5000) |
@@ -330,11 +331,15 @@ Para revisar las dependencias: `npm outdated` (versiones nuevas) y `npm audit` (
 - Contraseñas y códigos guardados con bcrypt.
 - Tokens JWT: acceso de 15 minutos (se renueva solo) y renovación de 7 días.
 - Códigos de 6 dígitos que vencen en 5 minutos y permiten 5 intentos.
-- Máximo 5 intentos fallidos de autenticación por IP cada 15 minutos.
+- Máximo 5 intentos fallidos de inicio de sesión cada 15 minutos, por IP y por correo. Pedir o reenviar un código: máximo 5 cada 15 minutos y una espera de 30 segundos entre envíos.
+- Contraseñas de 8 a 72 caracteres; todos los datos de entrada se validan por tipo y largo máximo.
+- La IP real del cliente solo se toma de `X-Forwarded-For` si hay un proxy de confianza (`TRUST_PROXY`, por defecto desactivado).
+- Tiempo real: máximo 3 conexiones por usuario; en cada latido se revalida la sesión y se cierra si dejó de ser válida.
+- Las exportaciones CSV neutralizan las fórmulas de Excel.
 - Máximo 5 solicitudes de código de recuperación por IP cada 15 minutos.
 - Las sesiones se cierran al cambiar la contraseña (`token_version`).
 - Validación de todos los datos de entrada antes de enviarlos a la base de datos.
 - El proyecto no tiene acceso directo a la base: solo usa su API, con una clave y un tiempo máximo de espera.
-- Cabeceras de seguridad con Helmet y una política de contenido (CSP) que solo permite los recursos propios, Chart.js y las fuentes de Google.
+- Cabeceras de seguridad con Helmet y una política de contenido (CSP) que solo permite scripts propios (Chart.js se sirve desde el mismo servidor en `/vendor`) y las fuentes de Google.
 - Mismo origen para la API y la interfaz, así que no se abre CORS.
 - Credenciales solo en `backend/.env`, excluido del repositorio.
