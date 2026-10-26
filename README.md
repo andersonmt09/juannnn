@@ -23,109 +23,89 @@ Aplicación web para administrar usuarios con inicio de sesión en dos pasos (co
 El proyecto sigue el patrón **Modelo – Vista – Controlador** en el backend y en el frontend. El frontend nunca se conecta a la base de datos: todo lo pide al backend, y el backend pide los datos a la API de la base de datos externa.
 
 ```
-FRONTEND                                   BACKEND                                              BASE DE DATOS
+FRONTEND                                         BACKEND                                                BASE DE DATOS
 
-vista ─► controlador ─► servicio ── req ──► ruta ─► middlewares ─► DTO de petición ─► controlador ─► servicio ─► modelo ──► API externa
-  ▲                         │                                                               │
-  └──── datos ◄─────────────┴──────── res ◄──────────── DTO de respuesta ◄──────────────────┘
+vista ─► controlador ─► modelo (api.js) ── req ──► ruta ─► middlewares ─► vista de petición ─► controlador ─► servicio ─► modelo ──► API externa
+  ▲                         │                                                                       │
+  └──── datos ◄─────────────┴──────────── res ◄──────────── vista de respuesta ◄────────────────────┘
 ```
 
 Un solo servidor atiende las dos partes: `/api/...` es la API y cualquier otra dirección entrega el frontend. Por eso no hace falta CORS ni configurar la URL de la API en el frontend.
 
-### Backend
-
-| Capa | Carpeta | Responsabilidad |
-|---|---|---|
-| Rutas | `rutas/` | Cada endpoint: URL, método y middlewares. `indice.js` las agrupa bajo `/api` y genera la lista de rutas que usa el monitoreo |
-| Middlewares | `middlewares/` | Autenticación, roles, validación con DTO, límite de intentos, registro de peticiones y errores |
-| DTO | `dtos/peticion/` y `dtos/respuesta/` | **Petición (req):** reúne body, `:id` y `?query`, los limpia y los valida. **Respuesta (res):** define el JSON que sale; nunca se envía un modelo directo ni el hash de la contraseña |
-| **Controlador** | `controladores/` | Recibe el DTO de petición (`req.dto`), llama al servicio y responde con el DTO de respuesta |
-| Servicios | `servicios/` | Reglas de negocio. Devuelven datos del dominio, no respuestas HTTP |
-| **Modelo** | `modelos/` | Una clase por entidad; única capa que pide y guarda datos |
-| Integraciones | `integraciones/` | Sistemas externos: API de la base de datos, correo SMTP y tokens JWT |
-| Configuración y constantes | `configuracion/`, `constantes/` | Variables de entorno, roles, seguridad y paginación |
-
-En el backend la **vista** es la respuesta JSON, cuyo formato definen los DTO de respuesta.
-
-### Frontend
-
-| Capa | Carpeta | Responsabilidad |
-|---|---|---|
-| **Vista** | `vistas/` | Una por pantalla. Solo dibuja los datos que recibe y avisa de los eventos (`onSave`, `onDelete`…). No llama a la API ni navega |
-| **Controlador** | `controladores/` | Uno por pantalla. Pide los datos a los servicios, se los pasa a la vista, atiende sus eventos, muestra los mensajes y decide la navegación |
-| **Modelo** | `modelos/` | Estado del cliente: `sesion.js` (tokens y usuario) y `preferencias.js` (tema) |
-| Servicios | `servicios/` | `cliente-http.js` y un archivo por recurso del backend |
-| Enrutador | `enrutador/` | Relaciona cada ruta `#/...` con su controlador y protege las rutas privadas |
-| Componentes | `componentes/` | Piezas visuales reutilizables: menú, modal, paginación, gráfica, encabezado y estado vacío |
-
-La base de datos **no forma parte del proyecto**: aquí no hay SQL, tablas ni conexión directa. Los modelos del backend llaman a la API de la base de datos externa mediante `integraciones/cliente-bd.js`, con la dirección y la clave definidas en `backend/.env`, archivo que no se sube al repositorio.
+La base de datos **no forma parte del proyecto**: aquí no hay SQL (`SELECT`, `DELETE`...), tablas, conexión directa ni usuarios escritos en el código. Los modelos del backend piden y guardan los datos llamando a la API de la base de datos externa (GET, POST, PATCH, DELETE) desde `externos.js`, con la dirección y la clave definidas en `backend/.env`, archivo que no se sube al repositorio.
 
 ## Estructura de carpetas
 
 ```
 axon-stack-flow/
 ├── backend/
-│   ├── codigo/
-│   │   ├── rutas/                  indice, autenticacion, usuarios, monitoreo, metricas, salud
-│   │   ├── middlewares/            autenticacion, roles, validacion, limite-intentos, registro-peticiones, errores
-│   │   ├── dtos/
-│   │   │   ├── peticion/           base, autenticacion, usuarios, monitoreo
-│   │   │   └── respuesta/          comunes, autenticacion, usuarios, monitoreo, metricas, salud
-│   │   ├── controladores/          autenticacion, usuarios, monitoreo, metricas, salud
-│   │   ├── servicios/              autenticacion, codigos-verificacion, usuarios, monitoreo, metricas, salud
-│   │   ├── modelos/                usuario, codigo-verificacion, endpoint-monitoreado, registro-peticion
-│   │   ├── integraciones/          cliente-bd, correo, tokens
-│   │   ├── configuracion/          entorno
-│   │   ├── constantes/             roles, seguridad
-│   │   ├── utilidades/             error-http, manejador-async, validaciones
-│   │   ├── aplicacion.js           Configuración de Express (API + frontend)
-│   │   └── arranque.js             Encendido del servidor
-│   ├── scripts/                    crear-admin.js
-│   ├── pruebas/
-│   │   ├── unitarias/              dtos, utilidades, servicios
-│   │   └── integracion/            api
+│   ├── modelos/            usuario, codigo-verificacion, endpoint-monitoreado, registro-peticion
+│   ├── vistas/             comunes, autenticacion, usuarios, monitoreo, metricas
+│   ├── controladores/      autenticacion, usuarios, monitoreo, metricas
+│   ├── servicios/          autenticacion, usuarios, monitoreo, metricas
+│   ├── rutas/              index, autenticacion, usuarios, monitoreo, metricas
+│   ├── middlewares/        autenticacion, validacion, registro-peticiones, errores
+│   ├── pruebas/            unitarias.test.js, api.test.js
+│   ├── configuracion.js    Variables de entorno, constantes (roles, seguridad), errores y validaciones
+│   ├── externos.js         API de la base de datos externa, correo y tokens JWT
+│   ├── servidor.js         Express (API + frontend) y arranque
+│   ├── crear-admin.js      Crea el primer administrador
 │   └── .env.example
 │
 ├── frontend/
-│   ├── codigo/
-│   │   ├── vistas/                 inicio-sesion, registro, verificacion, panel, usuarios, monitoreo, perfil
-│   │   ├── controladores/          los mismos nombres que vistas/ + sesion (cerrar sesión y tema)
-│   │   ├── modelos/                sesion, preferencias
-│   │   ├── servicios/              cliente-http, autenticacion, usuarios, monitoreo, metricas
-│   │   ├── enrutador/              rutas, enrutador
-│   │   ├── componentes/            menu, modal, paginacion, grafica, encabezado, estado-vacio
-│   │   ├── utilidades/             dom, iconos, notificaciones, csv, almacenamiento
-│   │   └── principal.js            Punto de entrada
-│   ├── recursos/
-│   │   ├── estilos/                principal.css importa variables, base, estructura, componentes y autenticacion
-│   │   └── imagenes/
+│   ├── css/                estilos.css
+│   ├── img/                favicon.svg
+│   ├── js/
+│   │   ├── modelos/        sesion (sesión y tema), api (todas las llamadas al backend)
+│   │   ├── vistas/         inicio-sesion, registro, verificacion, panel, usuarios, monitoreo, perfil
+│   │   │                   + componentes (menú, modal, paginación, gráfica, encabezado, estado vacío)
+│   │   ├── controladores/  los mismos nombres que vistas/
+│   │   ├── principal.js    Pantallas (#/...), navegación, tema y cierre de sesión
+│   │   └── utilidades.js   Elementos HTML, íconos, notificaciones, CSV y almacenamiento
 │   └── index.html
 │
 ├── package.json
 └── README.md
 ```
 
+### Backend
+
+| Capa | Carpeta | Responsabilidad |
+|---|---|---|
+| **Modelo** | `modelos/` | Una clase por entidad; única capa que pide y guarda datos (en la API externa) |
+| **Vista** | `vistas/` | Los DTO de cada recurso en un solo archivo. **Petición (req):** reúne body, `:id` y `?query`, los limpia y los valida. **Respuesta (res):** define el JSON que sale; nunca se envía un modelo directo ni el hash de la contraseña |
+| **Controlador** | `controladores/` | Recibe la petición ya validada (`req.dto`), llama al servicio y responde con la vista |
+| Servicios | `servicios/` | Reglas de negocio. Devuelven datos del dominio, no respuestas HTTP |
+| Rutas | `rutas/` | Cada endpoint: método, URL, quién puede entrar, qué vista valida y qué controlador responde |
+| Middlewares | `middlewares/` | Token y roles, límite de intentos, validación, registro de peticiones y errores |
+
+### Frontend
+
+| Capa | Carpeta | Responsabilidad |
+|---|---|---|
+| **Modelo** | `js/modelos/` | `sesion.js`: tokens, usuario y tema guardados en el navegador. `api.js`: las llamadas al backend |
+| **Vista** | `js/vistas/` | Una por pantalla. Solo dibuja los datos que recibe y avisa de los eventos (`onSave`, `onDelete`…). No llama a la API ni navega |
+| **Controlador** | `js/controladores/` | Uno por pantalla. Pide los datos al modelo, se los pasa a la vista, atiende sus eventos, muestra los mensajes y decide la navegación |
+
 Cada recurso tiene el mismo nombre en todas las capas. Por ejemplo, **usuarios**:
 
 | Capa | Archivo |
 |---|---|
-| Vista | `frontend/codigo/vistas/usuarios.js` |
-| Controlador (frontend) | `frontend/codigo/controladores/usuarios.js` |
-| Servicio (frontend) | `frontend/codigo/servicios/usuarios.js` |
-| Ruta | `backend/codigo/rutas/usuarios.js` |
-| DTO de petición | `backend/codigo/dtos/peticion/usuarios.js` |
-| Controlador (backend) | `backend/codigo/controladores/usuarios.js` |
-| Servicio (backend) | `backend/codigo/servicios/usuarios.js` |
-| Modelo | `backend/codigo/modelos/usuario.js` |
-| DTO de respuesta | `backend/codigo/dtos/respuesta/usuarios.js` |
+| Vista (frontend) | `frontend/js/vistas/usuarios.js` |
+| Controlador (frontend) | `frontend/js/controladores/usuarios.js` |
+| Ruta | `backend/rutas/usuarios.js` |
+| Vista (DTO de petición y respuesta) | `backend/vistas/usuarios.js` |
+| Controlador (backend) | `backend/controladores/usuarios.js` |
+| Servicio | `backend/servicios/usuarios.js` |
+| Modelo | `backend/modelos/usuario.js` |
 
 Los nombres de carpetas y archivos están en español; el código interno (variables, funciones, clases y endpoints) está en inglés.
 
 ## Endpoints
 
-Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador.
+Todas las rutas empiezan por `/api`. Las vistas están en `backend/vistas/` con el nombre del recurso. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador.
 
-| Método | Ruta | Acceso | DTO de petición (`dtos/peticion/`) | DTO de respuesta (`dtos/respuesta/`) |
+| Método | Ruta | Acceso | Vista de petición (req) | Vista de respuesta (res) |
 |---|---|---|---|---|
 | GET | `/health` | Público | — | `HealthResponseDto` |
 | POST | `/auth/register` | Público | `RegisterRequestDto` | `VerificationRequiredResponseDto` |

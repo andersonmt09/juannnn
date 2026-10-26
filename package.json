@@ -3,14 +3,14 @@
   "version": "3.0.0",
   "description": "Gestión de usuarios con inicio de sesión en dos pasos y monitoreo de la API",
   "private": true,
-  "main": "backend/codigo/arranque.js",
+  "main": "backend/servidor.js",
   "scripts": {
-    "start": "node backend/codigo/arranque.js",
-    "dev": "node --watch backend/codigo/arranque.js",
-    "crear-admin": "node backend/scripts/crear-admin.js",
-    "test": "node --test backend/pruebas/unitarias/dtos.test.js backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/servicios.test.js backend/pruebas/integracion/api.test.js",
-    "pruebas:unitarias": "node --test backend/pruebas/unitarias/dtos.test.js backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/servicios.test.js",
-    "pruebas:integracion": "node --test backend/pruebas/integracion/api.test.js"
+    "start": "node backend/servidor.js",
+    "dev": "node --watch backend/servidor.js",
+    "crear-admin": "node backend/crear-admin.js",
+    "test": "node --test backend/pruebas/unitarias.test.js backend/pruebas/api.test.js",
+    "pruebas:unitarias": "node --test backend/pruebas/unitarias.test.js",
+    "pruebas:integracion": "node --test backend/pruebas/api.test.js"
   },
   "engines": {
     "node": ">=18"
