@@ -60,11 +60,16 @@ const transporter = env.smtp.host
     })
   : null;
 
+// Asunto del correo según el propósito del código.
+const MAIL_SUBJECTS = {
+  [CODE_PURPOSE.REGISTRATION]: "AXON Security · Código de verificación",
+  [CODE_PURPOSE.LOGIN]: "AXON Security · Código de inicio de sesión",
+  [CODE_PURPOSE.PASSWORD_RESET]: "AXON Security · Código para restablecer tu contraseña",
+};
+
 const mail = {
   async sendVerificationCode(email, code, purpose) {
-    const subject = purpose === CODE_PURPOSE.REGISTRATION
-      ? "AXON Security · Código de verificación"
-      : "AXON Security · Código de inicio de sesión";
+    const subject = MAIL_SUBJECTS[purpose] || MAIL_SUBJECTS[CODE_PURPOSE.LOGIN];
     const text = `Tu código de verificación es: ${code}\nExpira en ${SECURITY.CODE_EXPIRY_MINUTES} minutos.`;
 
     if (!transporter) {
@@ -80,28 +85,31 @@ const mail = {
 };
 
 // ---------- Tokens JWT ----------
-// Solo llevan el id del usuario: el rol y el estado se consultan en cada petición.
+// Llevan el id del usuario (sub) y su versión de sesión (ver): el rol y el estado se consultan en cada petición.
+// Si cambia la contraseña, sube token_version y los tokens con otra versión dejan de servir.
 
 const tokens = {
   issue(user) {
-    const accessToken = jwt.sign({ sub: user.id }, env.jwt.secret, { expiresIn: env.jwt.expiresIn });
-    const refreshToken = jwt.sign({ sub: user.id, jti: crypto.randomUUID() }, env.jwt.refreshSecret, {
+    const accessToken = jwt.sign({ sub: user.id, ver: user.tokenVersion || 0 }, env.jwt.secret, { expiresIn: env.jwt.expiresIn });
+    const refreshToken = jwt.sign({ sub: user.id, ver: user.tokenVersion || 0, jti: crypto.randomUUID() }, env.jwt.refreshSecret, {
       expiresIn: env.jwt.refreshExpiresIn,
     });
     return { accessToken, refreshToken };
   },
 
-  // Devuelven el id del usuario dueño del token.
+  // Devuelven { id, ver } del dueño del token (ver ausente = 0).
   verifyAccess(token) {
     try {
-      return jwt.verify(token, env.jwt.secret).sub;
+      const payload = jwt.verify(token, env.jwt.secret);
+      return { id: payload.sub, ver: payload.ver || 0 };
     } catch {
       throw HttpError.unauthorized("Token inválido o expirado");
     }
   },
   verifyRefresh(token) {
     try {
-      return jwt.verify(token, env.jwt.refreshSecret).sub;
+      const payload = jwt.verify(token, env.jwt.refreshSecret);
+      return { id: payload.sub, ver: payload.ver || 0 };
     } catch {
       throw HttpError.unauthorized("Refresh token inválido o expirado");
     }

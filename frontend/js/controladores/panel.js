@@ -16,8 +16,22 @@ export function showDashboard(container) {
   let loaded = false;
   let dashboard = null; // datos vigentes (se modifican con el stream)
   let recent = [];
+  let ticket = 0; // ignora respuestas viejas del detalle
 
   const view = createDashboardView(container, { userName: session.getUser()?.name }, {
+    async onSelectRequest(row) {
+      if (!row.id) return;
+      const mine = ++ticket;
+      view.showRequestLoading();
+      try {
+        const log = await metricApi.getRequest(row.id);
+        if (alive && mine === ticket) view.showRequestDetail(log);
+      } catch (error) {
+        if (mine !== ticket) return;
+        view.closeRequestDetail();
+        toast.error(error.message);
+      }
+    },
     onRefresh: () => load(),
     onExport: () => {
       if (!recent.length) { toast.info("No hay actividad para exportar"); return; }

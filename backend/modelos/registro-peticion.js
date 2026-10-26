@@ -4,21 +4,21 @@ const { db } = require("../externos");
 
 class RequestLog {
   constructor(row) {
-    this.id = row.id;
+    this.id = Number(row.id);
     this.method = row.method;
     this.path = row.path;
     this.route = row.route;
     this.statusCode = row.status_code;
     this.latencyMs = row.latency_ms;
     this.source = row.source;
-    this.userId = row.user_id;
+    this.userId = row.user_id == null ? null : Number(row.user_id);
     this.createdAt = row.created_at;
   }
 
   static fromRow(row) { return row ? new RequestLog(row) : null; }
 
   static async create({ method, path, route, statusCode, latencyMs, source, userId }) {
-    await db.post("/request-logs", {
+    const row = await db.post("/request-logs", {
       method,
       path,
       route,
@@ -27,6 +27,12 @@ class RequestLog {
       source,
       user_id: userId,
     });
+    return row?.id ?? null; // id del registro nuevo (lo usa api:activity)
+  }
+
+  // Un registro por id, o null si no existe.
+  static async findById(id) {
+    return RequestLog.fromRow(await db.find(`/request-logs/${id}`));
   }
 
   static async findRecent(limit = 10) {
@@ -35,8 +41,8 @@ class RequestLog {
   }
 
   // Página de registros (del más nuevo al más viejo) con filtros opcionales: { logs, total }
-  static async findPage({ page = 1, limit = 20, method, statusClass } = {}) {
-    const { data, total } = await db.get("/request-logs", { page, limit, method, statusClass });
+  static async findPage({ page = 1, limit = 20, method, statusClass, route } = {}) {
+    const { data, total } = await db.get("/request-logs", { page, limit, method, statusClass, route });
     return { logs: data.map(RequestLog.fromRow), total: Number(total) || 0 };
   }
 

@@ -6,7 +6,7 @@ const { SimulationResponseDto } = require("../vistas/simulacion");
 
 const run = asyncHandler(async (req, res) => {
   const result = await simulationService.run(req.dto, req.receivedAt ?? performance.now());
-  res.json(new SimulationResponseDto(result));
+  res.json(new SimulationResponseDto(result, { path: req.baseUrl }));
 });
 
 module.exports = { run };

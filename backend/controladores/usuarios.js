@@ -3,6 +3,7 @@ const userService = require("../servicios/usuarios");
 const { asyncHandler } = require("../configuracion");
 const { MessageResponseDto } = require("../vistas/comunes");
 const { UserResponseDto, UserListResponseDto } = require("../vistas/usuarios");
+const { SessionResponseDto } = require("../vistas/autenticacion");
 
 const list = asyncHandler(async (req, res) => {
   res.json(new UserListResponseDto(await userService.list(req.dto)));
@@ -21,8 +22,9 @@ const update = asyncHandler(async (req, res) => {
 });
 
 const changePassword = asyncHandler(async (req, res) => {
-  await userService.changePassword(req.dto.id, req.dto, req.user);
-  res.json(new MessageResponseDto("Contraseña actualizada"));
+  const session = await userService.changePassword(req.dto.id, req.dto, req.user);
+  // Propia: sesión nueva (las demás quedan cerradas). De otro usuario: solo mensaje.
+  res.json(session ? new SessionResponseDto(session) : new MessageResponseDto("Contraseña actualizada"));
 });
 
 const remove = asyncHandler(async (req, res) => {

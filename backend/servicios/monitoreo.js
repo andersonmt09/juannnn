@@ -46,10 +46,22 @@ async function create(data, apiRoutes) {
   return { endpoint, stats, status: endpointStatus(stats) };
 }
 
+// Detalle: endpoint, estadísticas y sus últimas 10 peticiones (mismo método y ruta).
+async function getById(id) {
+  const endpoint = await MonitoredEndpoint.findById(id);
+  if (!endpoint) throw HttpError.notFound("Endpoint no encontrado");
+  const [index, page] = await Promise.all([
+    statsIndex(),
+    RequestLog.findPage({ page: 1, limit: 10, method: endpoint.method, route: endpoint.path }),
+  ]);
+  const stats = index.get(key(endpoint.method, endpoint.path));
+  return { endpoint, stats, status: endpointStatus(stats), recentRequests: page.logs };
+}
+
 async function remove(id) {
   const endpoint = await MonitoredEndpoint.findById(id);
   if (!endpoint) throw HttpError.notFound("Endpoint no encontrado");
   await MonitoredEndpoint.delete(id);
 }
 
-module.exports = { endpointStatus, list, create, remove };
+module.exports = { endpointStatus, list, getById, create, remove };

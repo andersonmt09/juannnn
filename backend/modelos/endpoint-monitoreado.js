@@ -3,7 +3,7 @@ const { db } = require("../externos");
 
 class MonitoredEndpoint {
   constructor(row) {
-    this.id = row.id;
+    this.id = Number(row.id);
     this.name = row.name;
     this.method = row.method;
     this.path = row.path;

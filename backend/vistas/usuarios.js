@@ -97,6 +97,7 @@ class UserDto {
     this.role = user.role;
     this.emailVerified = user.emailVerified;
     this.createdDate = user.createdDate;
+    this.updatedDate = user.updatedDate;
   }
 }
 

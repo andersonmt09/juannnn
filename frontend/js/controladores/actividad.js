@@ -18,6 +18,7 @@ export function showActivity(container) {
   let pageRows = [];
   let request = 0; // para ignorar respuestas viejas del historial
   let active = true;
+  let ticket = 0; // ignora respuestas viejas del detalle
 
   function refreshKpis() {
     const state = stream.getState();
@@ -44,6 +45,19 @@ export function showActivity(container) {
   }
 
   const view = renderActivityView(container, { showHistory: isAdmin }, {
+    async onSelectRequest(row) {
+      if (!row.id) return;
+      const mine = ++ticket;
+      view.showRequestLoading();
+      try {
+        const log = await metricApi.getRequest(row.id);
+        if (active && mine === ticket) view.showRequestDetail(log);
+      } catch (error) {
+        if (mine !== ticket) return;
+        view.closeRequestDetail();
+        toast.error(error.message);
+      }
+    },
     async onPing() {
       view.setPinging(true);
       try {
@@ -79,7 +93,7 @@ export function showActivity(container) {
   });
 
   const unsubscribe = stream.subscribe((event) => {
-    if (event.name !== "stream:status" && !paused) view.log.add(event);
+    if (event.name !== "stream:status" && !paused) view.addEvent(event);
     refreshKpis();
   });
 
@@ -89,5 +103,6 @@ export function showActivity(container) {
   return () => {
     active = false;
     unsubscribe();
+    view.closeRequestDetail();
   };
 }

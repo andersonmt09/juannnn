@@ -28,11 +28,11 @@ const LAYER_NAMES = {
 
 // Las capas van siempre en este orden: client, api, backend, database.
 class SimulationResponseDto {
-  constructor({ request, layers, data, totalMs }) {
+  constructor({ request, layers, data, totalMs }, { path = "/api/simulations" } = {}) {
     this.ok = true;
     this.request = {
       method: "POST",
-      path: "/api/simulations",
+      path,
       operation: request.operation,
       startedAt: request.startedAt,
     };

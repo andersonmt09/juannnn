@@ -1,4 +1,8 @@
 // Controlador de #/login: valida credenciales (paso 1) y lleva a la verificación del código.
+// Secuencia del tablero (login):
+//   Usuario -> Vista (onSubmit) -> authApi.login -> POST /auth/login
+//   -> CredentialsRequestDto -> ControlUsu.login -> validateCredentials -> User (Modelo) -> BD.
+//   Correcto: código al correo -> #/verify -> panel. Error (NO): toast + enlace "¿Olvidaste tu contraseña?".
 import { renderLoginView } from "../vistas/inicio-sesion.js";
 import { authApi, systemApi } from "../modelos/api.js";
 import { session, VERIFICATION_PURPOSE } from "../modelos/sesion.js";

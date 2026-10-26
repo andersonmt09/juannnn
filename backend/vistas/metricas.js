@@ -1,6 +1,6 @@
 // Vista de /api/metrics y /api/health.
 const { BaseRequestDto } = require("./comunes");
-const { PAGINATION, isValidHttpMethod } = require("../configuracion");
+const { PAGINATION, isValidHttpMethod, isPositiveInteger } = require("../configuracion");
 
 const STATUS_CLASSES = ["2xx", "3xx", "4xx", "5xx"];
 
@@ -25,6 +25,17 @@ class ListRequestLogsRequestDto extends BaseRequestDto {
   }
 }
 
+// GET /api/metrics/requests/:id
+class RequestLogIdRequestDto extends BaseRequestDto {
+  constructor({ id } = {}) {
+    super();
+    this.id = Number(id);
+  }
+  validate() {
+    return isPositiveInteger(this.id) ? [] : ["El id debe ser un número entero positivo"];
+  }
+}
+
 // ---------- Respuesta (res) ----------
 
 // Una petición registrada (actividad reciente).
@@ -38,6 +49,18 @@ class RequestLogDto {
     this.latencyMs = log.latencyMs;
     this.source = log.source;
     this.createdAt = log.createdAt;
+  }
+}
+
+// GET /api/metrics/requests/:id → { ok, data: { ...RequestLogDto, userId, user: { id, name, email } | null } }
+class RequestLogDetailResponseDto {
+  constructor({ log, user }) {
+    this.ok = true;
+    this.data = {
+      ...new RequestLogDto(log),
+      userId: log.userId ?? null,
+      user: user ? { id: user.id, name: user.name, email: user.email } : null,
+    };
   }
 }
 
@@ -86,7 +109,9 @@ class HealthResponseDto {
 
 module.exports = {
   ListRequestLogsRequestDto,
+  RequestLogIdRequestDto,
   RequestLogDto,
+  RequestLogDetailResponseDto,
   DashboardResponseDto,
   RequestLogListResponseDto,
   ServiceListResponseDto,

@@ -52,4 +52,17 @@ const authRateLimiter = rateLimit({
   },
 });
 
-module.exports = { authenticate, authenticateFromQuery, authorize, authRateLimiter };
+// Máximo 5 solicitudes de código de recuperación por IP cada 15 minutos (cuenta también las exitosas,
+// porque forgot siempre responde 200).
+const passwordResetLimiter = rateLimit({
+  windowMs: SECURITY.RATE_LIMIT_WINDOW_MS,
+  limit: SECURITY.RATE_LIMIT_MAX_ATTEMPTS,
+  skipSuccessfulRequests: false,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json(new ErrorResponseDto("Demasiados intentos. Intenta de nuevo en 15 minutos."));
+  },
+});
+
+module.exports = { authenticate, authenticateFromQuery, authorize, authRateLimiter, passwordResetLimiter };

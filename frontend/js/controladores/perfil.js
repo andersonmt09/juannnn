@@ -16,7 +16,9 @@ export function showProfile(container) {
       }
       view.setSaving(true);
       try {
-        await userApi.changePassword(user.id, password, currentPassword);
+        const result = await userApi.changePassword(user.id, password, currentPassword);
+        // Las demás sesiones se cierran: se guarda la sesión nueva para seguir conectado aquí.
+        if (result?.accessToken) session.save(result);
         toast.success("Contraseña actualizada");
         view.resetForm();
       } catch (error) {

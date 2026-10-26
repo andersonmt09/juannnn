@@ -16,6 +16,7 @@ export async function showUsers(container) {
   let currentPage = 1;
   let editingUser = null;
   let active = true;
+  let ticket = 0; // ignora respuestas viejas del detalle
 
   async function loadUsers(page = currentPage) {
     try {
@@ -50,7 +51,22 @@ export async function showUsers(container) {
       editingUser = null;
       view.openForm();
     },
+    async onSelect(user) {
+      const mine = ++ticket;
+      view.showDetailLoading();
+      try {
+        const detail = await userApi.get(user.id);
+        if (!active || mine !== ticket) return;
+        view.showUserDetail(detail, { isSelf: detail.id === currentUserId });
+      } catch (error) {
+        if (mine !== ticket) return;
+        view.closeDetail();
+        toast.error(error.message);
+      }
+    },
     onEdit(user) {
+      ticket++;
+      view.closeDetail();
       editingUser = user;
       view.openForm(user, { isSelf: user.id === currentUserId });
     },
@@ -75,6 +91,8 @@ export async function showUsers(container) {
       if (!confirmed) return;
       try {
         await userApi.remove(user.id);
+        ticket++;
+        view.closeDetail();
         toast.success("Usuario eliminado");
         await loadUsers();
       } catch (error) {
@@ -100,5 +118,5 @@ export async function showUsers(container) {
   });
 
   await loadUsers();
-  return () => { active = false; };
+  return () => { active = false; view.closeDetail(); };
 }

@@ -101,6 +101,10 @@ export const authApi = {
   login: (email, password) => http.post("/auth/login", { email, password }),
   verifyLogin: (email, code) => http.post("/auth/login/verify", { email, code }),
   resendLoginCode: (email) => http.post("/auth/login/resend-code", { email }),
+
+  // Recuperar contraseña: el correo siempre recibe la misma respuesta genérica.
+  forgotPassword: (email) => http.post("/auth/password/forgot", { email }),
+  resetPassword: (email, code, password) => http.post("/auth/password/reset", { email, code, password }),
 };
 
 // ---------- Usuarios: /api/users ----------
@@ -111,6 +115,7 @@ export const userApi = {
   get: (id) => http.get(`/users/${id}`).then((res) => res.data),
   create: (data) => http.post("/users", data).then((res) => res.data),
   update: (id, data) => http.put(`/users/${id}`, data).then((res) => res.data),
+  // Si es la contraseña propia, la respuesta trae una sesión nueva { accessToken, refreshToken, user }.
   changePassword: (id, password, currentPassword) => http.patch(`/users/${id}/password`, { password, currentPassword }),
   remove: (id) => http.delete(`/users/${id}`),
 
@@ -133,6 +138,8 @@ export const monitoringApi = {
   listApiRoutes: () => http.get("/monitoring/routes").then((res) => res.data),
   addEndpoint: (data) => http.post("/monitoring/endpoints", data).then((res) => res.data),
   removeEndpoint: (id) => http.delete(`/monitoring/endpoints/${id}`),
+  // Detalle: el endpoint con sus estadísticas y recentRequests (hasta 10).
+  getEndpoint: (id) => http.get(`/monitoring/endpoints/${id}`).then((res) => res.data),
 };
 
 // ---------- Métricas: /api/metrics ----------
@@ -140,6 +147,8 @@ export const monitoringApi = {
 export const metricApi = {
   getDashboard: () => http.get("/metrics/dashboard").then((res) => res.data),
   getServices: () => http.get("/metrics/services").then((res) => res.data),
+  // Detalle de una petición registrada, con el usuario que la hizo (o null).
+  getRequest: (id) => http.get(`/metrics/requests/${id}`).then((res) => res.data),
 
   // Historial paginado. Devuelve { data, meta: { total, page, limit, totalPages } }
   listRequests({ page = 1, limit = 20, method, statusClass } = {}) {

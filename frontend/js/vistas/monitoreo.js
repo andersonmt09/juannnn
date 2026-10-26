@@ -1,7 +1,7 @@
 // Vista de monitoreo (#/monitoring): mini KPI y tabla de endpoints vigilados con sus estadísticas reales.
 // El botón de agregar y el de quitar solo se dibujan para administradores.
-import { pageHeader, emptyState, errorState, skeleton, kpiCard, dataTable, createModal, methodBadge, statusDot } from "./componentes.js";
-import { el, icon, formatNumber, formatRelative } from "../utilidades.js";
+import { pageHeader, emptyState, errorState, skeleton, kpiCard, dataTable, createModal, methodBadge, statusDot, statusCodeBadge, detailDrawer, descriptionList, requestDetailContent } from "./componentes.js";
+import { el, icon, formatNumber, formatRelative, formatDate } from "../utilidades.js";
 
 const HIGH_ERROR_RATE = 0.2; // 20 % o más de respuestas con error = fallando
 const STATUS_LABEL = { healthy: "Saludable", failing: "Con errores", "no-traffic": "Sin tráfico" };
@@ -22,7 +22,7 @@ function errorsCell(stats) {
 /**
  * @param {HTMLElement} container
  * @param {{ canManage: boolean }} data
- * @param {{ onOpenForm: () => void, onSave: (data: object) => void, onDelete: (endpoint: object) => void, onRefresh: () => void }} handlers
+ * @param {{ onSelect: (endpoint: object) => void, onSelectRequest: (request: object) => void, onOpenForm: () => void, onSave: (data: object) => void, onDelete: (endpoint: object) => void, onRefresh: () => void }} handlers
  */
 export function renderMonitoringView(container, { canManage }, handlers) {
   const kpis = {
@@ -59,6 +59,40 @@ export function renderMonitoringView(container, { canManage }, handlers) {
     const [method, path] = route.split(" ");
     handlers.onSave({ method, path, name, description });
   });
+
+  // ---- Drawer de detalle ----
+  const drawer = detailDrawer({ title: "Detalle del endpoint" });
+  const backButton = (endpoint) => el("button", { type: "button", class: "btn btn-secondary", onclick: () => handlers.onSelect(endpoint) }, ["Volver al endpoint"]);
+
+  function endpointContent(ep) {
+    const stats = ep.stats || {};
+    const recent = ep.recentRequests || [];
+    const list = descriptionList([
+      { label: "Nombre", value: ep.name },
+      { label: "Descripción", value: ep.description },
+      { label: "Estado", value: el("span", { class: "row", style: "flex-wrap:nowrap" }, [statusDot(ep.status), el("span", {}, [STATUS_LABEL[ep.status] || ep.status])]) },
+      { label: "Método", value: methodBadge(ep.method) },
+      { label: "Ruta", value: el("span", { class: "mono" }, [ep.path]) },
+      { label: "Peticiones", value: formatNumber(stats.requests ?? 0) },
+      { label: "Errores", value: `${formatNumber(stats.errors ?? 0)} (${formatNumber(rateOf(stats) * 100, { maximumFractionDigits: 1 })} %)` },
+      { label: "Latencia media", value: stats.requests ? `${formatNumber(stats.avgLatencyMs)} ms` : "—" },
+      { label: "Última petición", value: stats.lastRequestAt ? formatDate(stats.lastRequestAt) : "—" },
+      { label: "Agregado", value: formatDate(ep.createdAt) },
+    ]);
+    // Peticiones recientes: el admin puede abrir cada una.
+    const onClick = canManage ? { onRowClick: (row) => handlers.onSelectRequest(row) } : {};
+    const table = dataTable({
+      columns: [
+        { key: "statusCode", label: "Estado", render: (r) => statusCodeBadge(r.statusCode) },
+        { key: "latencyMs", label: "Latencia", align: "right", render: (r) => `${formatNumber(r.latencyMs)} ms` },
+        { key: "createdAt", label: "Fecha", render: (r) => el("span", { class: "muted small" }, [formatDate(r.createdAt)]) },
+      ],
+      rows: recent,
+      empty: el("p", { class: "muted small" }, ["Sin peticiones recientes."]),
+      ...onClick,
+    });
+    return el("div", { class: "stack" }, [list, el("h3", {}, ["Peticiones recientes"]), canManage && recent.length ? el("p", { class: "muted small" }, ["Toca una para ver su detalle."]) : null, table]);
+  }
 
   const actions = [el("button", { type: "button", class: "btn btn-secondary", onclick: handlers.onRefresh }, [icon("refresh"), "Actualizar"])];
   if (canManage) actions.push(el("button", { type: "button", class: "btn btn-primary", onclick: handlers.onOpenForm }, [icon("plus"), "Agregar endpoint"]));
@@ -114,7 +148,28 @@ export function renderMonitoringView(container, { canManage }, handlers) {
         }));
         return;
       }
-      tableCard.replaceChildren(dataTable({ columns, rows: endpoints }));
+      tableCard.replaceChildren(dataTable({ columns, rows: endpoints, onRowClick: handlers.onSelect }));
+    },
+
+    showDetailLoading() {
+      drawer.setTitle("Detalle del endpoint");
+      drawer.showLoading();
+    },
+
+    showEndpointDetail(ep) {
+      drawer.setTitle(ep.name || "Detalle del endpoint");
+      const buttons = [];
+      if (canManage) buttons.push(el("button", { type: "button", class: "btn btn-danger", onclick: () => handlers.onDelete(ep) }, [icon("trash"), "Quitar"]));
+      drawer.open(endpointContent(ep), buttons);
+    },
+
+    showRequestDetail(log, endpoint) {
+      drawer.setTitle("Detalle de la petición");
+      drawer.open(requestDetailContent(log), [backButton(endpoint)]);
+    },
+
+    closeDetail() {
+      drawer.close();
     },
 
     showError() {

@@ -18,8 +18,21 @@ const verifyRegistration = asyncHandler(async (req, res) => {
   res.json(new EmailVerifiedResponseDto());
 });
 
+// Secuencia del tablero: Vista → CredentialsRequestDto → login → validateCredentials → User (Modelo) → BD
 const login = asyncHandler(async (req, res) => {
-  res.json(new VerificationRequiredResponseDto(await authService.login(req.dto)));
+  const user = await authService.validateCredentials(req.dto); // validarCredenciales(usu, contra)
+  res.json(new VerificationRequiredResponseDto(await authService.startLoginVerification(user)));
+});
+
+// Respuesta genérica: no revela si el correo existe.
+const forgotPassword = asyncHandler(async (req, res) => {
+  await authService.requestPasswordReset(req.dto);
+  res.json(new MessageResponseDto("Si el correo está registrado, te enviamos un código para restablecer tu contraseña"));
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  await authService.resetPassword(req.dto);
+  res.json(new MessageResponseDto("Contraseña actualizada. Ya puedes iniciar sesión."));
 });
 
 const verifyLogin = asyncHandler(async (req, res) => {
@@ -44,6 +57,8 @@ module.exports = {
   register,
   verifyRegistration,
   login,
+  forgotPassword,
+  resetPassword,
   verifyLogin,
   resendLoginCode,
   resendRegistrationCode,

@@ -36,6 +36,7 @@ class HeartbeatEventDto {
 // api:activity (sin usuario, IP ni query)
 class ActivityEventDto {
   constructor(log) {
+    this.id = log.id ?? null;
     this.method = log.method;
     this.path = log.path;
     this.statusCode = log.statusCode;

@@ -1,5 +1,5 @@
 // Vista de gestión de usuarios (#/users). Dibuja la tabla, la paginación y el formulario; las acciones las decide el controlador.
-import { pageHeader, createModal, emptyState, errorState, dataTable, pagination, badge, skeleton } from "./componentes.js";
+import { pageHeader, createModal, emptyState, errorState, dataTable, pagination, badge, skeleton, detailDrawer, descriptionList } from "./componentes.js";
 import { el, icon, initials, formatDate, formatNumber } from "../utilidades.js";
 
 const ROLE_LABEL = { admin: "Administrador", user: "Usuario" };
@@ -8,6 +8,7 @@ const ROLE_LABEL = { admin: "Administrador", user: "Usuario" };
  * @param {HTMLElement} container
  * @param {{
  *   onNew: () => void,
+ *   onSelect: (user: object) => void,
  *   onEdit: (user: object) => void,
  *   onDelete: (user: object) => void,
  *   onSave: (data: { name: string, email: string, role: string, password: string }) => void,
@@ -51,6 +52,9 @@ export function renderUsersView(container, handlers) {
     // Con el select deshabilitado FormData omite el rol: se lee directo.
     handlers.onSave({ ...Object.fromEntries(new FormData(form)), role: roleSelect.value });
   });
+
+  // ---- Drawer de detalle ----
+  const drawer = detailDrawer({ title: "Detalle del usuario" });
 
   container.replaceChildren(
     pageHeader({
@@ -109,7 +113,34 @@ export function renderUsersView(container, handlers) {
         }));
         return;
       }
-      tableCard.replaceChildren(dataTable({ columns: columns(currentUserId), rows: users }), pagination(meta, handlers.onPageChange));
+      tableCard.replaceChildren(dataTable({ columns: columns(currentUserId), rows: users, onRowClick: handlers.onSelect }), pagination(meta, handlers.onPageChange));
+    },
+
+    showDetailLoading() {
+      drawer.showLoading();
+    },
+
+    showUserDetail(user, { isSelf = false } = {}) {
+      drawer.setTitle(user.name);
+      const content = descriptionList([
+        { label: "Nombre", value: el("span", {}, [user.name, isSelf ? " (tú)" : ""]) },
+        { label: "Correo", value: user.email },
+        { label: "Rol", value: badge(ROLE_LABEL[user.role] || user.role, user.role === "admin" ? "accent" : "neutral") },
+        { label: "Verificado", value: badge(user.emailVerified ? "Sí" : "No", user.emailVerified ? "success" : "warning") },
+        { label: "Creado", value: formatDate(user.createdDate) },
+      ]);
+      drawer.open(content, [
+        el("button", { type: "button", class: "btn btn-secondary", onclick: () => handlers.onEdit(user) }, [icon("edit"), "Editar"]),
+        el("button", {
+          type: "button", class: "btn btn-danger", disabled: isSelf,
+          title: isSelf ? "No puedes eliminar tu propio usuario" : "Eliminar",
+          onclick: () => handlers.onDelete(user),
+        }, [icon("trash"), "Eliminar"]),
+      ]);
+    },
+
+    closeDetail() {
+      drawer.close();
     },
 
     showError() {

@@ -25,7 +25,8 @@ class RegisterRequestDto extends BaseRequestDto {
 }
 
 // POST /api/auth/login
-class LoginRequestDto extends BaseRequestDto {
+// Lifeline "UsuarioDTO" del diagrama de secuencia: recibe usu y contra desde la Vista.
+class CredentialsRequestDto extends BaseRequestDto {
   constructor({ email, password } = {}) {
     super();
     this.email = normalizeEmail(email);
@@ -35,6 +36,39 @@ class LoginRequestDto extends BaseRequestDto {
     const errors = [];
     if (!isValidEmail(this.email)) errors.push("El correo electrónico no es válido");
     if (!this.password) errors.push("La contraseña es obligatoria");
+    return errors;
+  }
+}
+
+// Alias para no romper el nombre anterior.
+const LoginRequestDto = CredentialsRequestDto;
+
+// POST /api/auth/password/forgot
+class ForgotPasswordRequestDto extends BaseRequestDto {
+  constructor({ email } = {}) {
+    super();
+    this.email = normalizeEmail(email);
+  }
+  validate() {
+    return isValidEmail(this.email) ? [] : ["El correo electrónico no es válido"];
+  }
+}
+
+// POST /api/auth/password/reset
+class ResetPasswordRequestDto extends BaseRequestDto {
+  constructor({ email, code, password } = {}) {
+    super();
+    this.email = normalizeEmail(email);
+    this.code = String(code || "").trim();
+    this.password = password || "";
+  }
+  validate() {
+    const errors = [];
+    if (!isValidEmail(this.email)) errors.push("El correo electrónico no es válido");
+    if (!/^\d{6}$/.test(this.code)) errors.push("El código debe tener 6 dígitos");
+    if (this.password.length < SECURITY.PASSWORD_MIN_LENGTH) {
+      errors.push(`La contraseña debe tener al menos ${SECURITY.PASSWORD_MIN_LENGTH} caracteres`);
+    }
     return errors;
   }
 }
@@ -95,7 +129,7 @@ class EmailVerifiedResponseDto {
   }
 }
 
-// POST /api/auth/login/verify y POST /api/auth/refresh-token
+// POST /api/auth/login/verify, POST /api/auth/refresh-token y PATCH /api/users/:id/password (propia)
 class SessionResponseDto {
   constructor({ accessToken, refreshToken, user }) {
     this.ok = true;
@@ -107,7 +141,10 @@ class SessionResponseDto {
 
 module.exports = {
   RegisterRequestDto,
+  CredentialsRequestDto,
   LoginRequestDto,
+  ForgotPasswordRequestDto,
+  ResetPasswordRequestDto,
   VerifyCodeRequestDto,
   ResendCodeRequestDto,
   RefreshTokenRequestDto,

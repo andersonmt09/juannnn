@@ -1,6 +1,7 @@
 // Reglas de gestión de usuarios. Devuelve modelos User; el controlador arma la vista de respuesta.
 const bcrypt = require("bcryptjs");
 const User = require("../modelos/usuario");
+const authService = require("./autenticacion");
 const { HttpError, ROLES, SECURITY } = require("../configuracion");
 
 async function findActiveOrFail(id) {
@@ -51,6 +52,7 @@ async function update(id, changes, requester) {
 }
 
 // Para cambiar la propia contraseña hay que dar la actual. El administrador puede cambiar la de otros sin ella.
+// Devuelve la sesión nueva si es la propia; null si la cambió un administrador a otro usuario.
 async function changePassword(id, { currentPassword, password }, requester) {
   const user = await findActiveOrFail(id);
   const isOwner = requester.id === user.id;
@@ -61,7 +63,13 @@ async function changePassword(id, { currentPassword, password }, requester) {
     if (!valid) throw HttpError.badRequest("La contraseña actual no es correcta");
   }
 
-  await User.updatePassword(id, await bcrypt.hash(password, SECURITY.BCRYPT_ROUNDS));
+  // token_version + 1 cierra todas las sesiones del usuario.
+  const tokenVersion = user.tokenVersion + 1;
+  await User.updatePassword(id, await bcrypt.hash(password, SECURITY.BCRYPT_ROUNDS), tokenVersion);
+
+  // Si cambia la propia, devuelve una sesión nueva para seguir conectado en este dispositivo.
+  if (isOwner) return authService.issueSession(await findActiveOrFail(id));
+  return null;
 }
 
 // Eliminación lógica. Nadie puede eliminarse a sí mismo ni al último administrador.

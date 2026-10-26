@@ -28,9 +28,11 @@ function requestLogger(req, res, next) {
     };
 
     // La actividad en vivo se publica aunque falle el guardado.
+    let id = null;
     RequestLog.create(log)
+      .then((newId) => { id = newId; })
       .catch((error) => console.error("[registro-peticiones]", error.message))
-      .finally(() => eventService.publishActivity({ ...log, createdAt: new Date().toISOString() }));
+      .finally(() => eventService.publishActivity({ ...log, id, createdAt: new Date().toISOString() }));
   });
 
   next();

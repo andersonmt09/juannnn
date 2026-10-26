@@ -4,6 +4,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { validateEnvironment } = require("../configuracion");
+const bcrypt = require("bcryptjs");
 
 validateEnvironment();
 const app = require("../servidor");
@@ -103,4 +104,40 @@ test("el frontend se sirve desde el mismo servidor", async () => {
   const response = await fetch(baseUrl.replace(/\/api$/, "/"));
   assert.equal(response.status, 200);
   assert.match(await response.text(), /<html/i);
+});
+
+test("las rutas de detalle sin token devuelven 401", async () => {
+  assert.equal((await request("GET", "/monitoring/endpoints/1")).status, 401);
+  assert.equal((await request("GET", "/metrics/requests/1")).status, 401);
+});
+
+test("forgot con un correo inexistente responde 200 genérico", async () => {
+  const { status, data } = await request("POST", "/auth/password/forgot", { email: "nadie-existe@axon.com" });
+  assert.equal(status, 200);
+  assert.match(data.message, /Si el correo está registrado/);
+});
+
+test("reset con body inválido devuelve 400 y con código falso 401", async () => {
+  assert.equal((await request("POST", "/auth/password/reset", { email: "x", code: "1", password: "1" })).status, 400);
+  const fake = await request("POST", "/auth/password/reset", { email: "nadie-existe@axon.com", code: "123456", password: "nueva123" });
+  assert.equal(fake.status, 401);
+});
+
+test("token_version: tras cambiar la contraseña el token y el refresh viejos devuelven 401", async () => {
+  const User = require("../modelos/usuario");
+  const { tokens } = require("../externos");
+  const email = `tv-${Date.now()}@axon.com`;
+  const user = await User.create({ name: "TV", email, passwordHash: await bcrypt.hash("clave123", 4), emailVerified: true });
+  const old = tokens.issue(user);
+  const auth = (t) => ({ Authorization: `Bearer ${t}` });
+  const get = async (t) => (await fetch(`${baseUrl}/users/${user.id}`, { headers: auth(t) })).status;
+  const refresh = async (t) =>
+    (await fetch(`${baseUrl}/auth/refresh-token`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refreshToken: t }) })).status;
+
+  assert.equal(await get(old.accessToken), 200);
+  assert.equal(await refresh(old.refreshToken), 200);
+  await User.updatePassword(user.id, await bcrypt.hash("otra1234", 4), 1);
+  assert.equal(await get(old.accessToken), 401);
+  assert.equal(await refresh(old.refreshToken), 401);
+  await User.softDelete(user.id);
 });

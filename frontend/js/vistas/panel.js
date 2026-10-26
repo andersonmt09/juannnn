@@ -1,7 +1,7 @@
 // Vista del panel (#/dashboard). Solo dibuja los datos que recibe y avisa por callbacks.
 import {
   pageHeader, kpiCard, architectureGraph, doughnutChart, barChart, dataTable, emptyState,
-  errorState, skeleton, segmented, badge, methodBadge, statusCodeBadge, statusDot,
+  errorState, skeleton, segmented, badge, methodBadge, statusCodeBadge, statusDot, detailDrawer, requestDetailContent,
 } from "./componentes.js";
 import { el, icon, formatNumber } from "../utilidades.js";
 
@@ -58,7 +58,7 @@ function chartOrFallback(kind, title, items) {
   return kind === "bar" ? barChart({ title, items }) : doughnutChart({ title, items });
 }
 
-function activityTable(rows) {
+function activityTable(rows, onSelect) {
   return dataTable({
     columns: [
       { key: "method", label: "Método", render: (r) => methodBadge(r.method) },
@@ -68,6 +68,7 @@ function activityTable(rows) {
       { key: "createdAt", label: "Hora", render: (r) => el("span", { class: "num small" }, [r.createdAt ? TIME.format(new Date(r.createdAt)) : "—"]) },
     ],
     rows,
+    onRowClick: onSelect,
     empty: emptyState({ icon: "activity", title: "Sin actividad", text: "Aún no se registran peticiones a la API." }),
   });
 }
@@ -86,10 +87,11 @@ function servicesList(services) {
 }
 
 /**
- * createDashboardView(container, { userName }, { onRefresh, onExport })
+ * createDashboardView(container, { userName }, { onRefresh, onExport, onSelectRequest })
  *  -> { showLoading, showError, showData, update, setRefreshing, setUpdatedAt, bindSimulation, playSimulation, destroy }
  */
-export function createDashboardView(container, { userName }, { onRefresh, onExport }) {
+export function createDashboardView(container, { userName }, { onRefresh, onExport, onSelectRequest }) {
+  const drawer = detailDrawer({ title: "Detalle de la petición" });
   let charts = [];
   let graph = null;
   let kpis = null;
@@ -133,7 +135,7 @@ export function createDashboardView(container, { userName }, { onRefresh, onExpo
     kpis.latency.setValue(`${formatNumber(summary.avgLatencyMs, { maximumFractionDigits: 0 })} ms`, "promedio de todas las peticiones");
     kpis.errors.setValue(formatNumber(summary.errorsTotal), `${formatNumber(errorPct, { maximumFractionDigits: 1 })} % de las peticiones`);
     kpis.endpoints.setValue(formatNumber(summary.monitoredEndpoints), "en seguimiento");
-    activityBox?.replaceChildren(activityTable(recent));
+    activityBox?.replaceChildren(activityTable(recent, onSelectRequest));
   }
 
   function buildSimulationCard() {
@@ -205,6 +207,9 @@ export function createDashboardView(container, { userName }, { onRefresh, onExpo
       if (failed) out.append(el("p", { class: "small" }, [result.message]));
       else out.append(el("details", {}, [el("summary", {}, ["Ver datos devueltos"]), el("pre", { class: "code" }, [JSON.stringify(result.data, null, 2)])]));
     },
-    destroy() { clearCharts(); graph?.reset(); },
+    showRequestLoading() { drawer.showLoading(); },
+    showRequestDetail(log) { drawer.open(requestDetailContent(log)); },
+    closeRequestDetail() { drawer.close(); },
+    destroy() { clearCharts(); graph?.reset(); drawer.close(); },
   };
 }

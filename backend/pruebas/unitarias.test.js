@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const bcrypt = require("bcryptjs");
 const { HttpError, isValidEmail, isValidHttpMethod, isPositiveInteger, toRoutePattern } = require("../configuracion");
 const { MessageResponseDto, ErrorResponseDto } = require("../vistas/comunes");
-const { LoginRequestDto, RegisterRequestDto, VerifyCodeRequestDto, SessionResponseDto, VerificationRequiredResponseDto } = require("../vistas/autenticacion");
+const { CredentialsRequestDto, ForgotPasswordRequestDto, ResetPasswordRequestDto, LoginRequestDto, RegisterRequestDto, VerifyCodeRequestDto, SessionResponseDto, VerificationRequiredResponseDto } = require("../vistas/autenticacion");
 const {
   ListUsersRequestDto,
   UserIdRequestDto,
@@ -15,8 +15,8 @@ const {
   UserDto,
   UserListResponseDto,
 } = require("../vistas/usuarios");
-const { CreateMonitoredEndpointRequestDto, MonitoredEndpointIdRequestDto, MonitoredEndpointDto } = require("../vistas/monitoreo");
-const { HealthResponseDto, ListRequestLogsRequestDto } = require("../vistas/metricas");
+const { CreateMonitoredEndpointRequestDto, MonitoredEndpointIdRequestDto, MonitoredEndpointDto, MonitoredEndpointDetailResponseDto } = require("../vistas/monitoreo");
+const { HealthResponseDto, ListRequestLogsRequestDto, RequestLogIdRequestDto, RequestLogDetailResponseDto } = require("../vistas/metricas");
 const { RunSimulationRequestDto, SimulationResponseDto } = require("../vistas/simulacion");
 const User = require("../modelos/usuario");
 const MonitoredEndpoint = require("../modelos/endpoint-monitoreado");
@@ -27,6 +27,8 @@ const monitoringService = require("../servicios/monitoreo");
 const metricsService = require("../servicios/metricas");
 const simulationService = require("../servicios/simulacion");
 const eventService = require("../servicios/eventos");
+const VerificationCode = require("../modelos/codigo-verificacion");
+const { mail, tokens } = require("../externos");
 
 // ================= Vistas (DTOs) =================
 
@@ -425,7 +427,7 @@ test("eventService.publish escribe el evento SSE en cada cliente y unsubscribe l
 
     eventService.publishActivity({ method: "POST", path: "/api/x", statusCode: 201, latencyMs: 3, userId: 9 });
     const activity = JSON.parse(writes[1].split("data: ")[1]);
-    assert.deepEqual(Object.keys(activity).sort(), ["createdAt", "latencyMs", "method", "path", "statusCode"]);
+    assert.deepEqual(Object.keys(activity).sort(), ["createdAt", "id", "latencyMs", "method", "path", "statusCode"]);
   } finally {
     eventService.unsubscribe(clientId);
     eventService.closeAll(); // detiene el heartbeat para que el proceso termine
@@ -433,4 +435,227 @@ test("eventService.publish escribe el evento SSE en cada cliente y unsubscribe l
   assert.equal(eventService.countClients(), 0);
   eventService.publish("api:activity", {});
   assert.equal(writes.length, 2);
+});
+
+// ================= Grupo T: login, recuperación, token_version y detalles =================
+
+// ---------- T1: User.validateCredentials ----------
+
+test("User.validateCredentials: null si el correo no existe o la contraseña falla; User si es correcta", async () => {
+  const row = { id: "15", name: "Ana", email: "ana@axon.com", role: "user", email_verified: true, password_hash: bcrypt.hashSync("clave123", 4) };
+  const find = test.mock.method(User, "findByEmail", async () => new User(row));
+  assert.equal(await User.validateCredentials("ana@axon.com", "mala"), null);
+  const ok = await User.validateCredentials("ana@axon.com", "clave123");
+  assert.equal(ok.id, 15); // el id "15" pasa a número
+  assert.equal(find.mock.callCount(), 2);
+  find.mock.restore();
+  test.mock.method(User, "findByEmail", async () => null);
+  assert.equal(await User.validateCredentials("nadie@axon.com", "x"), null);
+});
+
+test("User convierte ids de texto en números y tokenVersion ausente en 0", () => {
+  const u = new User({ id: "15", created_by_id: "3" });
+  assert.equal(u.id, 15);
+  assert.equal(u.createdById, 3);
+  assert.equal(u.tokenVersion, 0);
+  assert.equal(new RequestLog({ id: "4", user_id: "9" }).userId, 9);
+  assert.equal(new RequestLog({ id: "4", user_id: null }).userId, null);
+});
+
+// ---------- T2: DTOs nuevos ----------
+
+test("CredentialsRequestDto y su alias LoginRequestDto son la misma clase", () => {
+  assert.equal(LoginRequestDto, CredentialsRequestDto);
+  const dto = new CredentialsRequestDto({ email: " A@B.com ", password: "x" });
+  assert.equal(dto.email, "a@b.com");
+  assert.deepEqual(dto.validate(), []);
+});
+
+test("ForgotPasswordRequestDto y ResetPasswordRequestDto validan correo, código y contraseña", () => {
+  assert.equal(new ForgotPasswordRequestDto({ email: "malo" }).validate().length, 1);
+  assert.deepEqual(new ForgotPasswordRequestDto({ email: "A@b.com" }).validate(), []);
+  assert.equal(new ResetPasswordRequestDto({ email: "a@b.com", code: "123456", password: "nueva12" }).validate().length, 0);
+  assert.equal(new ResetPasswordRequestDto({ email: "x", code: "12", password: "1" }).validate().length, 3);
+});
+
+test("RequestLogIdRequestDto valida el id", () => {
+  assert.deepEqual(new RequestLogIdRequestDto({ id: "5" }).validate(), []);
+  assert.equal(new RequestLogIdRequestDto({ id: "0" }).validate().length, 1);
+  assert.equal(new RequestLogIdRequestDto({ id: "abc" }).validate().length, 1);
+});
+
+test("RequestLogDetailResponseDto incluye al usuario sin hash y MonitoredEndpointDetailResponseDto las peticiones", () => {
+  const log = new RequestLog({ id: 7, method: "GET", path: "/api/users", route: "/api/users", status_code: 200, latency_ms: 4, user_id: 2 });
+  const dto = new RequestLogDetailResponseDto({ log, user: ana });
+  assert.deepEqual(dto.data.user, { id: 2, name: "Ana", email: "ana@axon.com" });
+  assert.equal(dto.data.userId, 2);
+  assert.ok(!JSON.stringify(dto).match(/hash|token/i));
+  assert.equal(new RequestLogDetailResponseDto({ log: { ...log, userId: null }, user: null }).data.user, null);
+
+  const endpoint = { id: 1, name: "U", method: "GET", path: "/api/users" };
+  const detail = new MonitoredEndpointDetailResponseDto({ endpoint, stats: undefined, status: "no-traffic", recentRequests: [log] });
+  assert.equal(detail.ok, true);
+  assert.equal(detail.data.recentRequests.length, 1);
+  assert.equal(detail.data.recentRequests[0].id, 7);
+  assert.equal(detail.data.status, "no-traffic");
+});
+
+test("SimulationResponseDto usa el path recibido (alias /api/axonApi)", () => {
+  const layers = Object.fromEntries(["client", "api", "backend", "database"].map((k) => [k, { detail: "", durationMs: 0 }]));
+  const result = { request: { operation: "users", startedAt: "x" }, layers, data: {}, totalMs: 0 };
+  assert.equal(new SimulationResponseDto(result).request.path, "/api/simulations");
+  assert.equal(new SimulationResponseDto(result, { path: "/api/axonApi" }).request.path, "/api/axonApi");
+});
+
+// ---------- T3: servicio de autenticación ----------
+
+test("validateCredentials: 401 si falla, 403 si está inactivo y 403 EMAIL_NOT_VERIFIED si no verificó", async () => {
+  const stub = (u) => test.mock.method(User, "validateCredentials", async () => u);
+  stub(null);
+  await assert.rejects(authService.validateCredentials({ email: "a@b.com", password: "x" }), { statusCode: 401 });
+  test.mock.restoreAll();
+  stub(makeUser({ id: 3, role: "inactive" }));
+  await assert.rejects(authService.validateCredentials({ email: "a@b.com", password: "x" }), { statusCode: 403 });
+  test.mock.restoreAll();
+  stub(makeUser({ id: 3, role: "user", email_verified: false }));
+  await assert.rejects(authService.validateCredentials({ email: "a@b.com", password: "x" }), { statusCode: 403, code: "EMAIL_NOT_VERIFIED" });
+  test.mock.restoreAll();
+  stub(ana);
+  assert.equal((await authService.validateCredentials({ email: "a@b.com", password: "x" })).id, 2);
+});
+
+// Dobles para el envío de códigos
+function mockCodes() {
+  return {
+    invalidate: test.mock.method(VerificationCode, "invalidateAll", async () => {}),
+    create: test.mock.method(VerificationCode, "create", async () => {}),
+    send: test.mock.method(mail, "sendVerificationCode", async () => {}),
+  };
+}
+
+test("login emite un código de propósito login", async () => {
+  test.mock.method(User, "validateCredentials", async () => ana);
+  const { create, send } = mockCodes();
+  assert.deepEqual(await authService.login({ email: "ana@axon.com", password: "actual1" }), { email: "ana@axon.com" });
+  assert.equal(create.mock.calls[0].arguments[0].purpose, "login");
+  assert.equal(send.mock.calls[0].arguments[2], "login");
+});
+
+test("requestPasswordReset no hace nada si no existe, está inactivo o sin verificar", async () => {
+  const { create } = mockCodes();
+  const find = test.mock.method(User, "findByEmail", async () => null);
+  await authService.requestPasswordReset({ email: "nadie@axon.com" });
+  find.mock.restore();
+  for (const data of [{ id: 3, role: "inactive" }, { id: 3, role: "user", email_verified: false }]) {
+    test.mock.method(User, "findByEmail", async () => makeUser(data));
+    await authService.requestPasswordReset({ email: "x@axon.com" });
+    User.findByEmail.mock.restore();
+  }
+  assert.equal(create.mock.callCount(), 0);
+  test.mock.method(User, "findByEmail", async () => ana);
+  await authService.requestPasswordReset({ email: "ana@axon.com" });
+  assert.equal(create.mock.callCount(), 1);
+  assert.equal(create.mock.calls[0].arguments[0].purpose, "password_reset");
+});
+
+test("resetPassword: código malo → 401 sin updatePassword; código bueno → updatePassword + invalidar login", async () => {
+  const update = test.mock.method(User, "updatePassword", async () => {});
+  const invalidate = test.mock.method(VerificationCode, "invalidateAll", async () => {});
+  test.mock.method(User, "findByEmail", async () => makeUser({ id: 2, role: "user", token_version: 4 }));
+  test.mock.method(VerificationCode, "markUsed", async () => {});
+  test.mock.method(VerificationCode, "incrementAttempts", async () => {});
+  const find = test.mock.method(VerificationCode, "findActive", async () => null);
+
+  await assert.rejects(authService.resetPassword({ email: "ana@axon.com", code: "000000", password: "nueva12" }), { statusCode: 401 });
+  find.mock.restore();
+  const record = { id: 1, attempts: 0, codeHash: bcrypt.hashSync("123456", 4) };
+  test.mock.method(VerificationCode, "findActive", async () => record);
+  await assert.rejects(authService.resetPassword({ email: "ana@axon.com", code: "999999", password: "nueva12" }), { statusCode: 401 });
+  assert.equal(update.mock.callCount(), 0);
+
+  await authService.resetPassword({ email: "ana@axon.com", code: "123456", password: "nueva12" });
+  assert.equal(update.mock.callCount(), 1);
+  assert.equal(update.mock.calls[0].arguments[2], 5); // token_version + 1
+  assert.deepEqual(invalidate.mock.calls.at(-1).arguments, ["ana@axon.com", "login"]);
+});
+
+// ---------- token_version ----------
+
+test("un token de acceso con versión vieja devuelve 401; con la versión actual sirve", async () => {
+  const current = makeUser({ id: 2, role: "user", token_version: 1 });
+  test.mock.method(User, "findById", async () => current);
+  const old = tokens.issue(makeUser({ id: 2, role: "user", token_version: 0 }));
+  await assert.rejects(authService.authenticateToken(old.accessToken), { statusCode: 401, message: /ya no es válida/ });
+  const fresh = tokens.issue(current);
+  assert.equal((await authService.authenticateToken(fresh.accessToken)).id, 2);
+});
+
+test("tras resetPassword el refresh token viejo devuelve 401 y el nuevo sirve", async () => {
+  let stored = makeUser({ id: 2, role: "user", token_version: 0 });
+  const oldSession = tokens.issue(stored);
+  test.mock.method(User, "findById", async () => stored);
+  test.mock.method(User, "findByEmail", async () => stored);
+  test.mock.method(User, "updatePassword", async (id, hash, version) => {
+    stored = makeUser({ id, role: "user", token_version: version });
+  });
+  test.mock.method(VerificationCode, "invalidateAll", async () => {});
+  test.mock.method(VerificationCode, "incrementAttempts", async () => {});
+  test.mock.method(VerificationCode, "markUsed", async () => {});
+  test.mock.method(VerificationCode, "findActive", async () => ({ id: 1, attempts: 0, codeHash: bcrypt.hashSync("123456", 4) }));
+
+  assert.equal((await authService.refreshSession({ refreshToken: oldSession.refreshToken })).user.id, 2);
+  await authService.resetPassword({ email: "a@b.com", code: "123456", password: "nueva12" });
+  await assert.rejects(authService.refreshSession({ refreshToken: oldSession.refreshToken }), { statusCode: 401 });
+  const fresh = await authService.refreshSession({ refreshToken: tokens.issue(stored).refreshToken });
+  assert.equal(fresh.user.tokenVersion, 1);
+});
+
+test("changePassword propio devuelve sesión nueva y la vieja deja de servir", async () => {
+  let stored = makeUser({ id: 2, role: "user", token_version: 0, password_hash: bcrypt.hashSync("actual1", 4) });
+  const oldSession = tokens.issue(stored);
+  test.mock.method(User, "findById", async () => stored);
+  test.mock.method(User, "updatePassword", async (id, hash, version) => {
+    stored = makeUser({ id, role: "user", token_version: version, password_hash: hash });
+  });
+  const session = await userService.changePassword(2, { currentPassword: "actual1", password: "nueva12" }, stored);
+  assert.ok(session.accessToken && session.refreshToken);
+  assert.equal((await authService.authenticateToken(session.accessToken)).id, 2);
+  await assert.rejects(authService.authenticateToken(oldSession.accessToken), { statusCode: 401 });
+  await assert.rejects(authService.refreshSession({ refreshToken: oldSession.refreshToken }), { statusCode: 401 });
+});
+
+test("changePassword del admin sobre otro usuario incrementa tokenVersion y no devuelve sesión", async () => {
+  const target = makeUser({ id: 2, role: "user", token_version: 3 });
+  usersById(target);
+  const update = test.mock.method(User, "updatePassword", async () => {});
+  const result = await userService.changePassword(2, { password: "nueva12" }, admin);
+  assert.equal(result, null);
+  assert.equal(update.mock.calls[0].arguments[2], 4);
+});
+
+// ---------- T4: detalles ----------
+
+test("monitoringService.getById: 404 si no existe y consulta findPage con method/route", async () => {
+  const find = test.mock.method(MonitoredEndpoint, "findById", async () => null);
+  await assert.rejects(monitoringService.getById(9), { statusCode: 404 });
+  find.mock.restore();
+  test.mock.method(MonitoredEndpoint, "findById", async () => ({ id: 1, method: "GET", path: "/api/users" }));
+  test.mock.method(RequestLog, "getStatsByRoute", async () => [{ method: "GET", route: "/api/users", total: 10, errors: 5 }]);
+  const page = test.mock.method(RequestLog, "findPage", async () => ({ logs: [{ id: 1 }], total: 1 }));
+  const detail = await monitoringService.getById(1);
+  assert.deepEqual(page.mock.calls[0].arguments[0], { page: 1, limit: 10, method: "GET", route: "/api/users" });
+  assert.equal(detail.status, "failing");
+  assert.equal(detail.recentRequests.length, 1);
+});
+
+test("metricsService.getRequest: 404, con usuario y sin usuario", async () => {
+  const find = test.mock.method(RequestLog, "findById", async () => null);
+  await assert.rejects(metricsService.getRequest(9), { statusCode: 404 });
+  find.mock.restore();
+  test.mock.method(RequestLog, "findById", async () => ({ id: 1, userId: 2 }));
+  usersById(ana);
+  assert.equal((await metricsService.getRequest(1)).user.id, 2);
+  RequestLog.findById.mock.restore();
+  test.mock.method(RequestLog, "findById", async () => ({ id: 2, userId: null }));
+  assert.equal((await metricsService.getRequest(2)).user, null);
 });

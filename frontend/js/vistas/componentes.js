@@ -1,6 +1,6 @@
 // Catálogo de piezas visuales reutilizables (sistema de diseño "sala de control").
 // Solo dibujan: no llaman a la API ni deciden acciones; los eventos salen por callbacks.
-import { el, initials, icon, formatNumber } from "../utilidades.js";
+import { el, initials, icon, formatNumber, formatDate } from "../utilidades.js";
 
 
 // ---------- Encabezado ----------
@@ -203,19 +203,100 @@ export function kpiCard({ label, value = "—", hint = "", icon: iconName = "act
 // ---------- Tabla ----------
 
 /**
- * dataTable({ columns: [{ key, label, align, render }], rows, empty })
+ * dataTable({ columns: [{ key, label, align, render }], rows, empty, onRowClick })
  * render(row, index) devuelve un nodo o texto. En móvil cada fila se vuelve tarjeta (data-label).
+ * onRowClick(row): filas seleccionables (clic, Enter o Espacio). Los botones dentro de la fila
+ * no la activan: se ignoran los eventos que vienen de button, a, input, select o textarea.
  */
-export function dataTable({ columns, rows, empty }) {
+export function dataTable({ columns, rows, empty, onRowClick }) {
   if (!rows.length) return empty || emptyState({ title: "Sin datos", text: "No hay registros para mostrar." });
 
   const alignClass = (column) => (column.align ? ` is-${column.align}` : "");
   const head = el("tr", {}, columns.map((c) => el("th", { class: alignClass(c).trim(), scope: "col" }, [c.label])));
-  const body = rows.map((row, index) => el("tr", {}, columns.map((c) => {
-    const content = c.render ? c.render(row, index) : (row[c.key] ?? "—");
-    return el("td", { class: alignClass(c).trim(), "data-label": c.label }, [content]);
-  })));
+  const INTERACTIVE = "button, a, input, select, textarea";
+  const body = rows.map((row, index) => {
+    const tr = el("tr", onRowClick ? { class: "is-clickable", tabindex: "0", role: "button" } : {}, columns.map((c) => {
+      const content = c.render ? c.render(row, index) : (row[c.key] ?? "—");
+      return el("td", { class: alignClass(c).trim(), "data-label": c.label }, [content]);
+    }));
+    if (onRowClick) {
+      const fromInner = (event) => event.target !== tr && event.target.closest(INTERACTIVE);
+      tr.addEventListener("click", (event) => { if (!fromInner(event)) onRowClick(row, index); });
+      tr.addEventListener("keydown", (event) => {
+        if ((event.key === "Enter" || event.key === " ") && event.target === tr) {
+          event.preventDefault();
+          onRowClick(row, index);
+        }
+      });
+    }
+    return tr;
+  });
   return el("div", { class: "table-wrap" }, [el("table", { class: "table" }, [el("thead", {}, [head]), el("tbody", {}, body)])]);
+}
+
+// ---------- Detalle (drawer) ----------
+
+/**
+ * detailDrawer({ title }) -> { element, open(contentNode, actions?), close, setTitle, showLoading }
+ * Panel lateral sobre createModal (Esc y fondo lo cierran). actions: botones del pie.
+ * El elemento se agrega al body la primera vez que se abre.
+ */
+export function detailDrawer({ title = "Detalle" } = {}) {
+  const body = el("div", { class: "drawer-content" });
+  const footer = el("div", { class: "modal-footer" });
+  const modal = createModal({ title, body, onClose: () => setTimeout(() => { if (modal.element.classList.contains("hidden")) modal.element.remove(); }, 0) });
+  modal.element.dataset.variant = "drawer";
+  modal.element.querySelector(".modal-card").append(footer);
+  footer.hidden = true;
+
+  const setActions = (actions = []) => { footer.replaceChildren(...actions); footer.hidden = !actions.length; };
+  const show = () => {
+    if (!modal.element.isConnected) document.body.append(modal.element);
+    if (modal.element.classList.contains("hidden")) modal.open();
+  };
+
+  return {
+    element: modal.element,
+    open(content, actions = []) {
+      body.replaceChildren(content);
+      body.removeAttribute("aria-busy");
+      setActions(actions);
+      show();
+    },
+    showLoading() {
+      body.replaceChildren(skeleton(5));
+      body.setAttribute("aria-busy", "true");
+      setActions([]);
+      show();
+    },
+    close: modal.close,
+    setTitle: modal.setTitle,
+  };
+}
+
+/** descriptionList([{ label, value }]) -> <dl class="detail-list"> (value: texto o nodo) */
+export function descriptionList(items) {
+  return el("dl", { class: "detail-list" }, items.flatMap(({ label, value }) => [
+    el("dt", {}, [label]),
+    el("dd", {}, [value === null || value === undefined || value === "" ? "—" : value]),
+  ]));
+}
+
+/** requestDetailContent(log) -> nodo con el detalle de una petición (log.user opcional) */
+export function requestDetailContent(log) {
+  const who = log.user
+    ? el("span", {}, [log.user.name, el("span", { class: "muted small" }, [` · ${log.user.email}`])])
+    : "Sin usuario";
+  return descriptionList([
+    { label: "Método", value: methodBadge(log.method) },
+    { label: "Ruta", value: el("span", { class: "mono" }, [log.path]) },
+    { label: "Patrón", value: log.route ? el("span", { class: "mono" }, [log.route]) : "—" },
+    { label: "Estado", value: statusCodeBadge(log.statusCode) },
+    { label: "Latencia", value: `${formatNumber(log.latencyMs)} ms` },
+    { label: "Origen", value: log.source },
+    { label: "Fecha", value: formatDate(log.createdAt) },
+    { label: "Usuario", value: who },
+  ]);
 }
 
 // ---------- Paginación ----------
@@ -464,6 +545,10 @@ function statusPill(label, status) {
   return pill;
 }
 
+// Un solo listener de Esc para todo el módulo (antes se sumaba uno por cada login).
+let closeCurrentMenu = null;
+document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeCurrentMenu?.(); });
+
 /**
  * renderLayout(root, { user, isAdmin, theme, menu }, { onToggleTheme, onLogout })
  *   -> { content, setActive(route), setHealth(status), setStreamStatus(status) }
@@ -501,7 +586,7 @@ export function renderLayout(root, { user, isAdmin, theme, menu = MENU }, { onTo
   const scrim = el("div", { class: "scrim", onclick: close });
   const toggle = el("button", { type: "button", class: "icon-btn menu-toggle", "aria-label": "Abrir menú", "aria-controls": "sidebar", "aria-expanded": "false" }, [icon("menu")]);
   toggle.addEventListener("click", () => (sidebar.classList.contains("is-open") ? close() : openDrawer()));
-  document.addEventListener("keydown", (event) => { if (event.key === "Escape" && sidebar.isConnected) close(); });
+  closeCurrentMenu = close; // el único listener de Esc cierra el menú del layout actual
 
   const title = el("div", { class: "topbar-title" }, [""]);
   const apiPill = statusPill(API_LABELS.unknown, "unknown");

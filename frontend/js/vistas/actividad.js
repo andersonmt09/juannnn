@@ -1,5 +1,5 @@
 // Vista de Actividad (#/activity): estado de la conexión en vivo, consola de eventos e historial paginado.
-import { pageHeader, kpiCard, eventLog, segmented, dataTable, pagination, emptyState, errorState, skeleton, methodBadge, statusCodeBadge, statusDot, STREAM_LABELS } from "./componentes.js";
+import { pageHeader, kpiCard, eventLog, segmented, dataTable, pagination, emptyState, errorState, skeleton, methodBadge, statusCodeBadge, statusDot, detailDrawer, requestDetailContent, STREAM_LABELS } from "./componentes.js";
 import { el, icon, formatNumber, formatDate } from "../utilidades.js";
 
 const STATUS_FILTERS = [
@@ -14,12 +14,15 @@ const CONNECTION_TONE = { CONNECTED: "live", CONNECTING: "warning", DISCONNECTED
  * @param {HTMLElement} container
  * @param {{ showHistory: boolean }} data
  * @param {{
+ *   onSelectRequest: (request: object) => void,
  *   onPing: () => void, onTogglePause: () => void, onClear: () => void,
  *   onFilterChange: (filters: { statusClass: string, method: string }) => void,
  *   onPageChange: (page: number) => void, onExportPage: () => void, onRetryHistory: () => void,
  * }} handlers
  */
 export function renderActivityView(container, { showHistory }, handlers) {
+  const drawer = detailDrawer({ title: "Detalle de la petición" });
+
   // ---- KPI ----
   const connection = kpiCard({ label: "Conexión", value: STREAM_LABELS.DISCONNECTED, icon: "radio", tone: "danger", hint: "Tiempo real (SSE)" });
   connection.querySelector(".kpi-value").style.fontSize = "var(--fs-2xl)";
@@ -88,6 +91,25 @@ export function renderActivityView(container, { showHistory }, handlers) {
   return {
     log,
 
+    // Agrega una línea a la consola; si es una petición con id, se puede abrir.
+    addEvent(event) {
+      log.add(event);
+      const id = event.name === "api:activity" ? event.data?.id : null;
+      const line = log.element.firstElementChild;
+      if (!id || !line) return;
+      const open = () => handlers.onSelectRequest(event.data);
+      line.classList.add("is-clickable");
+      line.setAttribute("tabindex", "0");
+      line.setAttribute("role", "button");
+      line.style.cursor = "pointer";
+      line.addEventListener("click", open);
+      line.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+    },
+
+    showRequestLoading() { drawer.showLoading(); },
+    showRequestDetail(logData) { drawer.open(requestDetailContent(logData)); },
+    closeRequestDetail() { drawer.close(); },
+
     // status: CONNECTED | CONNECTING | DISCONNECTED
     setConnection(status) {
       connection.setValue(STREAM_LABELS[status] || status);
@@ -126,7 +148,7 @@ export function renderActivityView(container, { showHistory }, handlers) {
 
     showHistory(logs, meta) {
       const empty = emptyState({ icon: "activity", title: "Sin peticiones", text: "No hay registros con esos filtros." });
-      historyBody.replaceChildren(dataTable({ columns: historyColumns, rows: logs, empty }), ...(logs.length ? [pagination(meta, handlers.onPageChange)] : []));
+      historyBody.replaceChildren(dataTable({ columns: historyColumns, rows: logs, empty, onRowClick: handlers.onSelectRequest }), ...(logs.length ? [pagination(meta, handlers.onPageChange)] : []));
     },
 
     showHistoryError() {

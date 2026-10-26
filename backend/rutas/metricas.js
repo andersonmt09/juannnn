@@ -12,6 +12,7 @@ const adminOnly = [authenticate, authorize(ROLES.ADMIN)];
 router.get("/health", metrics.checkHealth);
 router.get("/metrics/dashboard", adminOnly, metrics.getDashboard);
 router.get("/metrics/requests", adminOnly, validateRequest(views.ListRequestLogsRequestDto), metrics.listRequests);
+router.get("/metrics/requests/:id", adminOnly, validateRequest(views.RequestLogIdRequestDto), metrics.getRequest);
 router.get("/metrics/services", adminOnly, metrics.getServices);
 
 module.exports = router;

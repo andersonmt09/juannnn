@@ -5,6 +5,7 @@ const { MessageResponseDto } = require("../vistas/comunes");
 const {
   MonitoredEndpointListResponseDto,
   MonitoredEndpointResponseDto,
+  MonitoredEndpointDetailResponseDto,
   ApiRouteListResponseDto,
 } = require("../vistas/monitoreo");
 
@@ -19,6 +20,10 @@ const list = asyncHandler(async (req, res) => {
   res.json(new MonitoredEndpointListResponseDto(await monitoringService.list()));
 });
 
+const getById = asyncHandler(async (req, res) => {
+  res.json(new MonitoredEndpointDetailResponseDto(await monitoringService.getById(req.dto.id)));
+});
+
 const create = asyncHandler(async (req, res) => {
   res.status(201).json(new MonitoredEndpointResponseDto(await monitoringService.create(req.dto, apiRoutes(req))));
 });
@@ -28,4 +33,4 @@ const remove = asyncHandler(async (req, res) => {
   res.json(new MessageResponseDto("Endpoint eliminado del monitoreo"));
 });
 
-module.exports = { listRoutes, list, create, remove };
+module.exports = { listRoutes, list, getById, create, remove };

@@ -11,6 +11,7 @@ const adminOnly = [authenticate, authorize(ROLES.ADMIN)];
 
 router.get("/routes", adminOnly, monitoring.listRoutes);
 router.get("/endpoints", authenticate, monitoring.list);
+router.get("/endpoints/:id", authenticate, validateRequest(views.MonitoredEndpointIdRequestDto), monitoring.getById);
 router.post("/endpoints", adminOnly, validateRequest(views.CreateMonitoredEndpointRequestDto), monitoring.create);
 router.delete("/endpoints/:id", adminOnly, validateRequest(views.MonitoredEndpointIdRequestDto), monitoring.remove);
 

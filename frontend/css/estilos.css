@@ -571,6 +571,24 @@ details[open] > summary { margin-bottom: var(--sp-2); }
 
 /* ==================== 8. Animaciones y movimiento reducido ==================== */
 
+/* ---- Filas seleccionables, drawer de detalle y lista de descripción ---- */
+/* Con el drawer abierto, los avisos bajan para no tapar su encabezado */
+body:has(.modal[data-variant="drawer"]:not(.hidden)) .toast-wrap { top: auto; bottom: var(--sp-4); }
+.table tbody tr.is-clickable { cursor: pointer; }
+.table tbody tr.is-clickable:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--surface-hover); }
+.modal[data-variant="drawer"] { place-items: stretch end; padding: 0; }
+.modal[data-variant="drawer"] .modal-card { width: min(420px, 100%); height: 100%; max-height: none; border-radius: 0; border-width: 0 0 0 1px; animation: drawer-in .24s var(--ease); }
+.modal[data-variant="drawer"] .modal-body { flex: 1; }
+.modal[data-variant="drawer"] .modal-footer { border-radius: 0; flex-wrap: wrap; }
+.detail-list { display: grid; grid-template-columns: minmax(90px, max-content) minmax(0, 1fr); gap: var(--sp-3) var(--sp-4); align-items: baseline; }
+.detail-list dt { font-size: var(--fs-xs); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+.detail-list dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+@keyframes drawer-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+
+/* ---- Recuperar contraseña ---- */
+.auth-forgot { align-self: flex-end; margin-top: calc(var(--sp-2) * -1); font-size: var(--fs-sm); }
+.auth-step[hidden] { display: none; }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes shimmer { to { background-position: -200% 0; } }
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 3px var(--live-soft); } 50% { box-shadow: 0 0 0 6px transparent; } }

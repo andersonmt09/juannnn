@@ -27,23 +27,30 @@ async function verifyRegistration({ email, code }) {
 
 // ---------- Inicio de sesión ----------
 
-// Paso 1: valida correo y contraseña y envía el código al correo.
-async function login({ email, password }) {
-  const user = await User.findByEmail(email);
-  const validPassword = user && (await bcrypt.compare(password, user.passwordHash));
-  if (!validPassword) throw HttpError.unauthorized("Credenciales incorrectas");
+// validarCredenciales(usu, contra): consulta al Modelo y aplica las reglas de la cuenta.
+async function validateCredentials({ email, password }) {
+  const user = await User.validateCredentials(email, password);
+  if (!user) throw HttpError.unauthorized("Credenciales incorrectas");
   if (!user.isActive()) throw HttpError.forbidden("La cuenta está desactivada");
   if (!user.emailVerified) throw HttpError.forbidden("Debes verificar tu correo electrónico primero", "EMAIL_NOT_VERIFIED");
+  return user;
+}
 
-  await issueCode({ userId: user.id, email, purpose: CODE_PURPOSE.LOGIN });
-  return { email };
+// Paso 1 (después de validar): envía el código al correo.
+async function startLoginVerification(user) {
+  await issueCode({ userId: user.id, email: user.email, purpose: CODE_PURPOSE.LOGIN });
+  return { email: user.email };
+}
+
+async function login(credentials) {
+  return startLoginVerification(await validateCredentials(credentials));
 }
 
 // Paso 2: valida el código y entrega los tokens.
 async function verifyLogin({ email, code }) {
   await verifyCode({ email, code, purpose: CODE_PURPOSE.LOGIN });
   const user = ensureActive(await User.findByEmail(email));
-  return { ...tokens.issue(user), user };
+  return issueSession(user);
 }
 
 async function resendCode({ email, purpose }) {
@@ -54,11 +61,36 @@ async function resendCode({ email, purpose }) {
   await issueCode({ userId: user.id, email, purpose });
 }
 
+// ---------- Recuperar contraseña ----------
+
+// Respuesta siempre genérica: si no existe, está inactivo o sin verificar, no hace nada.
+async function requestPasswordReset({ email }) {
+  const user = await User.findByEmail(email);
+  if (!user || !user.isActive() || !user.emailVerified) return;
+  await issueCode({ userId: user.id, email, purpose: CODE_PURPOSE.PASSWORD_RESET });
+}
+
+// Comprueba el código, guarda la contraseña nueva y cierra todas las sesiones (token_version + 1).
+async function resetPassword({ email, code, password }) {
+  await verifyCode({ email, code, purpose: CODE_PURPOSE.PASSWORD_RESET });
+  const user = await User.findByEmail(email);
+  if (!user || !user.isActive()) throw HttpError.unauthorized("Código inválido o expirado");
+
+  const passwordHash = await bcrypt.hash(password, SECURITY.BCRYPT_ROUNDS);
+  await User.updatePassword(user.id, passwordHash, user.tokenVersion + 1);
+  await VerificationCode.invalidateAll(email, CODE_PURPOSE.LOGIN);
+}
+
 // ---------- Sesión ----------
+
+// Entrega tokens nuevos con la versión actual del usuario.
+function issueSession(user) {
+  return { ...tokens.issue(user), user };
+}
 
 async function refreshSession({ refreshToken }) {
   const user = await findActiveUser(tokens.verifyRefresh(refreshToken));
-  return { ...tokens.issue(user), user };
+  return issueSession(user);
 }
 
 // Lo usa el middleware authenticate en cada petición: un usuario desactivado pierde el acceso de inmediato.
@@ -71,8 +103,11 @@ function ensureActive(user) {
   return user;
 }
 
-async function findActiveUser(id) {
-  return ensureActive(await User.findById(id));
+// { id, ver } viene del token: si la versión no coincide, la sesión fue cerrada (cambio de contraseña).
+async function findActiveUser({ id, ver }) {
+  const user = ensureActive(await User.findById(id));
+  if (user.tokenVersion !== ver) throw HttpError.unauthorized("La sesión ya no es válida");
+  return user;
 }
 
 // ---------- Códigos de verificación (6 dígitos) ----------
@@ -111,8 +146,13 @@ async function verifyCode({ email, purpose, code }) {
 module.exports = {
   register,
   verifyRegistration,
+  validateCredentials,
+  startLoginVerification,
   login,
   verifyLogin,
+  requestPasswordReset,
+  resetPassword,
+  issueSession,
   resendCode,
   refreshSession,
   authenticateToken,

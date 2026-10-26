@@ -3,7 +3,7 @@ const User = require("../modelos/usuario");
 const MonitoredEndpoint = require("../modelos/endpoint-monitoreado");
 const RequestLog = require("../modelos/registro-peticion");
 const Database = require("../modelos/base-datos");
-const { env, ROLES } = require("../configuracion");
+const { env, ROLES, HttpError } = require("../configuracion");
 
 async function getDashboard() {
   const [roles, endpoints, logs, recentRequests] = await Promise.all([
@@ -46,6 +46,14 @@ async function getDashboard() {
 async function listRequests({ page, limit, method, statusClass }) {
   const { logs, total } = await RequestLog.findPage({ page, limit, method, statusClass });
   return { logs, total, page, limit };
+}
+
+// Una petición registrada y el usuario que la hizo (si hubo).
+async function getRequest(id) {
+  const log = await RequestLog.findById(id);
+  if (!log) throw HttpError.notFound("Petición no encontrada");
+  const user = log.userId ? await User.findById(log.userId) : null;
+  return { log, user };
 }
 
 // ¿Responde la API de la base de datos externa?
@@ -96,4 +104,4 @@ async function getServices() {
   ];
 }
 
-module.exports = { getDashboard, listRequests, checkHealth, getServices };
+module.exports = { getDashboard, listRequests, getRequest, checkHealth, getServices };

@@ -1,5 +1,6 @@
 // Vista de /api/monitoring: lo que entra (DTOs de petición) y lo que sale (DTOs de respuesta).
 const { BaseRequestDto } = require("./comunes");
+const { RequestLogDto } = require("./metricas");
 const { HTTP_METHODS, isValidHttpMethod, isPositiveInteger } = require("../configuracion");
 
 // ---------- Petición (req) ----------
@@ -71,6 +72,17 @@ class MonitoredEndpointResponseDto {
   }
 }
 
+// GET /api/monitoring/endpoints/:id → { ok, data: { ...MonitoredEndpointDto, recentRequests: RequestLogDto[] } }
+class MonitoredEndpointDetailResponseDto {
+  constructor({ endpoint, stats, status, recentRequests }) {
+    this.ok = true;
+    this.data = {
+      ...new MonitoredEndpointDto(endpoint, stats, status),
+      recentRequests: recentRequests.map((log) => new RequestLogDto(log)),
+    };
+  }
+}
+
 // GET /api/monitoring/routes → rutas reales de la API que se pueden monitorear.
 class ApiRouteListResponseDto {
   constructor(routes) {
@@ -85,5 +97,6 @@ module.exports = {
   MonitoredEndpointDto,
   MonitoredEndpointListResponseDto,
   MonitoredEndpointResponseDto,
+  MonitoredEndpointDetailResponseDto,
   ApiRouteListResponseDto,
 };

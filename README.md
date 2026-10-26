@@ -11,12 +11,14 @@ Aplicación web para administrar usuarios con inicio de sesión en dos pasos (co
 ## Funcionalidades
 
 - Registro con verificación del correo e inicio de sesión en dos pasos (código de 6 dígitos).
-- Sesión con token de 15 minutos que se renueva sola.
+- Recuperación de contraseña con código al correo ("¿Olvidaste tu contraseña?").
+- Sesión con token de 15 minutos que se renueva sola. Al restablecer o cambiar la contraseña se cierran las demás sesiones.
 - Gestión de usuarios por roles (administrador y usuario), con paginación, confirmaciones y eliminación lógica.
 - Panel de control (solo administradores): cinco indicadores, arquitectura visual, gráficas, estado de los servicios y actividad reciente.
 - Simulación de una petición que recorre las cuatro capas: Cliente, API, Backend y Base de datos.
 - Actividad en vivo (solo administradores): cada petición a la API aparece al instante, con medición de latencia e historial filtrable.
 - Monitoreo de endpoints: peticiones, errores, latencia y estado (saludable, con errores o sin tráfico) de cada ruta vigilada.
+- Ver detalle: al seleccionar un usuario, un endpoint monitoreado o una petición registrada se abre un panel lateral con sus datos.
 - Exportación a CSV, tema claro y oscuro, y diseño adaptable a celular.
 
 ## Arquitectura
@@ -58,8 +60,8 @@ axon-stack-flow/
 │   ├── img/                favicon.svg
 │   ├── js/
 │   │   ├── modelos/        sesion (sesión y tema), api (un llamado por endpoint), eventos (tiempo real)
-│   │   ├── vistas/         inicio-sesion, registro, verificacion, panel, usuarios, monitoreo, actividad, perfil
-│   │   │                   + componentes (menú, tablas, tarjetas, modal, gráficas, arquitectura...)
+│   │   ├── vistas/         inicio-sesion, registro, verificacion, recuperar-contrasena, panel, usuarios, monitoreo, actividad, perfil
+│   │   │                   + componentes (menú, tablas, tarjetas, modal, panel lateral de detalle, gráficas, arquitectura...)
 │   │   ├── controladores/  los mismos nombres que vistas/ + menu (tema, cierre de sesión y estado)
 │   │   ├── principal.js    Pantallas (#/...), permisos por rol y navegación
 │   │   └── utilidades.js   Elementos HTML, íconos, notificaciones, formatos, CSV y almacenamiento
@@ -105,7 +107,7 @@ Los nombres de carpetas y archivos están en español; el código interno (varia
 
 ## Endpoints
 
-Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador. Las vistas están en `backend/vistas/` con el nombre del recurso, y el llamado está en `frontend/js/modelos/api.js`.
+Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador. Las vistas están en `backend/vistas/` con el nombre del recurso, y el llamado está en `frontend/js/modelos/api.js`. `LoginRequestDto` se conserva como alias de `CredentialsRequestDto`.
 
 | Método | Ruta | Acceso | Vista de petición (req) | Vista de respuesta (res) | Llamado en el frontend |
 |---|---|---|---|---|---|
@@ -113,22 +115,26 @@ Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el tok
 | POST | `/auth/register` | Público | `RegisterRequestDto` | `VerificationRequiredResponseDto` | `authApi.register` |
 | POST | `/auth/register/verify` | Público | `VerifyCodeRequestDto` | `EmailVerifiedResponseDto` | `authApi.verifyRegistration` |
 | POST | `/auth/register/resend-code` | Público | `ResendCodeRequestDto` | `MessageResponseDto` | `authApi.resendRegistrationCode` |
-| POST | `/auth/login` | Público | `LoginRequestDto` | `VerificationRequiredResponseDto` | `authApi.login` |
+| POST | `/auth/login` | Público | `CredentialsRequestDto` | `VerificationRequiredResponseDto` | `authApi.login` |
 | POST | `/auth/login/verify` | Público | `VerifyCodeRequestDto` | `SessionResponseDto` | `authApi.verifyLogin` |
 | POST | `/auth/login/resend-code` | Público | `ResendCodeRequestDto` | `MessageResponseDto` | `authApi.resendLoginCode` |
+| POST | `/auth/password/forgot` | Público (límite de 5 cada 15 min) | `ForgotPasswordRequestDto` | `MessageResponseDto` | `authApi.forgotPassword` |
+| POST | `/auth/password/reset` | Público | `ResetPasswordRequestDto` | `MessageResponseDto` | `authApi.resetPassword` |
 | POST | `/auth/refresh-token` | Público | `RefreshTokenRequestDto` | `SessionResponseDto` | `authApi.refreshToken` (automático) |
 | GET | `/users?page=&limit=` | Admin | `ListUsersRequestDto` | `UserListResponseDto` | `userApi.list`, `userApi.listAll` |
 | GET | `/users/:id` | Sesión (propio o admin) | `UserIdRequestDto` | `UserResponseDto` | `userApi.get` |
 | POST | `/users` | Admin | `CreateUserRequestDto` | `UserResponseDto` | `userApi.create` |
 | PUT | `/users/:id` | Admin | `UpdateUserRequestDto` | `UserResponseDto` | `userApi.update` |
-| PATCH | `/users/:id/password` | Sesión (propio o admin) | `ChangePasswordRequestDto` | `MessageResponseDto` | `userApi.changePassword` |
+| PATCH | `/users/:id/password` | Sesión (propio o admin) | `ChangePasswordRequestDto` | `SessionResponseDto` (contraseña propia) o `MessageResponseDto` (la de otro usuario) | `userApi.changePassword` |
 | DELETE | `/users/:id` | Admin | `UserIdRequestDto` | `MessageResponseDto` | `userApi.remove` |
 | GET | `/monitoring/routes` | Admin | — | `ApiRouteListResponseDto` | `monitoringApi.listApiRoutes` |
 | GET | `/monitoring/endpoints` | Sesión | — | `MonitoredEndpointListResponseDto` | `monitoringApi.listEndpoints` |
+| GET | `/monitoring/endpoints/:id` | Sesión | `MonitoredEndpointIdRequestDto` | `MonitoredEndpointDetailResponseDto` | `monitoringApi.getEndpoint` |
 | POST | `/monitoring/endpoints` | Admin | `CreateMonitoredEndpointRequestDto` | `MonitoredEndpointResponseDto` | `monitoringApi.addEndpoint` |
 | DELETE | `/monitoring/endpoints/:id` | Admin | `MonitoredEndpointIdRequestDto` | `MessageResponseDto` | `monitoringApi.removeEndpoint` |
 | GET | `/metrics/dashboard` | Admin | — | `DashboardResponseDto` | `metricApi.getDashboard` |
 | GET | `/metrics/requests?page=&limit=&method=&statusClass=` | Admin | `ListRequestLogsRequestDto` | `RequestLogListResponseDto` | `metricApi.listRequests` |
+| GET | `/metrics/requests/:id` | Admin | `RequestLogIdRequestDto` | `RequestLogDetailResponseDto` | `metricApi.getRequest` |
 | GET | `/metrics/services` | Admin | — | `ServiceListResponseDto` | `metricApi.getServices` |
 | POST | `/simulations` (alias `/axonApi`) | Admin | `RunSimulationRequestDto` | `SimulationResponseDto` | `simulationApi.run` |
 | GET | `/events/stream?token=` | Admin | `StreamRequestDto` | Eventos SSE (ver abajo) | `stream.connect` en `js/modelos/eventos.js` |
@@ -142,8 +148,9 @@ Cualquier error responde con `ErrorResponseDto`: `{ "ok": false, "message": "...
 |---|---|---|
 | `stream:connected` | Al conectarse | Cliente y hora |
 | `stream:heartbeat` | Cada 15 segundos | Clientes conectados y tiempo activo |
-| `api:activity` | Cada petición a la API | Método, ruta, estado, latencia y hora |
-| `stream:pong` | Respuesta a `POST /events/ping` | Hora, para medir la latencia |
+| `api:activity` | Cada petición a la API | `id` del registro, método, ruta, estado, latencia y hora |
+
+**Ping y pong.** `stream:ping` es la petición `POST /api/events/ping` que envía el cliente; `stream:pong` es su respuesta (`PongResponseDto`, con la hora) y no un evento SSE. El cliente la usa para medir el tiempo de ida y vuelta.
 
 El navegador no permite enviar encabezados con `EventSource`, por eso el token va en `?token=`. Las rutas se guardan sin la query, así que el token nunca queda registrado.
 
@@ -154,12 +161,87 @@ El navegador no permite enviar encabezados con `EventSource`, por eso el token v
 - Solo se pueden monitorear rutas que existen en la API, y cada una una sola vez. Un endpoint está "con errores" si el 20 % o más de sus respuestas fallan.
 - En cada petición se comprueba que el usuario del token siga activo: una cuenta eliminada pierde el acceso de inmediato.
 - El reenvío de código responde lo mismo exista o no el correo, para no revelar qué cuentas existen.
+- La recuperación de contraseña responde lo mismo exista o no el correo (y esté activo y verificado o no).
+- Al restablecer o cambiar una contraseña se cierran las demás sesiones (ver "Sesiones y `token_version`").
 
-**Equivalencias con el documento de requerimientos.** `POST /auth/verify-code` del documento corresponde a `POST /auth/register/verify` y `POST /auth/login/verify`. `POST /api/axonApi` se mantiene como alias de `POST /api/simulations`. Socket.IO se reemplazó por Server-Sent Events, que no necesita dependencias adicionales. Se usa un único servidor (puerto 4000) en lugar de dos (5173 y 4000).
+## Secuencia del inicio de sesión
+
+El login sigue el diagrama de secuencia del tablero. Cada participante tiene su equivalente en el código:
+
+| Participante del diagrama | En AXON |
+|---|---|
+| Usuario | La persona en el navegador |
+| Vista | `frontend/js/vistas/inicio-sesion.js` (`onSubmit({ email, password })`). Su controlador, `controladores/inicio-sesion.js`, llama a `authApi.login(email, password)` |
+| DTO de entrada (usu, contra) | `CredentialsRequestDto` en `backend/vistas/autenticacion.js` |
+| Controlador | `login` en `backend/controladores/autenticacion.js` |
+| `validateCredentials(usu, contra)` | `authService.validateCredentials({ email, password })`, que llama a `User.validateCredentials(email, password)` |
+| Modelo | `backend/modelos/usuario.js`: convierte la fila de la base en un `User` |
+| Base de datos | API externa: `GET /users?email=&includeInactive=true&limit=1` |
+| DTO de salida | `UserDto`, dentro de `SessionResponseDto.user` |
+
+Pasos:
+
+1. El usuario escribe correo y contraseña en la Vista, que los entrega a su controlador.
+2. `POST /api/auth/login`: la ruta valida el body con `CredentialsRequestDto` (correo válido y contraseña no vacía).
+3. El controlador llama a `validateCredentials`. El servicio pide al Modelo `User.validateCredentials`, que busca el correo en la API externa y compara la contraseña con bcrypt.
+4. **Credenciales válidas:** el Modelo devuelve el `User`. El servicio comprueba que la cuenta esté activa y verificada, y `startLoginVerification` genera el código de 6 dígitos y lo envía al correo. La respuesta es `VerificationRequiredResponseDto` y la Vista pasa a `#/verify`.
+5. El usuario escribe el código (`POST /api/auth/login/verify`). Si es correcto, el backend responde con `SessionResponseDto` (`accessToken`, `refreshToken` y `user` como `UserDto`) y se muestra el panel: `#/dashboard` para el administrador y `#/monitoring` para el usuario común.
+6. **Credenciales inválidas** (el correo no existe o la contraseña no coincide, el "( )" vacío del diagrama): el Modelo devuelve `null`, el servicio responde 401 "Credenciales incorrectas" con `ErrorResponseDto` y la Vista muestra el error junto al enlace "¿Olvidaste tu contraseña?". Una cuenta desactivada responde 403, y una sin verificar, 403 con el código `EMAIL_NOT_VERIFIED`.
+
+El hash de la contraseña nunca sale del backend: la Vista solo recibe un `UserDto`.
+
+## Recuperar contraseña
+
+Entrada: el enlace "¿Olvidaste tu contraseña?" del inicio de sesión (`#/forgot-password`, pantalla pública con dos pasos).
+
+1. **Solicitar el código.** El usuario escribe su correo y el frontend llama a `authApi.forgotPassword` (`POST /api/auth/password/forgot`, `ForgotPasswordRequestDto`). Si la cuenta existe, está activa y verificada, se invalidan los códigos anteriores y se envía un código de 6 dígitos con `purpose: "password_reset"` (asunto "AXON Security · Código para restablecer tu contraseña").
+2. **Restablecer.** En el mismo formulario escribe el código, la contraseña nueva y su confirmación (que se comprueba en el navegador). El frontend llama a `authApi.resetPassword` (`POST /api/auth/password/reset`, `ResetPasswordRequestDto`: `email`, `code` de 6 dígitos y `password`).
+3. El backend comprueba el código (vence en 5 minutos, 5 intentos y uso único), guarda la contraseña con bcrypt, incrementa `token_version`, invalida los códigos de inicio de sesión pendientes y responde "Contraseña actualizada. Ya puedes iniciar sesión.". El frontend vuelve a `#/login`.
+4. El pie de la pantalla permite reenviar el código (con una espera de 30 segundos) y volver al inicio de sesión.
+
+**Respuesta genérica.** `forgot` siempre responde 200 con el mismo mensaje ("Si el correo está registrado, te enviamos un código para restablecer tu contraseña"), exista o no el correo, para no revelar qué cuentas existen. Un código incorrecto o vencido en `reset` responde 401 "Código inválido o expirado".
+
+**Límite.** `forgot` admite como máximo 5 solicitudes por IP cada 15 minutos, cuenten o no como éxito; la sexta responde 429. `reset` usa el límite de intentos fallidos de autenticación (5 cada 15 minutos).
+
+## Ver detalle
+
+Desde el panel de cada rol se puede seleccionar una fila (con clic, o con Enter o Espacio) y se abre un panel lateral con el detalle. Cerrar vuelve a la pantalla anterior.
+
+| Pantalla | Quién | Qué se selecciona | Qué muestra | Endpoint |
+|---|---|---|---|---|
+| `#/monitoring` | Todos | Un endpoint monitoreado | Datos, estado, estadísticas (peticiones, errores, tasa de error, latencia, última petición) y sus últimas 10 peticiones. El administrador puede abrir cada una de esas peticiones y quitar el endpoint del monitoreo | `GET /api/monitoring/endpoints/:id` |
+| `#/dashboard` ("Actividad reciente") y `#/activity` (historial y filas en vivo) | Administrador | Una petición registrada | Método, ruta, patrón, estado, latencia, origen, fecha y el usuario que la hizo (nombre y correo, o ninguno si fue anónima) | `GET /api/metrics/requests/:id` |
+| `#/users` | Administrador | Un usuario | Datos, rol, correo verificado, fecha de creación y de actualización, con las acciones Editar y Eliminar | `GET /api/users/:id` |
+
+Las filas en vivo de `#/activity` se pueden abrir porque `api:activity` trae el `id` del registro.
+
+## Sesiones y `token_version`
+
+Cada usuario tiene un número de versión de sesión, `token_version` (entero, 0 por defecto), guardado en el recurso `/users` de la API externa. El modelo `User` lo lee como `tokenVersion`.
+
+- Los dos tokens (acceso y renovación) llevan `ver`, la versión del usuario al emitirse.
+- En cada petición y en cada renovación se compara `ver` con la versión actual. Si no coincide, responde 401 "La sesión ya no es válida".
+- Restablecer la contraseña (`/auth/password/reset`) y cambiarla (`PATCH /users/:id/password`, propia o hecha por el administrador) suman 1 a `token_version`, así que se cierran las demás sesiones, incluidos los tokens de renovación robados.
+- Quien cambia **su propia** contraseña recibe un `SessionResponseDto` con tokens nuevos y el frontend los guarda, así que sigue conectado en ese dispositivo. Si el administrador cambia la de otro usuario, la respuesta es solo un `MessageResponseDto`.
+
+## Equivalencias con el documento de requerimientos
+
+`POST /auth/verify-code` del documento corresponde a `POST /auth/register/verify` y `POST /auth/login/verify`; `/auth/verify-registration`, a `/auth/register/verify`; `/auth/resend-registration`, a `/auth/register/resend-code`; y `/auth/resend-code`, a `/auth/login/resend-code`. La recuperación de contraseña (`/auth/password/forgot` y `/auth/password/reset`) y el detalle (`/monitoring/endpoints/:id` y `/metrics/requests/:id`) son ampliaciones del tablero. `POST /api/axonApi` se mantiene como alias de `POST /api/simulations`. Socket.IO se reemplazó por Server-Sent Events, que no necesita dependencias adicionales.
+
+Se usa un único servidor (puerto 4000) en lugar de dos (5173 y 4000). Los DTO de los diagramas (`UsuarioDTO.cs`) equivalen a los de `backend/vistas/autenticacion.js`, y `validarCredenciales` a `validateCredentials`.
 
 ## API de la base de datos externa
 
-Los modelos usan los siguientes recursos de la API externa. Cada petición envía la clave en el encabezado `x-api-key`, y los datos viajan en JSON con los nombres de columna de la base (`password_hash`, `email_verified`, `created_at`...).
+Los modelos usan los siguientes recursos de la API externa. Cada petición envía la clave en el encabezado `x-api-key`, y los datos viajan en JSON con los nombres de columna de la base (`password_hash`, `email_verified`, `created_at`...). Las columnas dependen del recurso:
+
+| Recurso | Columnas |
+|---|---|
+| `/users` | `id`, `name`, `email`, `password_hash`, `role`, `email_verified`, `created_by_id`, `token_version`, `created_date`, `updated_date` |
+| `/verification-codes` | `id`, `user_id`, `email`, `purpose`, `code_hash`, `expires_at`, `attempts`, `used`, `created_at` |
+| `/endpoints` | `id`, `name`, `method`, `path`, `description`, `created_at` |
+| `/request-logs` | `id`, `method`, `path`, `route`, `status_code`, `latency_ms`, `source`, `user_id`, `created_at` |
+
+`token_version` es una columna entera nueva de `/users` (0 por defecto). `purpose` de `/verification-codes` admite `login`, `registration` y `password_reset`.
 
 | Modelo | Método | Ruta | Uso |
 |---|---|---|---|
@@ -169,16 +251,17 @@ Los modelos usan los siguientes recursos de la API externa. Cada petición enví
 | | GET | `/users/:id` | Un usuario (404 si no existe) |
 | | GET | `/users/count-by-role` | `{ admin, user, inactive }` |
 | | POST | `/users` | Crear usuario |
-| | PATCH | `/users/:id` | Editar datos, contraseña, verificación o rol |
+| | PATCH | `/users/:id` | Editar datos, contraseña (junto con `token_version`), verificación o rol |
 | `codigo-verificacion.js` | POST | `/verification-codes` | Guardar un código (hash) |
 | | GET | `/verification-codes/active?email=&purpose=` | Último código vigente (404 si no hay) |
 | | POST | `/verification-codes/:id/attempts` | Sumar un intento |
 | | PATCH | `/verification-codes/:id` | Marcar como usado |
-| | POST | `/verification-codes/invalidate` | Invalidar los códigos anteriores |
+| | POST | `/verification-codes/invalidate` | Invalidar los códigos anteriores (`email` y `purpose`) |
 | `endpoint-monitoreado.js` | GET | `/endpoints`, `/endpoints/:id` | Endpoints monitoreados → `{ data }` |
 | | POST / DELETE | `/endpoints`, `/endpoints/:id` | Agregar y quitar |
-| `registro-peticion.js` | POST | `/request-logs` | Registrar una petición (`method`, `path`, `route`, `status_code`, `latency_ms`, `source`, `user_id`) |
-| | GET | `/request-logs?page=&limit=&method=&statusClass=` | Historial del más nuevo al más viejo → `{ data, total }`. `statusClass` es `2xx`, `3xx`, `4xx` o `5xx` |
+| `registro-peticion.js` | POST | `/request-logs` | Registrar una petición (`method`, `path`, `route`, `status_code`, `latency_ms`, `source`, `user_id`) → responde `{ id }` |
+| | GET | `/request-logs?page=&limit=&method=&statusClass=&route=` | Historial del más nuevo al más viejo → `{ data, total }`. `statusClass` es `2xx`, `3xx`, `4xx` o `5xx`; `route` filtra por la ruta exacta (patrón) |
+| | GET | `/request-logs/:id` | Un registro (404 si no existe) |
 | | GET | `/request-logs/summary` | `{ total, last24h, avgLatencyMs, byStatus, byMethod }` (promedio sobre todos los registros) |
 | | GET | `/request-logs/stats-by-route` | `{ data: [{ method, route, total, errors, avgLatencyMs, lastRequestAt }] }`, donde `errors` cuenta respuestas con código 400 o superior |
 
@@ -248,6 +331,8 @@ Para revisar las dependencias: `npm outdated` (versiones nuevas) y `npm audit` (
 - Tokens JWT: acceso de 15 minutos (se renueva solo) y renovación de 7 días.
 - Códigos de 6 dígitos que vencen en 5 minutos y permiten 5 intentos.
 - Máximo 5 intentos fallidos de autenticación por IP cada 15 minutos.
+- Máximo 5 solicitudes de código de recuperación por IP cada 15 minutos.
+- Las sesiones se cierran al cambiar la contraseña (`token_version`).
 - Validación de todos los datos de entrada antes de enviarlos a la base de datos.
 - El proyecto no tiene acceso directo a la base: solo usa su API, con una clave y un tiempo máximo de espera.
 - Cabeceras de seguridad con Helmet y una política de contenido (CSP) que solo permite los recursos propios, Chart.js y las fuentes de Google.
