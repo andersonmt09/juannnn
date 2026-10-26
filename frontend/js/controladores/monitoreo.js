@@ -1,17 +1,22 @@
 // Controlador de #/monitoring: muestra las estadísticas y, si es administrador, agrega o quita endpoints.
 import { renderMonitoringView } from "../vistas/monitoreo.js";
+import { confirmDialog } from "../vistas/componentes.js";
 import { monitoringApi } from "../modelos/api.js";
 import { session } from "../modelos/sesion.js";
 import { toast } from "../utilidades.js";
 
 export async function showMonitoring(container) {
   let endpoints = [];
+  let active = true;
 
   async function loadEndpoints() {
     try {
-      endpoints = await monitoringApi.listEndpoints();
+      const list = await monitoringApi.listEndpoints();
+      if (!active) return;
+      endpoints = list;
       view.showEndpoints(endpoints);
     } catch (error) {
+      if (!active) return;
       view.showError();
       toast.error(error.message);
     }
@@ -32,6 +37,7 @@ export async function showMonitoring(container) {
       }
     },
     async onSave(data) {
+      view.setSaving(true);
       try {
         await monitoringApi.addEndpoint(data);
         toast.success("Endpoint agregado al monitoreo");
@@ -39,10 +45,17 @@ export async function showMonitoring(container) {
         await loadEndpoints();
       } catch (error) {
         toast.error(error.message);
+      } finally {
+        view.setSaving(false);
       }
     },
     async onDelete(endpoint) {
-      if (!confirm(`¿Quitar "${endpoint.name}" del monitoreo?`)) return;
+      const confirmed = await confirmDialog({
+        title: "Quitar del monitoreo",
+        message: `¿Quitar "${endpoint.name}" del monitoreo? Se dejará de vigilar ${endpoint.method} ${endpoint.path}.`,
+        confirmLabel: "Quitar",
+      });
+      if (!confirmed) return;
       try {
         await monitoringApi.removeEndpoint(endpoint.id);
         toast.success("Endpoint quitado del monitoreo");
@@ -51,8 +64,12 @@ export async function showMonitoring(container) {
         toast.error(error.message);
       }
     },
-    onRefresh: loadEndpoints,
+    onRefresh() {
+      view.showLoading();
+      loadEndpoints();
+    },
   });
 
   await loadEndpoints();
+  return () => { active = false; };
 }

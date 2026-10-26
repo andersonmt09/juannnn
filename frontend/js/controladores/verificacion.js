@@ -1,7 +1,7 @@
 // Controlador de #/verify: comprueba el código del registro o del inicio de sesión (paso 2).
 import { renderVerifyView } from "../vistas/verificacion.js";
 import { authApi } from "../modelos/api.js";
-import { session } from "../modelos/sesion.js";
+import { session, VERIFICATION_PURPOSE } from "../modelos/sesion.js";
 import { toast } from "../utilidades.js";
 
 export function showVerify(container) {
@@ -10,7 +10,7 @@ export function showVerify(container) {
     location.hash = "#/login";
     return;
   }
-  const isRegistration = purpose === "registration";
+  const isRegistration = purpose === VERIFICATION_PURPOSE.REGISTRATION;
 
   async function verify(code) {
     if (isRegistration) {
@@ -24,7 +24,7 @@ export function showVerify(container) {
     session.save(result);
     session.clearPendingVerification();
     toast.success(`Bienvenido, ${result.user.name}`);
-    location.hash = "#/dashboard";
+    location.hash = session.isAdmin() ? "#/dashboard" : "#/monitoring";
   }
 
   const view = renderVerifyView(container, { email, isRegistration }, {
@@ -34,6 +34,7 @@ export function showVerify(container) {
         await verify(code);
       } catch (error) {
         toast.error(error.message);
+        view.clearCode();
       } finally {
         view.setLoading(false);
       }
@@ -41,10 +42,13 @@ export function showVerify(container) {
     async onResend() {
       try {
         await (isRegistration ? authApi.resendRegistrationCode(email) : authApi.resendLoginCode(email));
-        toast.success("Código reenviado");
+        toast.success("Si el correo existe, te enviamos un código nuevo");
+        view.restartTimers();
       } catch (error) {
         toast.error(error.message);
       }
     },
   });
+
+  return view.destroy; // detiene los contadores al salir
 }

@@ -1,5 +1,6 @@
 // Controlador de #/users (solo administradores): listar por páginas, crear, editar, eliminar y exportar usuarios.
 import { renderUsersView } from "../vistas/usuarios.js";
+import { confirmDialog } from "../vistas/componentes.js";
 import { userApi } from "../modelos/api.js";
 import { session } from "../modelos/sesion.js";
 import { toast, exportToCsv } from "../utilidades.js";
@@ -14,15 +15,18 @@ export async function showUsers(container) {
   const currentUserId = session.getUser()?.id;
   let currentPage = 1;
   let editingUser = null;
+  let active = true;
 
   async function loadUsers(page = currentPage) {
     try {
       const { data, meta } = await userApi.list(page, PAGE_SIZE);
+      if (!active) return;
       // Si se eliminó el último de una página, vuelve a la anterior.
       if (!data.length && page > 1) return loadUsers(page - 1);
       currentPage = meta.page;
       view.showUsers(data, meta, currentUserId);
     } catch (error) {
+      if (!active) return;
       view.showError();
       toast.error(error.message);
     }
@@ -34,8 +38,10 @@ export async function showUsers(container) {
       toast.success("Usuario creado");
       return;
     }
-    await userApi.update(editingUser.id, { name, email, role });
-    if (password && editingUser.id !== currentUserId) await userApi.changePassword(editingUser.id, password);
+    const isSelf = editingUser.id === currentUserId;
+    // El rol propio no se cambia: no se envía.
+    await userApi.update(editingUser.id, isSelf ? { name, email } : { name, email, role });
+    if (password && !isSelf) await userApi.changePassword(editingUser.id, password);
     toast.success("Usuario actualizado");
   }
 
@@ -49,16 +55,24 @@ export async function showUsers(container) {
       view.openForm(user, { isSelf: user.id === currentUserId });
     },
     async onSave(data) {
+      view.setSaving(true);
       try {
         await save(data);
         view.closeForm();
         await loadUsers();
       } catch (error) {
         toast.error(error.message);
+      } finally {
+        view.setSaving(false);
       }
     },
     async onDelete(user) {
-      if (!confirm(`¿Eliminar a ${user.name}? (eliminación lógica)`)) return;
+      const confirmed = await confirmDialog({
+        title: "Eliminar usuario",
+        message: `¿Eliminar a ${user.name}? Es una eliminación lógica: la cuenta dejará de poder iniciar sesión.`,
+        confirmLabel: "Eliminar",
+      });
+      if (!confirmed) return;
       try {
         await userApi.remove(user.id);
         toast.success("Usuario eliminado");
@@ -72,12 +86,19 @@ export async function showUsers(container) {
     },
     async onExport() {
       try {
-        exportToCsv(await userApi.listAll(), "axon-usuarios.csv", CSV_COLUMNS);
+        const users = await userApi.listAll();
+        exportToCsv(users, "axon-usuarios.csv", CSV_COLUMNS);
+        toast.success(`Se exportaron ${users.length} usuarios a CSV`);
       } catch (error) {
         toast.error(error.message);
       }
     },
+    onRetry() {
+      view.showLoading();
+      loadUsers();
+    },
   });
 
   await loadUsers();
+  return () => { active = false; };
 }

@@ -1,15 +1,15 @@
-// Punto de entrada del frontend: define las pantallas (#/...), decide cuál mostrar,
-// protege las privadas y arma el menú. También maneja el tema y el cierre de sesión.
+// Punto de entrada del frontend: solo es el router. Define las pantallas (#/...),
+// decide cuál mostrar según la sesión y el rol, y limpia la pantalla anterior al cambiar.
 import { showLogin } from "./controladores/inicio-sesion.js";
 import { showRegister } from "./controladores/registro.js";
 import { showVerify } from "./controladores/verificacion.js";
 import { showDashboard } from "./controladores/panel.js";
 import { showUsers } from "./controladores/usuarios.js";
 import { showMonitoring } from "./controladores/monitoreo.js";
+import { showActivity } from "./controladores/actividad.js";
 import { showProfile } from "./controladores/perfil.js";
+import { showLayout, hideLayout } from "./controladores/menu.js";
 import { session, preferences } from "./modelos/sesion.js";
-import { SESSION_EXPIRED_EVENT } from "./modelos/api.js";
-import { renderLayout, setActiveMenu } from "./vistas/componentes.js";
 import { el } from "./utilidades.js";
 
 // ---------- Pantallas ----------
@@ -19,33 +19,17 @@ const ROUTES = {
   "#/login":      { controller: showLogin,      public: true },
   "#/register":   { controller: showRegister,   public: true },
   "#/verify":     { controller: showVerify,     public: true },
-  "#/dashboard":  { controller: showDashboard },
+  "#/dashboard":  { controller: showDashboard,  adminOnly: true },
   "#/users":      { controller: showUsers,      adminOnly: true },
   "#/monitoring": { controller: showMonitoring },
+  "#/activity":   { controller: showActivity,   adminOnly: true },
   "#/profile":    { controller: showProfile },
 };
 
 const DEFAULT_PUBLIC_ROUTE = "#/login";
-const DEFAULT_PRIVATE_ROUTE = "#/dashboard";
 
-// ---------- Tema y sesión ----------
-
-function applySavedTheme() {
-  document.documentElement.dataset.theme = preferences.getTheme();
-}
-
-// Alterna entre claro y oscuro y devuelve el tema nuevo.
-function toggleTheme() {
-  const next = preferences.getTheme() === "light" ? "dark" : "light";
-  preferences.setTheme(next);
-  document.documentElement.dataset.theme = next;
-  return next;
-}
-
-function logout() {
-  session.clear();
-  location.hash = DEFAULT_PUBLIC_ROUTE;
-}
+// El administrador entra al panel; el usuario común, a monitoreo.
+const defaultPrivateRoute = () => (session.isAdmin() ? "#/dashboard" : "#/monitoring");
 
 // ---------- Navegación ----------
 
@@ -54,22 +38,30 @@ function resolve(hash) {
   const loggedIn = session.isLoggedIn();
   const route = ROUTES[hash];
 
-  if (!route) return loggedIn ? DEFAULT_PRIVATE_ROUTE : DEFAULT_PUBLIC_ROUTE;
+  if (!route) return loggedIn ? defaultPrivateRoute() : DEFAULT_PUBLIC_ROUTE;
   if (!route.public && !loggedIn) return DEFAULT_PUBLIC_ROUTE;
-  if (route.public && loggedIn) return DEFAULT_PRIVATE_ROUTE;
-  if (route.adminOnly && !session.isAdmin()) return DEFAULT_PRIVATE_ROUTE;
+  if (route.public && loggedIn) return defaultPrivateRoute();
+  if (route.adminOnly && !session.isAdmin()) return defaultPrivateRoute();
   return hash;
 }
 
-// Las páginas privadas comparten el menú lateral; solo se dibuja una vez.
-function privateContainer(root) {
-  const existing = document.getElementById("page");
-  if (existing) return existing;
-  return renderLayout(
-    root,
-    { user: session.getUser(), isAdmin: session.isAdmin(), theme: preferences.getTheme() },
-    { onToggleTheme: toggleTheme, onLogout: logout }
-  );
+let layout = null;      // layout privado actual (se dibuja una sola vez)
+let cleanup = null;     // limpieza de la pantalla actual
+let navigation = 0;     // número de navegación, para ignorar controladores lentos
+
+function runCleanup() {
+  try { cleanup?.(); } catch { /* una limpieza rota no debe bloquear la navegación */ }
+  cleanup = null;
+}
+
+// Un controlador puede devolver (o resolver) una función de limpieza.
+function mount(controller, container) {
+  const current = ++navigation;
+  Promise.resolve(controller(container)).then((result) => {
+    if (typeof result !== "function") return;
+    if (current === navigation) cleanup = result;
+    else result(); // el usuario ya cambió de pantalla
+  }).catch(() => { /* cada controlador muestra sus propios errores */ });
 }
 
 function navigate() {
@@ -80,22 +72,26 @@ function navigate() {
     return;
   }
 
+  runCleanup();
   const route = ROUTES[target];
+
   if (route.public) {
+    if (layout) { hideLayout(); layout = null; }
     const container = el("div", { id: "auth-container" });
     root.replaceChildren(container);
-    route.controller(container);
+    mount(route.controller, container);
     return;
   }
 
-  const content = privateContainer(root);
-  setActiveMenu(target);
-  route.controller(content);
+  if (!layout || !document.getElementById("page")) layout = showLayout(root);
+  layout.setActive(target);
+  layout.content.replaceChildren();
+  window.scrollTo(0, 0);
+  mount(route.controller, layout.content);
 }
 
 // ---------- Inicio ----------
 
-applySavedTheme();
+document.documentElement.dataset.theme = preferences.getTheme();
 window.addEventListener("hashchange", navigate);
-window.addEventListener(SESSION_EXPIRED_EVENT, () => { location.hash = DEFAULT_PUBLIC_ROUTE; });
 navigate();

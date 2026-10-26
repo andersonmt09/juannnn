@@ -12,6 +12,9 @@ const KEYS = Object.freeze({
   PENDING_PURPOSE: "axon_pending_purpose",
 });
 
+// Para qué se pide el código de verificación (lo usan los tres controladores de acceso).
+export const VERIFICATION_PURPOSE = Object.freeze({ LOGIN: "login", REGISTRATION: "registration" });
+
 export const session = {
   getAccessToken: () => storage.get(KEYS.ACCESS_TOKEN),
   getRefreshToken: () => storage.get(KEYS.REFRESH_TOKEN),
@@ -29,6 +32,11 @@ export const session = {
     if (user) storage.set(KEYS.USER, JSON.stringify(user));
   },
 
+  // Reemplaza solo los datos del usuario (por ejemplo tras consultar GET /users/:id).
+  updateUser(user) {
+    if (user) storage.set(KEYS.USER, JSON.stringify(user));
+  },
+
   clear() {
     storage.remove(KEYS.ACCESS_TOKEN);
     storage.remove(KEYS.REFRESH_TOKEN);
@@ -43,7 +51,7 @@ export const session = {
   getPendingVerification() {
     return {
       email: storage.get(KEYS.PENDING_EMAIL) || "",
-      purpose: storage.get(KEYS.PENDING_PURPOSE) || "login",
+      purpose: storage.get(KEYS.PENDING_PURPOSE) || VERIFICATION_PURPOSE.LOGIN,
     };
   },
   clearPendingVerification() {

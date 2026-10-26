@@ -1,39 +1,47 @@
-// Vista de registro (#/register). Solo dibuja el formulario y avisa al controlador.
+// Vista de registro (#/register). Solo dibuja y avisa al controlador.
 import { el } from "../utilidades.js";
+import { passwordField } from "./componentes.js";
+import { buildAuthShell } from "./inicio-sesion.js";
 
 /**
  * @param {HTMLElement} container
- * @param {{ onSubmit: (data: { name: string, email: string, password: string }) => void }} handlers
+ * @param {{ onSubmit: (data: { name: string, email: string, password: string, confirmPassword: string }) => void }} handlers
  */
 export function renderRegisterView(container, { onSubmit }) {
-  const submit = el("button", { type: "submit", class: "btn btn-primary" }, ["Registrarse"]);
+  const submit = el("button", { type: "submit", class: "btn btn-primary btn-block" }, [el("span", {}, ["Crear cuenta"])]);
   const form = el("form", {}, [
-    el("label", { for: "reg-name" }, ["Nombre completo"]),
-    el("input", { id: "reg-name", name: "name", required: true, minlength: "2", autocomplete: "name" }),
-    el("label", { for: "reg-email" }, ["Correo electrónico"]),
-    el("input", { id: "reg-email", type: "email", name: "email", required: true, autocomplete: "email" }),
-    el("label", { for: "reg-password" }, ["Contraseña (mínimo 6 caracteres)"]),
-    el("input", { id: "reg-password", type: "password", name: "password", required: true, minlength: "6", autocomplete: "new-password" }),
+    el("div", { class: "field" }, [
+      el("label", { class: "field-label", for: "reg-name" }, ["Nombre completo"]),
+      el("input", { id: "reg-name", name: "name", class: "input", required: true, minlength: "2", autocomplete: "name", placeholder: "Tu nombre" }),
+    ]),
+    el("div", { class: "field" }, [
+      el("label", { class: "field-label", for: "reg-email" }, ["Correo electrónico"]),
+      el("input", { id: "reg-email", name: "email", type: "email", class: "input", required: true, autocomplete: "email", placeholder: "tu@correo.com" }),
+    ]),
+    passwordField({ id: "reg-password", name: "password", label: "Contraseña", autocomplete: "new-password", hint: "Mínimo 6 caracteres", minlength: 6 }),
+    passwordField({ id: "reg-confirm", name: "confirmPassword", label: "Confirmar contraseña", autocomplete: "new-password" }),
     submit,
   ]);
-
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     onSubmit(Object.fromEntries(new FormData(form)));
   });
 
-  container.replaceChildren(el("div", { class: "auth-card" }, [
-    el("div", { class: "auth-brand" }, ["AXON STACK FLOW"]),
-    el("h1", {}, ["Crear cuenta"]),
-    el("p", { class: "muted" }, ["Regístrate para empezar a usar el panel"]),
+  const card = el("section", { class: "auth-card", "aria-labelledby": "reg-title" }, [
+    el("h1", { id: "reg-title" }, ["Crear cuenta"]),
+    el("p", { class: "auth-sub" }, ["Regístrate para empezar a usar el panel"]),
     form,
-    el("p", { class: "muted small" }, ["¿Ya tienes cuenta? ", el("a", { href: "#/login" }, ["Inicia sesión"])]),
-  ]));
+    el("p", { class: "auth-foot" }, ["¿Ya tienes cuenta? ", el("a", { href: "#/login" }, ["Inicia sesión"])]),
+  ]);
+  const shell = buildAuthShell(card);
+  container.replaceChildren(shell.layout);
 
   return {
+    setHealth: shell.setHealth,
     setLoading(loading) {
       submit.disabled = loading;
-      submit.textContent = loading ? "Enviando..." : "Registrarse";
+      submit.classList.toggle("is-loading", loading);
+      submit.setAttribute("aria-busy", String(loading));
     },
   };
 }

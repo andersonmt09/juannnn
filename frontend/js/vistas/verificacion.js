@@ -1,5 +1,10 @@
 // Vista de verificación con código de 6 dígitos (#/verify), para el registro y el inicio de sesión.
-import { el } from "../utilidades.js";
+import { el, icon, maskEmail } from "../utilidades.js";
+
+const EXPIRY_SECONDS = 300; // el código vence en 5:00
+const RESEND_SECONDS = 30; // espera entre reenvíos
+
+const clock = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
 /**
  * @param {HTMLElement} container
@@ -7,38 +12,120 @@ import { el } from "../utilidades.js";
  * @param {{ onSubmit: (code: string) => void, onResend: () => void }} handlers
  */
 export function renderVerifyView(container, { email, isRegistration }, { onSubmit, onResend }) {
-  const submit = el("button", { type: "submit", class: "btn btn-primary" }, ["Verificar"]);
-  const form = el("form", {}, [
-    el("label", { for: "verify-code" }, ["Código de verificación (6 dígitos)"]),
-    el("input", {
-      id: "verify-code", name: "code", required: true, maxlength: "6", pattern: "[0-9]{6}",
-      inputmode: "numeric", autocomplete: "one-time-code",
-    }),
-    submit,
-  ]);
+  let loading = false;
+  let expired = false;
+  let expiryTimer = null;
+  let resendTimer = null;
 
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    onSubmit(new FormData(form).get("code"));
+  const submit = el("button", { type: "submit", class: "btn btn-primary btn-block" }, [el("span", {}, ["Verificar"])]);
+  const input = el("input", {
+    id: "verify-code", name: "code", class: "otp-input", required: true, maxlength: "6", pattern: "[0-9]{6}",
+    inputmode: "numeric", autocomplete: "one-time-code", placeholder: "······", "aria-label": "Código de verificación de 6 dígitos",
+    "aria-describedby": "verify-countdown",
   });
+  const countdown = el("p", { id: "verify-countdown", class: "countdown", role: "timer" });
+  const resend = el("button", { type: "button", class: "btn btn-ghost btn-sm" }, ["Reenviar código"]);
+  const form = el("form", {}, [input, countdown, submit]);
 
-  container.replaceChildren(el("div", { class: "auth-card" }, [
-    el("h1", {}, ["Verificación"]),
-    el("p", { class: "muted" }, [isRegistration
-      ? "Te enviamos un código para confirmar tu correo."
-      : "Ingresa el código de 6 dígitos que enviamos a tu correo."]),
-    el("p", { class: "muted small" }, [`Correo: ${email}`]),
-    form,
-    el("div", { class: "row small" }, [
-      el("button", { type: "button", class: "btn btn-link", onclick: onResend }, ["Reenviar código"]),
-      el("a", { href: "#/login", class: "btn btn-link" }, ["Volver"]),
+  function send() {
+    if (loading || expired) return;
+    const code = input.value;
+    if (/^\d{6}$/.test(code)) onSubmit(code);
+    else input.reportValidity();
+  }
+
+  form.addEventListener("submit", (event) => { event.preventDefault(); send(); });
+  // Solo dígitos; con 6 dígitos (escritos o pegados) se envía solo.
+  input.addEventListener("input", () => {
+    input.value = input.value.replace(/\D/g, "").slice(0, 6);
+    if (input.value.length === 6) send();
+  });
+  resend.addEventListener("click", () => onResend());
+
+  function refreshControls() {
+    submit.disabled = loading || expired;
+    input.disabled = loading;
+    submit.classList.toggle("is-loading", loading);
+  }
+
+  function startExpiry() {
+    clearInterval(expiryTimer);
+    expired = false;
+    let left = EXPIRY_SECONDS;
+    const tick = () => {
+      if (left <= 0) {
+        expired = true;
+        clearInterval(expiryTimer);
+        countdown.textContent = "El código venció. Solicita uno nuevo.";
+        countdown.dataset.expired = "true";
+      } else {
+        countdown.textContent = `El código vence en ${clock(left)}`;
+        delete countdown.dataset.expired;
+      }
+      refreshControls();
+      left -= 1;
+    };
+    tick();
+    expiryTimer = setInterval(tick, 1000);
+  }
+
+  function startCooldown() {
+    clearInterval(resendTimer);
+    let left = RESEND_SECONDS;
+    const tick = () => {
+      if (left <= 0) {
+        clearInterval(resendTimer);
+        resend.disabled = false;
+        resend.textContent = "Reenviar código";
+        return;
+      }
+      resend.disabled = true;
+      resend.textContent = `Reenviar en ${left} s`;
+      left -= 1;
+    };
+    tick();
+    resendTimer = setInterval(tick, 1000);
+  }
+
+  container.replaceChildren(el("div", { class: "auth-layout" }, [
+    el("main", { class: "auth-main", style: "grid-column: 1 / -1" }, [
+      el("section", { class: "auth-card is-centered", "aria-labelledby": "verify-title" }, [
+        el("div", { class: "verify-icon" }, [icon("mail")]),
+        el("h1", { id: "verify-title" }, ["Revisa tu correo"]),
+        el("p", { class: "auth-sub" }, [
+          isRegistration ? "Enviamos un código para confirmar tu cuenta a " : "Enviamos un código de acceso a ",
+          el("strong", {}, [maskEmail(email)]),
+        ]),
+        form,
+        el("div", { class: "row", style: "justify-content:center;margin-top:16px" }, [
+          resend,
+          el("a", { href: "#/login", class: "btn btn-link" }, ["Volver"]),
+        ]),
+      ]),
     ]),
   ]));
+  input.focus();
+  startExpiry();
+  startCooldown();
 
   return {
-    setLoading(loading) {
-      submit.disabled = loading;
-      submit.textContent = loading ? "Verificando..." : "Verificar";
+    setLoading(value) {
+      loading = value;
+      refreshControls();
+      if (!value && !expired) input.focus();
+    },
+    // Tras un reenvío correcto: limpia el campo y reinicia ambos contadores.
+    restartTimers() {
+      input.value = "";
+      startExpiry();
+      startCooldown();
+      input.focus();
+    },
+    clearCode() { input.value = ""; input.focus(); },
+    // Limpieza al salir de la pantalla.
+    destroy() {
+      clearInterval(expiryTimer);
+      clearInterval(resendTimer);
     },
   };
 }

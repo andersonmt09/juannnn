@@ -1,14 +1,22 @@
-// Vista de monitoreo (#/monitoring): tabla de endpoints vigilados con sus estadísticas reales.
-// El formulario para agregar y los botones de quitar solo se dibujan para administradores.
-import { pageHeader, emptyState } from "./componentes.js";
-import { el, formatDate } from "../utilidades.js";
+// Vista de monitoreo (#/monitoring): mini KPI y tabla de endpoints vigilados con sus estadísticas reales.
+// El botón de agregar y el de quitar solo se dibujan para administradores.
+import { pageHeader, emptyState, errorState, skeleton, kpiCard, dataTable, createModal, methodBadge, statusDot } from "./componentes.js";
+import { el, icon, formatNumber, formatRelative } from "../utilidades.js";
 
-const HIGH_ERROR_RATE = 0.2; // 20 % o más de respuestas con error se resalta
+const HIGH_ERROR_RATE = 0.2; // 20 % o más de respuestas con error = fallando
+const STATUS_LABEL = { healthy: "Saludable", failing: "Con errores", "no-traffic": "Sin tráfico" };
 
-// "2 · 29 %": errores y porcentaje sobre el total de peticiones.
-function errorsCell({ requests, errors }) {
-  const rate = requests ? errors / requests : 0;
-  return el("span", { class: rate >= HIGH_ERROR_RATE ? "error-rate-high" : "" }, [`${errors} · ${Math.round(rate * 100)} %`]);
+const rateOf = ({ requests, errors, errorRate }) => errorRate ?? (requests ? errors / requests : 0);
+
+// Número de errores y una barra fina con la tasa.
+function errorsCell(stats) {
+  const rate = rateOf(stats);
+  const tone = rate >= HIGH_ERROR_RATE ? "danger" : rate > 0 ? "warning" : "success";
+  const percent = `${formatNumber(rate * 100, { maximumFractionDigits: 1 })} %`;
+  return el("div", { class: "rate", style: "white-space:nowrap", title: `${percent} de las peticiones` }, [
+    el("span", { class: "num" }, [formatNumber(stats.errors)]),
+    el("div", { class: "rate-bar", "data-tone": tone }, [el("span", { style: `width:${Math.min(100, Math.round(rate * 100))}%` })]),
+  ]);
 }
 
 /**
@@ -17,22 +25,33 @@ function errorsCell({ requests, errors }) {
  * @param {{ onOpenForm: () => void, onSave: (data: object) => void, onDelete: (endpoint: object) => void, onRefresh: () => void }} handlers
  */
 export function renderMonitoringView(container, { canManage }, handlers) {
-  const tablePanel = el("div", { class: "panel" }, [el("p", { class: "muted" }, ["Cargando..."])]);
+  const kpis = {
+    total: kpiCard({ label: "Monitoreados", icon: "link", tone: "accent", loading: true }),
+    healthy: kpiCard({ label: "Saludables", icon: "check", tone: "success", loading: true }),
+    failing: kpiCard({ label: "Con errores", icon: "alert", tone: "danger", loading: true }),
+    idle: kpiCard({ label: "Sin tráfico", icon: "clock", tone: "warning", loading: true }),
+  };
+  const tableCard = el("div", { class: "card card-flush" }, [skeleton(5)]);
 
-  const routeSelect = el("select", { id: "mon-route", name: "route", required: true });
-  const form = el("form", {}, [
-    el("label", { for: "mon-route" }, ["Ruta de la API"]),
-    routeSelect,
-    el("label", { for: "mon-name" }, ["Nombre"]),
-    el("input", { id: "mon-name", name: "name", required: true, placeholder: "Ej.: Inicio de sesión" }),
-    el("label", { for: "mon-description" }, ["Descripción"]),
-    el("input", { id: "mon-description", name: "description" }),
-    el("div", { class: "row" }, [
-      el("button", { type: "submit", class: "btn btn-primary" }, ["Monitorear"]),
-      el("button", { type: "button", class: "btn", onclick: () => formPanel.classList.add("hidden") }, ["Cancelar"]),
+  // ---- Modal para agregar ----
+  const routeSelect = el("select", { id: "mon-route", name: "route", class: "input mono", required: true });
+  const form = el("form", { id: "mon-form" }, [
+    el("div", { class: "field" }, [el("label", { class: "field-label", for: "mon-route" }, ["Ruta de la API"]), routeSelect]),
+    el("div", { class: "field" }, [
+      el("label", { class: "field-label", for: "mon-name" }, ["Nombre"]),
+      el("input", { id: "mon-name", name: "name", class: "input", required: true, placeholder: "Ej.: Inicio de sesión", autocomplete: "off" }),
+    ]),
+    el("div", { class: "field" }, [
+      el("label", { class: "field-label", for: "mon-description" }, ["Descripción"]),
+      el("input", { id: "mon-description", name: "description", class: "input", placeholder: "Opcional", autocomplete: "off" }),
     ]),
   ]);
-  const formPanel = el("div", { class: "panel hidden" }, [el("h3", {}, ["Agregar endpoint al monitoreo"]), form]);
+  const saveButton = el("button", { type: "submit", form: "mon-form", class: "btn btn-primary" }, ["Monitorear"]);
+  const modal = createModal({
+    title: "Agregar endpoint al monitoreo",
+    body: form,
+    footer: [el("button", { type: "button", class: "btn btn-secondary", onclick: () => modal.close() }, ["Cancelar"]), saveButton],
+  });
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -41,43 +60,65 @@ export function renderMonitoringView(container, { canManage }, handlers) {
     handlers.onSave({ method, path, name, description });
   });
 
-  const actions = [el("button", { class: "btn", onclick: handlers.onRefresh }, ["Actualizar"])];
-  if (canManage) actions.push(el("button", { class: "btn btn-primary", onclick: handlers.onOpenForm }, ["+ Agregar"]));
+  const actions = [el("button", { type: "button", class: "btn btn-secondary", onclick: handlers.onRefresh }, [icon("refresh"), "Actualizar"])];
+  if (canManage) actions.push(el("button", { type: "button", class: "btn btn-primary", onclick: handlers.onOpenForm }, [icon("plus"), "Agregar endpoint"]));
 
-  container.replaceChildren(...[
-    pageHeader("Monitoreo", "Peticiones, errores y latencia de los endpoints vigilados", actions),
-    canManage ? formPanel : null,
-    tablePanel,
-  ].filter(Boolean));
+  container.replaceChildren(
+    pageHeader({ title: "Monitoreo", subtitle: "Peticiones, errores y latencia de los endpoints vigilados", actions }),
+    el("div", { class: "grid-kpi" }, Object.values(kpis)),
+    tableCard,
+    modal.element
+  );
+
+  const columns = [
+    {
+      key: "status", label: "Estado",
+      render: (ep) => el("span", { class: "row", style: "flex-wrap:nowrap;white-space:nowrap" }, [statusDot(ep.status), el("span", {}, [STATUS_LABEL[ep.status] || ep.status])]),
+    },
+    {
+      key: "name", label: "Endpoint",
+      render: (ep) => el("div", {}, [el("div", { class: "user-cell-name" }, [ep.name]), ep.description ? el("div", { class: "user-cell-sub" }, [ep.description]) : null]),
+    },
+    { key: "method", label: "Método", render: (ep) => methodBadge(ep.method) },
+    { key: "path", label: "Ruta", render: (ep) => el("span", { class: "mono", style: "white-space:nowrap" }, [ep.path]) },
+    { key: "requests", label: "Peticiones", align: "right", render: (ep) => formatNumber(ep.stats.requests) },
+    { key: "errors", label: "Errores", render: (ep) => errorsCell(ep.stats) },
+    { key: "latency", label: "Latencia", align: "right", render: (ep) => (ep.stats.requests ? `${formatNumber(ep.stats.avgLatencyMs)} ms` : "—") },
+    { key: "last", label: "Última", render: (ep) => el("span", { class: "muted small" }, [formatRelative(ep.stats.lastRequestAt)]) },
+  ];
+  if (canManage) {
+    columns.push({
+      key: "actions", label: "Quitar", align: "right",
+      render: (ep) => el("button", { type: "button", class: "btn btn-ghost btn-icon", title: "Quitar del monitoreo", "aria-label": `Quitar ${ep.name}`, onclick: () => handlers.onDelete(ep) }, [icon("trash")]),
+    });
+  }
 
   return {
+    showLoading() {
+      tableCard.replaceChildren(skeleton(5));
+    },
+
     showEndpoints(endpoints) {
+      const count = (status) => endpoints.filter((e) => e.status === status).length;
+      kpis.total.setValue(formatNumber(endpoints.length), "endpoints vigilados");
+      kpis.healthy.setValue(formatNumber(count("healthy")), "tasa de error menor a 20 %");
+      kpis.failing.setValue(formatNumber(count("failing")), "20 % o más con error");
+      kpis.idle.setValue(formatNumber(count("no-traffic")), "sin peticiones aún");
+
       if (!endpoints.length) {
-        const hint = canManage ? "Agrega una ruta de la API para empezar a vigilarla." : "Un administrador aún no ha agregado endpoints.";
-        tablePanel.replaceChildren(emptyState("Sin endpoints monitoreados", hint));
+        tableCard.replaceChildren(emptyState({
+          icon: "link",
+          title: "Sin endpoints monitoreados",
+          text: canManage ? "Agrega una ruta de la API para empezar a vigilarla." : "Un administrador aún no ha agregado endpoints.",
+          action: canManage ? { label: "Agregar endpoint", icon: "plus", onClick: handlers.onOpenForm } : null,
+        }));
         return;
       }
-      const headers = ["Nombre", "Método", "Ruta", "Peticiones", "Errores", "Latencia prom.", "Última petición"];
-      if (canManage) headers.push("Acciones");
-
-      const rows = endpoints.map((ep) => el("tr", {}, [
-        el("td", {}, [ep.name, ep.description ? el("div", { class: "muted small" }, [ep.description]) : null]),
-        el("td", {}, [el("span", { class: `badge method-${ep.method}` }, [ep.method])]),
-        el("td", { class: "mono small" }, [ep.path]),
-        el("td", {}, [String(ep.stats.requests)]),
-        el("td", {}, [errorsCell(ep.stats)]),
-        el("td", { class: "small" }, [`${ep.stats.avgLatencyMs} ms`]),
-        el("td", { class: "small" }, [formatDate(ep.stats.lastRequestAt)]),
-        canManage ? el("td", {}, [el("button", { class: "btn btn-sm btn-danger", onclick: () => handlers.onDelete(ep) }, ["Quitar"])]) : null,
-      ]));
-      tablePanel.replaceChildren(el("table", { class: "table" }, [
-        el("thead", {}, [el("tr", {}, headers.map((h) => el("th", {}, [h])))]),
-        el("tbody", {}, rows),
-      ]));
+      tableCard.replaceChildren(dataTable({ columns, rows: endpoints }));
     },
 
     showError() {
-      tablePanel.replaceChildren(el("p", { class: "muted" }, ["Error al cargar el monitoreo."]));
+      tableCard.replaceChildren(errorState({ text: "No se pudo cargar el monitoreo.", onRetry: handlers.onRefresh }));
     },
 
     // routes: rutas de la API que todavía no se monitorean.
@@ -85,12 +126,18 @@ export function renderMonitoringView(container, { canManage }, handlers) {
       routeSelect.replaceChildren(...routes.map(({ method, path }) =>
         el("option", { value: `${method} ${path}` }, [`${method} ${path}`])));
       form.reset();
-      formPanel.classList.remove("hidden");
+      this.setSaving(false);
+      modal.open();
+    },
+
+    setSaving(saving) {
+      saveButton.classList.toggle("is-loading", saving);
+      saveButton.disabled = saving;
     },
 
     closeForm() {
       form.reset();
-      formPanel.classList.add("hidden");
+      modal.close();
     },
   };
 }

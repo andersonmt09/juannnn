@@ -1,6 +1,8 @@
 // Vista de gestión de usuarios (#/users). Dibuja la tabla, la paginación y el formulario; las acciones las decide el controlador.
-import { pageHeader, createModal, emptyState, pagination } from "./componentes.js";
-import { el } from "../utilidades.js";
+import { pageHeader, createModal, emptyState, errorState, dataTable, pagination, badge, skeleton } from "./componentes.js";
+import { el, icon, initials, formatDate, formatNumber } from "../utilidades.js";
+
+const ROLE_LABEL = { admin: "Administrador", user: "Usuario" };
 
 /**
  * @param {HTMLElement} container
@@ -11,93 +13,128 @@ import { el } from "../utilidades.js";
  *   onSave: (data: { name: string, email: string, role: string, password: string }) => void,
  *   onPageChange: (page: number) => void,
  *   onExport: () => void,
+ *   onRetry: () => void,
  * }} handlers
  */
 export function renderUsersView(container, handlers) {
-  const tablePanel = el("div", { class: "panel" }, [el("p", { class: "muted" }, ["Cargando..."])]);
+  const subtitle = el("span", {}, ["Gestión de cuentas y roles"]);
+  const tableCard = el("div", { class: "card" }, [skeleton(5)]);
 
-  const passwordLabel = el("label", { for: "user-password" }, ["Contraseña"]);
-  const passwordInput = el("input", { id: "user-password", name: "password", type: "password", minlength: "6", autocomplete: "new-password" });
-  const form = el("form", {}, [
-    el("label", { for: "user-name" }, ["Nombre"]),
-    el("input", { id: "user-name", name: "name", required: true, minlength: "2" }),
-    el("label", { for: "user-email" }, ["Correo"]),
-    el("input", { id: "user-email", name: "email", type: "email", required: true }),
-    el("label", { for: "user-role" }, ["Rol"]),
-    el("select", { id: "user-role", name: "role" }, [
-      el("option", { value: "user" }, ["Usuario"]),
-      el("option", { value: "admin" }, ["Administrador"]),
-    ]),
-    passwordLabel,
-    passwordInput,
-    el("div", { class: "row" }, [
-      el("button", { type: "submit", class: "btn btn-primary" }, ["Guardar"]),
-      el("button", { type: "button", class: "btn", onclick: () => modal.close() }, ["Cancelar"]),
-    ]),
+  // ---- Formulario del modal ----
+  const nameInput = el("input", { id: "user-name", name: "name", class: "input", required: true, minlength: "2", autocomplete: "off" });
+  const emailInput = el("input", { id: "user-email", name: "email", class: "input", type: "email", required: true, autocomplete: "off" });
+  const roleSelect = el("select", { id: "user-role", name: "role", class: "input" }, [
+    el("option", { value: "user" }, ["Usuario"]),
+    el("option", { value: "admin" }, ["Administrador"]),
   ]);
-  const modal = createModal("Usuario", form);
+  const roleHint = el("div", { class: "field-hint hidden" }, ["No puedes cambiar tu propio rol"]);
+  const passwordLabel = el("label", { class: "field-label", for: "user-password" }, ["Contraseña"]);
+  const passwordInput = el("input", { id: "user-password", name: "password", class: "input", type: "password", minlength: "6", autocomplete: "new-password" });
+  const passwordHint = el("div", { class: "field-hint" }, ["Mínimo 6 caracteres"]);
+  const passwordField = el("div", { class: "field" }, [passwordLabel, passwordInput, passwordHint]);
+
+  const form = el("form", { id: "user-form" }, [
+    el("div", { class: "field" }, [el("label", { class: "field-label", for: "user-name" }, ["Nombre"]), nameInput]),
+    el("div", { class: "field" }, [el("label", { class: "field-label", for: "user-email" }, ["Correo"]), emailInput]),
+    el("div", { class: "field" }, [el("label", { class: "field-label", for: "user-role" }, ["Rol"]), roleSelect, roleHint]),
+    passwordField,
+  ]);
+  const saveButton = el("button", { type: "submit", form: "user-form", class: "btn btn-primary" }, ["Guardar"]);
+  const modal = createModal({
+    title: "Usuario",
+    body: form,
+    footer: [el("button", { type: "button", class: "btn btn-secondary", onclick: () => modal.close() }, ["Cancelar"]), saveButton],
+  });
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    handlers.onSave(Object.fromEntries(new FormData(form)));
+    // Con el select deshabilitado FormData omite el rol: se lee directo.
+    handlers.onSave({ ...Object.fromEntries(new FormData(form)), role: roleSelect.value });
   });
 
   container.replaceChildren(
-    pageHeader("Usuarios", "Gestión de cuentas y roles", [
-      el("button", { class: "btn", onclick: handlers.onExport }, ["Exportar CSV"]),
-      el("button", { class: "btn btn-primary", onclick: handlers.onNew }, ["+ Nuevo usuario"]),
-    ]),
-    tablePanel,
+    pageHeader({
+      title: "Usuarios",
+      subtitle,
+      actions: [
+        el("button", { type: "button", class: "btn btn-secondary", onclick: handlers.onExport }, [icon("download"), "Exportar CSV"]),
+        el("button", { type: "button", class: "btn btn-primary", onclick: handlers.onNew }, [icon("plus"), "Nuevo usuario"]),
+      ],
+    }),
+    tableCard,
     modal.element
   );
 
+  const columns = (currentUserId) => [
+    {
+      key: "name", label: "Usuario",
+      render: (u) => el("div", { class: "user-cell" }, [
+        el("span", { class: "avatar" }, [initials(u.name)]),
+        el("div", {}, [
+          el("div", { class: "user-cell-name" }, [u.name, u.id === currentUserId ? " (tú)" : ""]),
+          el("div", { class: "user-cell-sub" }, [u.email]),
+        ]),
+      ]),
+    },
+    { key: "role", label: "Rol", render: (u) => badge(ROLE_LABEL[u.role] || u.role, u.role === "admin" ? "accent" : "neutral") },
+    { key: "emailVerified", label: "Verificado", render: (u) => badge(u.emailVerified ? "Sí" : "No", u.emailVerified ? "success" : "warning") },
+    { key: "createdDate", label: "Creado", render: (u) => formatDate(u.createdDate) },
+    {
+      key: "actions", label: "Acciones", align: "right",
+      render: (u) => {
+        const isSelf = u.id === currentUserId;
+        return el("div", { class: "cell-actions" }, [
+          el("button", { type: "button", class: "btn btn-ghost btn-icon", title: "Editar", "aria-label": `Editar a ${u.name}`, onclick: () => handlers.onEdit(u) }, [icon("edit")]),
+          el("button", {
+            type: "button", class: "btn btn-ghost btn-icon", disabled: isSelf,
+            title: isSelf ? "No puedes eliminar tu propio usuario" : "Eliminar", "aria-label": `Eliminar a ${u.name}`,
+            onclick: () => handlers.onDelete(u),
+          }, [icon("trash")]),
+        ]);
+      },
+    },
+  ];
+
   return {
+    showLoading() {
+      tableCard.replaceChildren(skeleton(5));
+    },
+
     showUsers(users, meta, currentUserId) {
+      subtitle.textContent = `${formatNumber(meta.total)} ${meta.total === 1 ? "cuenta registrada" : "cuentas registradas"}`;
       if (!users.length) {
-        tablePanel.replaceChildren(emptyState("Sin usuarios", "Crea el primer usuario."));
+        tableCard.replaceChildren(emptyState({
+          icon: "users", title: "Sin usuarios", text: "Crea el primer usuario.",
+          action: { label: "Nuevo usuario", icon: "plus", onClick: handlers.onNew },
+        }));
         return;
       }
-      const rows = users.map((u) => el("tr", {}, [
-        el("td", {}, [String(u.id)]),
-        el("td", {}, [u.name]),
-        el("td", {}, [u.email]),
-        el("td", {}, [el("span", { class: `badge role-${u.role}` }, [u.role])]),
-        el("td", {}, [u.emailVerified ? "Sí" : "No"]),
-        el("td", { class: "actions" }, [
-          el("button", { class: "btn btn-sm", onclick: () => handlers.onEdit(u) }, ["Editar"]),
-          el("button", {
-            class: "btn btn-sm btn-danger",
-            disabled: u.id === currentUserId,
-            title: u.id === currentUserId ? "No puedes eliminar tu propio usuario" : undefined,
-            onclick: () => handlers.onDelete(u),
-          }, ["Eliminar"]),
-        ]),
-      ]));
-      tablePanel.replaceChildren(
-        el("table", { class: "table" }, [
-          el("thead", {}, [el("tr", {}, ["ID", "Nombre", "Correo", "Rol", "Verificado", "Acciones"].map((h) => el("th", {}, [h])))]),
-          el("tbody", {}, rows),
-        ]),
-        pagination(meta, handlers.onPageChange)
-      );
+      tableCard.replaceChildren(dataTable({ columns: columns(currentUserId), rows: users }), pagination(meta, handlers.onPageChange));
     },
 
     showError() {
-      tablePanel.replaceChildren(el("p", { class: "muted" }, ["Error al cargar usuarios."]));
+      tableCard.replaceChildren(errorState({ text: "No se pudieron cargar los usuarios.", onRetry: handlers.onRetry }));
     },
 
-    // isSelf: la contraseña propia se cambia en "Mi perfil" (pide la actual), no aquí.
+    // isSelf: la contraseña propia se cambia en "Mi perfil" (pide la actual) y el rol propio no se cambia.
     openForm(user = null, { isSelf = false } = {}) {
       modal.setTitle(user ? "Editar usuario" : "Nuevo usuario");
       form.reset();
-      form.elements.name.value = user?.name || "";
-      form.elements.email.value = user?.email || "";
-      form.elements.role.value = user?.role || "user";
+      nameInput.value = user?.name || "";
+      emailInput.value = user?.email || "";
+      roleSelect.value = user?.role || "user";
+      roleSelect.disabled = isSelf;
+      roleHint.classList.toggle("hidden", !isSelf);
       passwordInput.required = !user;
       passwordLabel.textContent = user ? "Nueva contraseña (opcional)" : "Contraseña";
-      passwordLabel.classList.toggle("hidden", isSelf);
-      passwordInput.classList.toggle("hidden", isSelf);
+      passwordField.classList.toggle("hidden", isSelf);
+      this.setSaving(false);
       modal.open();
+    },
+
+    setSaving(saving) {
+      saveButton.classList.toggle("is-loading", saving);
+      saveButton.disabled = saving;
     },
 
     closeForm() {

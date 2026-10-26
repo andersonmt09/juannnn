@@ -1,6 +1,8 @@
-// Vista de perfil (#/profile): datos del usuario y formulario de cambio de contraseña.
-import { pageHeader } from "./componentes.js";
-import { el } from "../utilidades.js";
+// Vista de perfil (#/profile): tarjeta de identidad y formulario de cambio de contraseña.
+import { pageHeader, passwordField, badge } from "./componentes.js";
+import { el, initials, formatDate } from "../utilidades.js";
+
+const ROLE_LABEL = { admin: "Administrador", user: "Usuario" };
 
 /**
  * @param {HTMLElement} container
@@ -8,32 +10,54 @@ import { el } from "../utilidades.js";
  * @param {{ onChangePassword: (data: { currentPassword: string, password: string, confirmPassword: string }) => void }} handlers
  */
 export function renderProfileView(container, { user }, { onChangePassword }) {
-  const form = el("form", {}, [
-    el("label", { for: "profile-current-password" }, ["Contraseña actual"]),
-    el("input", { id: "profile-current-password", name: "currentPassword", type: "password", required: true, autocomplete: "current-password" }),
-    el("label", { for: "profile-password" }, ["Nueva contraseña (mínimo 6 caracteres)"]),
-    el("input", { id: "profile-password", name: "password", type: "password", required: true, minlength: "6", autocomplete: "new-password" }),
-    el("label", { for: "profile-confirm-password" }, ["Confirmar nueva contraseña"]),
-    el("input", { id: "profile-confirm-password", name: "confirmPassword", type: "password", required: true, minlength: "6", autocomplete: "new-password" }),
-    el("button", { type: "submit", class: "btn btn-primary" }, ["Actualizar contraseña"]),
-  ]);
+  // ---- Identidad (se vuelve a pintar con setUser cuando llegan los datos frescos) ----
+  const identity = el("div", { class: "card profile-card" });
+
+  function setUser(next) {
+    identity.replaceChildren(
+      el("span", { class: "avatar avatar-lg" }, [initials(next.name)]),
+      el("div", { class: "profile-name" }, [next.name]),
+      el("div", { class: "muted" }, [next.email]),
+      el("div", { class: "profile-meta" }, [
+        badge(ROLE_LABEL[next.role] || next.role, next.role === "admin" ? "accent" : "neutral"),
+        next.emailVerified === undefined ? null : badge(next.emailVerified ? "Correo verificado" : "Sin verificar", next.emailVerified ? "success" : "warning"),
+      ]),
+      next.createdDate ? el("div", { class: "profile-since" }, [`Miembro desde ${formatDate(next.createdDate)}`]) : null
+    );
+  }
+  setUser(user);
+
+  // ---- Contraseña ----
+  const current = passwordField({ id: "profile-current-password", name: "currentPassword", label: "Contraseña actual", autocomplete: "current-password" });
+  const next = passwordField({ id: "profile-password", name: "password", label: "Nueva contraseña", autocomplete: "new-password", hint: "Mínimo 6 caracteres", minlength: 6 });
+  const confirm = passwordField({ id: "profile-confirm-password", name: "confirmPassword", label: "Confirmar nueva contraseña", autocomplete: "new-password", minlength: 6 });
+  const submit = el("button", { type: "submit", class: "btn btn-primary" }, ["Guardar contraseña"]);
+  const form = el("form", {}, [current, next, confirm, el("div", { class: "row" }, [submit])]);
+  form.querySelector(".row").style.marginTop = "var(--sp-5)";
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    onChangePassword(Object.fromEntries(new FormData(form)));
+    onChangePassword({
+      currentPassword: current.input.value,
+      password: next.input.value,
+      confirmPassword: confirm.input.value,
+    });
   });
 
   container.replaceChildren(
-    pageHeader("Mi perfil"),
-    el("div", { class: "panel" }, [
-      el("p", {}, [el("strong", {}, ["Nombre: "]), user.name]),
-      el("p", {}, [el("strong", {}, ["Correo: "]), user.email]),
-      el("p", {}, [el("strong", {}, ["Rol: "]), user.role]),
-    ]),
-    el("div", { class: "panel" }, [el("h3", {}, ["Cambiar contraseña"]), form])
+    pageHeader({ title: "Mi perfil", subtitle: "Tus datos y la seguridad de tu cuenta" }),
+    el("div", { class: "grid-1-2" }, [
+      identity,
+      el("div", { class: "card" }, [el("div", { class: "card-header" }, [el("h2", {}, ["Cambiar contraseña"])]), form]),
+    ])
   );
 
   return {
+    setUser,
+    setSaving(saving) {
+      submit.classList.toggle("is-loading", saving);
+      submit.disabled = saving;
+    },
     resetForm() {
       form.reset();
     },
