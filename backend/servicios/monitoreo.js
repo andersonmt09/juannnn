@@ -11,10 +11,24 @@ async function statsIndex() {
   return new Map(stats.map((s) => [key(s.method, s.route), s]));
 }
 
-// [{ endpoint, stats }]
+const FAILING_ERROR_RATE = 0.2;
+
+// Proporción de peticiones con error (0 a 1).
+const errorRate = (stats) => (stats?.total ? stats.errors / stats.total : 0);
+
+// "no-traffic" sin peticiones, "failing" con 20 % o más de errores, "healthy" en otro caso.
+function endpointStatus(stats) {
+  if (!stats || !stats.total) return "no-traffic";
+  return errorRate(stats) >= FAILING_ERROR_RATE ? "failing" : "healthy";
+}
+
+// [{ endpoint, stats, status }]
 async function list() {
   const [endpoints, stats] = await Promise.all([MonitoredEndpoint.findAll(), statsIndex()]);
-  return endpoints.map((endpoint) => ({ endpoint, stats: stats.get(key(endpoint.method, endpoint.path)) }));
+  return endpoints.map((endpoint) => {
+    const endpointStats = stats.get(key(endpoint.method, endpoint.path));
+    return { endpoint, stats: endpointStats, status: endpointStatus(endpointStats) };
+  });
 }
 
 // apiRoutes: rutas reales de la API ({ method, path }), para no monitorear rutas que no existen.
@@ -28,8 +42,8 @@ async function create(data, apiRoutes) {
   }
 
   const endpoint = await MonitoredEndpoint.create(data);
-  const stats = await statsIndex();
-  return { endpoint, stats: stats.get(key(endpoint.method, endpoint.path)) };
+  const stats = (await statsIndex()).get(key(endpoint.method, endpoint.path));
+  return { endpoint, stats, status: endpointStatus(stats) };
 }
 
 async function remove(id) {
@@ -38,4 +52,4 @@ async function remove(id) {
   await MonitoredEndpoint.delete(id);
 }
 
-module.exports = { list, create, remove };
+module.exports = { endpointStatus, list, create, remove };

@@ -8,7 +8,7 @@ const {
   ApiRouteListResponseDto,
 } = require("../vistas/monitoreo");
 
-// Rutas reales de la API; las calcula servidor.js al montar rutas.js.
+// Rutas reales de la API; las calcula servidor.js con listApiRoutes de rutas/index.js.
 const apiRoutes = (req) => req.app.locals.apiRoutes || [];
 
 const listRoutes = (req, res) => {

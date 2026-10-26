@@ -19,6 +19,19 @@ async function authenticate(req, res, next) {
   }
 }
 
+// Igual que authenticate, pero el token viene en ?token= (EventSource no permite cabeceras).
+async function authenticateFromQuery(req, res, next) {
+  const token = typeof req.query.token === "string" ? req.query.token : null;
+  if (!token) return next(HttpError.unauthorized());
+
+  try {
+    req.user = await authService.authenticateToken(token);
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
 // Exige uno de los roles indicados. Uso: authorize(ROLES.ADMIN)
 function authorize(...roles) {
   return (req, res, next) => {
@@ -39,4 +52,4 @@ const authRateLimiter = rateLimit({
   },
 });
 
-module.exports = { authenticate, authorize, authRateLimiter };
+module.exports = { authenticate, authenticateFromQuery, authorize, authRateLimiter };

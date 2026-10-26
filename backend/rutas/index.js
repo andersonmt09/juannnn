@@ -3,11 +3,16 @@
 // quién puede entrar, qué vista de petición valida los datos y qué controlador responde.
 const { Router } = require("express");
 
+const simulationRouter = require("./simulacion");
+
 const MODULES = [
   ["", require("./metricas")], // /health y /metrics/dashboard
   ["/auth", require("./autenticacion")],
   ["/users", require("./usuarios")],
   ["/monitoring", require("./monitoreo")],
+  ["/simulations", simulationRouter],
+  ["/axonApi", simulationRouter], // alias del documento para la simulación
+  ["/events", require("./eventos")],
 ];
 
 const router = Router();

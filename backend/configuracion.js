@@ -27,7 +27,7 @@ const env = {
     port: Number(process.env.SMTP_PORT) || 587,
     user: process.env.SMTP_USER || "",
     pass: process.env.SMTP_PASS || "",
-    from: process.env.SMTP_FROM || "AXON <no-reply@axon.local>",
+    from: process.env.SMTP_FROM || "AXON Security <no-reply@axon.local>",
   },
 };
 
@@ -72,16 +72,18 @@ const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
 // Los servicios lanzan HttpError y el middleware de errores lo convierte en respuesta.
 class HttpError extends Error {
-  constructor(statusCode, message, details) {
+  // code: texto estable para que el frontend distinga casos; path y method los completa el 404.
+  constructor(statusCode, message, details, code) {
     super(message);
     this.name = "HttpError";
     this.statusCode = statusCode;
     if (details) this.details = details;
+    if (code) this.code = code;
   }
 
   static badRequest(message, details) { return new HttpError(400, message, details); }
   static unauthorized(message = "No autenticado") { return new HttpError(401, message); }
-  static forbidden(message = "Sin permisos para esta acción") { return new HttpError(403, message); }
+  static forbidden(message = "Sin permisos para esta acción", code) { return new HttpError(403, message, undefined, code); }
   static notFound(message = "Recurso no encontrado") { return new HttpError(404, message); }
   static conflict(message) { return new HttpError(409, message); }
   static tooManyRequests(message = "Demasiados intentos. Intenta más tarde.") { return new HttpError(429, message); }

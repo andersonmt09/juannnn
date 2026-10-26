@@ -21,16 +21,25 @@ async function list({ page, limit }) {
   return { users, total, page, limit };
 }
 
+// Un usuario ve su propio perfil; el administrador ve cualquiera.
+async function getById(id, requester) {
+  if (requester.id !== id && !requester.isAdmin()) throw HttpError.forbidden();
+  return findActiveOrFail(id);
+}
+
 // Los usuarios creados por un administrador quedan verificados.
 async function create({ name, email, password, role }, requester) {
   if (await User.findByEmail(email)) throw HttpError.conflict("El correo ya está registrado");
 
   const passwordHash = await bcrypt.hash(password, SECURITY.BCRYPT_ROUNDS);
-  return User.create({ name, email, passwordHash, role, emailVerified: true, createdById: requester.id });
+  return User.create({ name, email, passwordHash, role, emailVerified: true, createdById: requester?.id ?? null });
 }
 
-async function update(id, changes) {
+async function update(id, changes, requester) {
   const user = await findActiveOrFail(id);
+  if (requester?.id === id && changes.role !== undefined && changes.role !== user.role) {
+    throw HttpError.badRequest("No puedes cambiar tu propio rol");
+  }
 
   if (changes.email && changes.email !== user.email) {
     const other = await User.findByEmail(changes.email);
@@ -64,4 +73,4 @@ async function remove(id, requester) {
   await User.softDelete(id);
 }
 
-module.exports = { list, create, update, changePassword, remove };
+module.exports = { list, getById, create, update, changePassword, remove };

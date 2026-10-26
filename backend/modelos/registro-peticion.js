@@ -34,6 +34,12 @@ class RequestLog {
     return data.map(RequestLog.fromRow);
   }
 
+  // Página de registros (del más nuevo al más viejo) con filtros opcionales: { logs, total }
+  static async findPage({ page = 1, limit = 20, method, statusClass } = {}) {
+    const { data, total } = await db.get("/request-logs", { page, limit, method, statusClass });
+    return { logs: data.map(RequestLog.fromRow), total: Number(total) || 0 };
+  }
+
   // Totales, últimas 24 horas, latencia promedio y conteos por código y método.
   static async getSummary() {
     const summary = await db.get("/request-logs/summary");

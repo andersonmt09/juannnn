@@ -19,7 +19,16 @@ app.locals.apiRoutes = listApiRoutes();
 app.set("trust proxy", 1);
 app.use(helmet({
   contentSecurityPolicy: {
-    directives: { "script-src": ["'self'", "https://cdn.jsdelivr.net"] }, // Chart.js
+    useDefaults: true,
+    directives: {
+      "script-src": ["'self'", "https://cdn.jsdelivr.net"], // Chart.js
+      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
+      "connect-src": ["'self'"],
+      "img-src": ["'self'", "data:"],
+      // Solo en producción (HTTPS); en desarrollo rompe http://localhost en Safari.
+      "upgrade-insecure-requests": env.nodeEnv === "production" ? [] : null,
+    },
   },
 }));
 app.use(express.json({ limit: "1mb" }));
@@ -28,11 +37,21 @@ app.use(express.json({ limit: "1mb" }));
 app.use("/api", requestLogger, apiRouter);
 app.use("/api", notFound);
 
-// Frontend (SPA): archivos estáticos y, para cualquier otra ruta, index.html
+// Frontend (SPA): archivos estáticos y, para rutas sin extensión, index.html
 app.use(express.static(FRONTEND_DIR));
-app.get("*", (req, res) => res.sendFile(path.join(FRONTEND_DIR, "index.html")));
+app.get(/^[^.]*$/, (req, res) => res.sendFile(path.join(FRONTEND_DIR, "index.html")));
 
 app.use(errorHandler);
+
+// Cierra las conexiones SSE abiertas para que server.close no espere.
+// Se carga al usarse: el servicio de eventos puede no existir aún.
+function closeStreams() {
+  try {
+    require("./servicios/eventos").closeAll();
+  } catch (error) {
+    if (error.code !== "MODULE_NOT_FOUND") console.error("[eventos]", error);
+  }
+}
 
 // ---------- Arranque ----------
 // Valida el .env, comprueba que la API de la base de datos responde e inicia el servidor.
@@ -54,6 +73,7 @@ async function start() {
 
   const shutdown = (signal) => {
     console.log(`\n[axon] ${signal} recibido. Cerrando...`);
+    closeStreams();
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(1), 10000).unref();
   };

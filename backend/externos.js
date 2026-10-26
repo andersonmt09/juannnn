@@ -63,8 +63,8 @@ const transporter = env.smtp.host
 const mail = {
   async sendVerificationCode(email, code, purpose) {
     const subject = purpose === CODE_PURPOSE.REGISTRATION
-      ? "Verifica tu correo - AXON"
-      : "Código de inicio de sesión - AXON";
+      ? "AXON Security · Código de verificación"
+      : "AXON Security · Código de inicio de sesión";
     const text = `Tu código de verificación es: ${code}\nExpira en ${SECURITY.CODE_EXPIRY_MINUTES} minutos.`;
 
     if (!transporter) {

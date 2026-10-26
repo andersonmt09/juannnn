@@ -8,12 +8,16 @@ const list = asyncHandler(async (req, res) => {
   res.json(new UserListResponseDto(await userService.list(req.dto)));
 });
 
+const getById = asyncHandler(async (req, res) => {
+  res.json(new UserResponseDto(await userService.getById(req.dto.id, req.user)));
+});
+
 const create = asyncHandler(async (req, res) => {
   res.status(201).json(new UserResponseDto(await userService.create(req.dto, req.user)));
 });
 
 const update = asyncHandler(async (req, res) => {
-  res.json(new UserResponseDto(await userService.update(req.dto.id, req.dto.changes())));
+  res.json(new UserResponseDto(await userService.update(req.dto.id, req.dto.changes(), req.user)));
 });
 
 const changePassword = asyncHandler(async (req, res) => {
@@ -26,4 +30,4 @@ const remove = asyncHandler(async (req, res) => {
   res.json(new MessageResponseDto("Usuario eliminado"));
 });
 
-module.exports = { list, create, update, changePassword, remove };
+module.exports = { list, getById, create, update, changePassword, remove };

@@ -1,9 +1,9 @@
-// Datos del panel (usuarios, endpoints monitoreados y peticiones) y estado de la base de datos externa.
+// Datos del panel (usuarios, endpoints monitoreados y peticiones) y estado de los servicios.
 const User = require("../modelos/usuario");
 const MonitoredEndpoint = require("../modelos/endpoint-monitoreado");
 const RequestLog = require("../modelos/registro-peticion");
-const { db } = require("../externos");
-const { ROLES } = require("../configuracion");
+const Database = require("../modelos/base-datos");
+const { env, ROLES } = require("../configuracion");
 
 async function getDashboard() {
   const [roles, endpoints, logs, recentRequests] = await Promise.all([
@@ -17,6 +17,12 @@ async function getDashboard() {
   const users = roles[ROLES.USER] || 0;
   const inactive = roles[ROLES.INACTIVE] || 0;
 
+  // Errores = peticiones con código >= 400
+  const errorsTotal = logs.byStatus
+    .filter((item) => Number(item.status) >= 400)
+    .reduce((sum, item) => sum + (Number(item.count) || 0), 0);
+  const errorRate = logs.total ? Math.round((errorsTotal / logs.total) * 100) / 100 : 0;
+
   return {
     summary: {
       usersTotal: admins + users + inactive,
@@ -27,6 +33,8 @@ async function getDashboard() {
       requestsTotal: logs.total,
       requestsLast24h: logs.last24h,
       avgLatencyMs: logs.avgLatencyMs,
+      errorsTotal,
+      errorRate,
     },
     requestsByStatus: logs.byStatus,
     requestsByMethod: logs.byMethod,
@@ -34,14 +42,58 @@ async function getDashboard() {
   };
 }
 
-// ¿Responde la API de la base de datos externa?
-async function checkHealth() {
-  try {
-    await db.ping();
-    return { databaseAvailable: true };
-  } catch {
-    return { databaseAvailable: false };
-  }
+// Historial de peticiones paginado y filtrado.
+async function listRequests({ page, limit, method, statusClass }) {
+  const { logs, total } = await RequestLog.findPage({ page, limit, method, statusClass });
+  return { logs, total, page, limit };
 }
 
-module.exports = { getDashboard, checkHealth };
+// ¿Responde la API de la base de datos externa?
+async function checkHealth() {
+  const { available, latencyMs } = await Database.ping();
+  return {
+    databaseAvailable: available,
+    databaseLatencyMs: latencyMs,
+    uptimeSeconds: Math.round(process.uptime()),
+  };
+}
+
+// Estado de cada servicio: base de datos, API, tiempo real y correo.
+async function getServices() {
+  const { available, latencyMs } = await Database.ping();
+  // Se carga al usarse para no crear una dependencia circular con los eventos.
+  const clients = require("./eventos").countClients();
+
+  return [
+    {
+      key: "database",
+      name: "Base de datos",
+      role: "API externa de datos",
+      status: available ? "online" : "offline",
+      detail: available ? `Responde en ${latencyMs} ms` : "No responde",
+    },
+    {
+      key: "api",
+      name: "Express",
+      role: "API REST",
+      status: "online",
+      detail: `Node ${process.version} · activo ${Math.round(process.uptime())} s`,
+    },
+    {
+      key: "realtime",
+      name: "Tiempo real",
+      role: "Server-Sent Events",
+      status: "online",
+      detail: `${clients} ${clients === 1 ? "cliente conectado" : "clientes conectados"}`,
+    },
+    {
+      key: "mail",
+      name: "Correo",
+      role: "Códigos de verificación",
+      status: env.smtp.host ? "online" : "console",
+      detail: env.smtp.host ? `SMTP ${env.smtp.host}` : "Sin SMTP: los códigos salen por la consola",
+    },
+  ];
+}
+
+module.exports = { getDashboard, listRequests, checkHealth, getServices };

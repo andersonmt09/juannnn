@@ -1,4 +1,4 @@
-// Rutas de /api/users (administrador, salvo cambiar la propia contraseña).
+// Rutas de /api/users (administrador, salvo ver el propio perfil y cambiar la propia contraseña).
 const { Router } = require("express");
 const users = require("../controladores/usuarios");
 const views = require("../vistas/usuarios");
@@ -10,6 +10,7 @@ const router = Router();
 const adminOnly = [authenticate, authorize(ROLES.ADMIN)];
 
 router.get("/", adminOnly, validateRequest(views.ListUsersRequestDto), users.list);
+router.get("/:id", authenticate, validateRequest(views.UserIdRequestDto), users.getById);
 router.post("/", adminOnly, validateRequest(views.CreateUserRequestDto), users.create);
 router.put("/:id", adminOnly, validateRequest(views.UpdateUserRequestDto), users.update);
 router.patch("/:id/password", authenticate, validateRequest(views.ChangePasswordRequestDto), users.changePassword);

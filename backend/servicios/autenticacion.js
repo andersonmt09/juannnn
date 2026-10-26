@@ -33,7 +33,7 @@ async function login({ email, password }) {
   const validPassword = user && (await bcrypt.compare(password, user.passwordHash));
   if (!validPassword) throw HttpError.unauthorized("Credenciales incorrectas");
   if (!user.isActive()) throw HttpError.forbidden("La cuenta está desactivada");
-  if (!user.emailVerified) throw HttpError.forbidden("Debes verificar tu correo electrónico primero");
+  if (!user.emailVerified) throw HttpError.forbidden("Debes verificar tu correo electrónico primero", "EMAIL_NOT_VERIFIED");
 
   await issueCode({ userId: user.id, email, purpose: CODE_PURPOSE.LOGIN });
   return { email };
@@ -47,12 +47,10 @@ async function verifyLogin({ email, code }) {
 }
 
 async function resendCode({ email, purpose }) {
+  // Respuesta genérica: no revela si el correo existe, está desactivado o ya verificado.
   const user = await User.findByEmail(email);
-  if (!user) throw HttpError.notFound("Usuario no encontrado");
-  if (!user.isActive()) throw HttpError.forbidden("La cuenta está desactivada");
-  if (purpose === CODE_PURPOSE.REGISTRATION && user.emailVerified) {
-    throw HttpError.badRequest("El correo ya fue verificado");
-  }
+  if (!user || !user.isActive()) return;
+  if (purpose === CODE_PURPOSE.REGISTRATION && user.emailVerified) return;
   await issueCode({ userId: user.id, email, purpose });
 }
 

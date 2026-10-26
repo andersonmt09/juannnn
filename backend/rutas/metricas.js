@@ -1,11 +1,17 @@
-// Rutas de /api/health (pública) y /api/metrics (con sesión).
+// Rutas de /api/health (pública) y /api/metrics (administrador).
 const { Router } = require("express");
 const metrics = require("../controladores/metricas");
-const { authenticate } = require("../middlewares/autenticacion");
+const views = require("../vistas/metricas");
+const { authenticate, authorize } = require("../middlewares/autenticacion");
+const { validateRequest } = require("../middlewares/validacion");
+const { ROLES } = require("../configuracion");
 
 const router = Router();
+const adminOnly = [authenticate, authorize(ROLES.ADMIN)];
 
 router.get("/health", metrics.checkHealth);
-router.get("/metrics/dashboard", authenticate, metrics.getDashboard);
+router.get("/metrics/dashboard", adminOnly, metrics.getDashboard);
+router.get("/metrics/requests", adminOnly, validateRequest(views.ListRequestLogsRequestDto), metrics.listRequests);
+router.get("/metrics/services", adminOnly, metrics.getServices);
 
 module.exports = router;

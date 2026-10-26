@@ -10,7 +10,8 @@
     "crear-admin": "node backend/crear-admin.js",
     "test": "node --test backend/pruebas/unitarias.test.js backend/pruebas/api.test.js",
     "pruebas:unitarias": "node --test backend/pruebas/unitarias.test.js",
-    "pruebas:integracion": "node --test backend/pruebas/api.test.js"
+    "pruebas:integracion": "node --test backend/pruebas/api.test.js",
+    "pruebas:carga": "node backend/pruebas/carga.js"
   },
   "engines": {
     "node": ">=18"

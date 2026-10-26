@@ -1,8 +1,7 @@
 // Crea un usuario administrador.
 // Uso: npm run crear-admin -- "Nombre" correo@dominio.com "Contraseña"
-const bcrypt = require("bcryptjs");
-const { validateEnvironment, ROLES, SECURITY } = require("./configuracion");
-const User = require("./modelos/usuario");
+const { validateEnvironment, ROLES } = require("./configuracion");
+const userService = require("./servicios/usuarios");
 const { CreateUserRequestDto } = require("./vistas/usuarios");
 
 async function main() {
@@ -17,14 +16,13 @@ async function main() {
     return;
   }
 
-  if (await User.findByEmail(dto.email)) {
+  try {
+    await userService.create(dto, null);
+    console.log(`Administrador creado: ${dto.email}`);
+  } catch (error) {
+    if (error.statusCode !== 409) throw error;
     console.log(`Ya existe un usuario con el correo ${dto.email}`);
-    return;
   }
-
-  const passwordHash = await bcrypt.hash(dto.password, SECURITY.BCRYPT_ROUNDS);
-  await User.create({ name: dto.name, email: dto.email, passwordHash, role: ROLES.ADMIN, emailVerified: true });
-  console.log(`Administrador creado: ${dto.email}`);
 }
 
 main()

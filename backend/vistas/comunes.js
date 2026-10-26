@@ -28,12 +28,15 @@ class MessageResponseDto {
   }
 }
 
-// { ok: false, message, errors? }
+// { ok: false, message, errors?, code?, path?, method? }
 class ErrorResponseDto {
-  constructor(message, errors) {
+  constructor(message, { errors, code, path, method } = {}) {
     this.ok = false;
     this.message = message;
     if (errors) this.errors = errors;
+    if (code) this.code = code;
+    if (path) this.path = path;
+    if (method) this.method = method;
   }
 }
 

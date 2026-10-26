@@ -37,16 +37,18 @@ class MonitoredEndpointIdRequestDto extends BaseRequestDto {
 
 // Un endpoint monitoreado con sus estadísticas reales (tomadas del registro de peticiones).
 class MonitoredEndpointDto {
-  constructor(endpoint, stats) {
+  constructor(endpoint, stats, status) {
     this.id = endpoint.id;
     this.name = endpoint.name;
     this.method = endpoint.method;
     this.path = endpoint.path;
     this.description = endpoint.description;
     this.createdAt = endpoint.createdAt;
+    this.status = status;
     this.stats = {
       requests: stats?.total || 0,
       errors: stats?.errors || 0,
+      errorRate: stats?.total ? Math.round((stats.errors / stats.total) * 100) / 100 : 0,
       avgLatencyMs: stats?.avgLatencyMs || 0,
       lastRequestAt: stats?.lastRequestAt || null,
     };
@@ -57,15 +59,15 @@ class MonitoredEndpointDto {
 class MonitoredEndpointListResponseDto {
   constructor(items) {
     this.ok = true;
-    this.data = items.map(({ endpoint, stats }) => new MonitoredEndpointDto(endpoint, stats));
+    this.data = items.map(({ endpoint, stats, status }) => new MonitoredEndpointDto(endpoint, stats, status));
   }
 }
 
 // POST /api/monitoring/endpoints → { ok, data }
 class MonitoredEndpointResponseDto {
-  constructor({ endpoint, stats }) {
+  constructor({ endpoint, stats, status }) {
     this.ok = true;
-    this.data = new MonitoredEndpointDto(endpoint, stats);
+    this.data = new MonitoredEndpointDto(endpoint, stats, status);
   }
 }
 
