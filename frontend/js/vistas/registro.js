@@ -1,12 +1,7 @@
-// Vista de registro (#/register). Solo dibuja y avisa al controlador.
 import { el } from "../utilidades.js";
 import { passwordField } from "./componentes.js";
 import { buildAuthShell } from "./inicio-sesion.js";
 
-/**
- * @param {HTMLElement} container
- * @param {{ onSubmit: (data: { name: string, email: string, password: string, confirmPassword: string }) => void }} handlers
- */
 export function renderRegisterView(container, { onSubmit }) {
   const submit = el("button", { type: "submit", class: "btn btn-primary btn-block" }, [el("span", {}, ["Crear cuenta"])]);
   const password = passwordField({ id: "reg-password", name: "password", label: "Contraseña", autocomplete: "new-password", hint: "Entre 8 y 72 caracteres", minlength: 8 });

@@ -1,4 +1,3 @@
-// Registro de cada petición a la API; con estos datos se calculan las métricas y el monitoreo.
 const { performance } = require("perf_hooks");
 const RequestLog = require("../modelos/registro-peticion");
 const eventService = require("../servicios/eventos");
@@ -6,12 +5,10 @@ const { toRoutePattern } = require("../configuracion");
 
 const STREAM_PATH = "/api/events/stream";
 
-// Guarda cada petición al terminar la respuesta, sin retrasarla.
-// El path va siempre sin query (el stream lleva el token ahí) el propio stream y las rutas inexistentes (404) no se registran.
-// route es la ruta en forma de patrón (/api/users/:id), que usa el monitoreo para agrupar.
+// el stream y las rutas 404 no se registran
 function requestLogger(req, res, next) {
   const startedAt = Date.now();
-  req.receivedAt = performance.now(); // lo usa la simulación para medir la capa API
+  req.receivedAt = performance.now();
 
   res.on("finish", () => {
     const path = req.originalUrl.split("?")[0].slice(0, 255);
@@ -27,7 +24,6 @@ function requestLogger(req, res, next) {
       userId: req.user ? req.user.id : null,
     };
 
-    // La actividad en vivo se publica aunque falle el guardado.
     let id = null;
     RequestLog.create(log)
       .then((newId) => { id = newId; })

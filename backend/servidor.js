@@ -1,5 +1,3 @@
-// Servidor: configura Express (API en /api y el frontend como archivos estáticos) y lo enciende.
-// Al servir el frontend desde el mismo servidor no hace falta CORS ni una URL del backend en el frontend.
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
@@ -13,34 +11,31 @@ const eventService = require("./servicios/eventos");
 
 const FRONTEND_DIR = path.join(__dirname, "..", "frontend");
 
-// ---------- Aplicación ----------
-
 const app = express();
 app.locals.apiRoutes = listApiRoutes();
 
-// Proxy de confianza configurable (TRUST_PROXY); por defecto no se confía en X-Forwarded-For.
+// proxy de confianza (TRUST_PROXY), por defecto no se confía en X-Forwarded-For
 app.set("trust proxy", env.trustProxy ?? false);
 app.use(helmet({
   contentSecurityPolicy: {
     useDefaults: true,
     directives: {
-      "script-src": ["'self'"], // Chart.js se sirve localmente en /vendor
+      "script-src": ["'self'"],
       "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
       "connect-src": ["'self'"],
       "img-src": ["'self'", "data:"],
-      // Solo en producción (HTTPS); en desarrollo rompe http://localhost en Safari.
+      // solo en producción (HTTPS)
       "upgrade-insecure-requests": env.nodeEnv === "production" ? [] : null,
     },
   },
 }));
 app.use(express.json({ limit: "1mb" }));
 
-// Chart.js local (dependencia npm); si no está instalada, /vendor responde 404 sin tumbar el servidor.
-// (el campo "exports" de chart.js bloquea el subpath, por eso se resuelve desde la entrada principal).
+// chart.js local; si no está, /vendor responde 404
 let chartFile = null;
 try {
-  const chartDist = path.dirname(require.resolve("chart.js")); // .../chart.js/dist
+  const chartDist = path.dirname(require.resolve("chart.js"));
   const candidate = path.join(chartDist, "chart.umd.min.js");
   chartFile = fs.existsSync(candidate) ? candidate : path.join(chartDist, "chart.umd.js");
   if (!fs.existsSync(chartFile)) chartFile = null;
@@ -51,21 +46,16 @@ app.get("/vendor/chart.umd.min.js", (req, res, next) => {
 });
 app.use("/vendor", (req, res, next) => next(HttpError.notFound("Recurso no encontrado")));
 
-// API
 app.use("/api", requestLogger, apiRouter);
 app.use("/api", notFound);
 
-// Frontend (SPA): archivos estáticos y, para rutas sin extensión, index.html
 app.use(express.static(FRONTEND_DIR));
 app.get(/^[^.]*$/, (req, res) => res.sendFile(path.join(FRONTEND_DIR, "index.html")));
 
 app.use(errorHandler);
 
-// Cierra las conexiones SSE abiertas para que server.close no espere.
+// cierra las conexiones SSE abiertas
 const closeStreams = () => eventService.closeAll();
-
-// ---------- Arranque ----------
-// Valida el .env, comprueba que la API de la base de datos responde e inicia el servidor.
 
 async function start() {
   validateEnvironment();
@@ -92,7 +82,6 @@ async function start() {
   process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
-// "npm start" ejecuta este archivo; las pruebas solo importan app.
 if (require.main === module) start();
 
 module.exports = app;

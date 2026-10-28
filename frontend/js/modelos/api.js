@@ -1,12 +1,8 @@
-// Cliente HTTP del backend (/api). Los endpoints viven en cada controlador (js/controladores).
-// El cliente agrega el token, lo renueva una vez si expira y, si la sesión ya no es válida,
-// avisa con el evento SESSION_EXPIRED_EVENT (lo atiende controladores/menu.js).
+// cliente HTTP del backend (/api): agrega el token y lo renueva si vence
 import { session } from "./sesion.js";
 import { RefreshTokenRequestDto } from "../dto/autenticacion.js";
 
-// ---------- Cliente HTTP ----------
-
-const API_BASE_URL = "/api"; // el backend sirve el frontend: misma dirección
+const API_BASE_URL = "/api";
 
 export const SESSION_EXPIRED_EVENT = "session:expired";
 
@@ -18,10 +14,9 @@ export class ApiError extends Error {
   }
 }
 
-// Una sola renovación a la vez: si llegan varios 401 juntos, todos esperan la misma promesa.
+// una sola renovación a la vez
 let refreshing = null;
 
-// Resultado de la renovación: vigente, inválida (401/403) o sin respuesta (red caída o 503).
 export const REFRESH = Object.freeze({ OK: "ok", INVALID: "invalid", UNAVAILABLE: "unavailable" });
 
 function expireSession() {
@@ -29,10 +24,7 @@ function expireSession() {
   window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
 }
 
-/**
- * Renueva los tokens con el refresh token. Solo se cierra la sesión (y se avisa una vez)
- * si el servidor responde 401/403; por red o 503 la sesión se conserva.
- */
+// renueva los tokens; solo cierra la sesión si el servidor responde 401/403
 export function ensureFreshSession() {
   refreshing ??= (async () => {
     const refreshToken = session.getRefreshToken();
@@ -54,8 +46,7 @@ export function ensureFreshSession() {
   return refreshing;
 }
 
-// POST /auth/refresh-token
-// fetch directo (sin pasar por request) para no entrar en un ciclo de renovaciones.
+// fetch directo para no entrar en un ciclo de renovaciones
 async function refreshSession(dto) {
   let response;
   try {
@@ -89,13 +80,12 @@ export async function request(method, path, body, canRetry = true) {
   }
 
   if (response.status === 401 && token && canRetry) {
-    // Si otra petición ya renovó el token, solo se reintenta con el nuevo.
     const current = session.getAccessToken();
     if (current && current !== token) return request(method, path, body, false);
     const result = await ensureFreshSession();
     if (result === REFRESH.OK) return request(method, path, body, false);
     if (result === REFRESH.UNAVAILABLE) throw new ApiError("No se pudo renovar la sesión, intenta de nuevo", 503);
-    throw new ApiError("Tu sesión expiró", 401); // INVALID: el aviso ya se emitió una sola vez
+    throw new ApiError("Tu sesión expiró", 401);
   }
 
   const data = await response.json().catch(() => null);
@@ -105,7 +95,6 @@ export async function request(method, path, body, canRetry = true) {
   return data;
 }
 
-// Atajos para los controladores. body: un DTO de petición (ver dto/).
 export const http = {
   get: (path) => request("GET", path),
   post: (path, body) => request("POST", path, body),

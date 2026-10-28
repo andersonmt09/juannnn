@@ -1,12 +1,6 @@
-// Utilidades compartidas por vistas y controladores: crear elementos HTML, formatos, íconos,
-// notificaciones, exportar a CSV (sin avisos: el aviso lo da el controlador) y acceso seguro a localStorage.
+// utilidades compartidas: elementos, formatos, íconos, avisos, CSV y localStorage
 
-// ---------- Elementos HTML ----------
-
-/**
- * Crea un elemento.  el("button", { class: "btn" }, ["Guardar"])
- * Los textos se insertan como texto (no como HTML), evitando XSS.
- */
+// los textos se insertan como texto (evita XSS)
 export function el(tag, attrs = {}, children = []) {
   const element = document.createElement(tag);
   for (const [key, value] of Object.entries(attrs)) {
@@ -26,7 +20,6 @@ export function formatDate(value) {
   return value ? new Date(value).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) : "—";
 }
 
-// "hace 3 min", "hace 2 h"... Devuelve "—" si no hay fecha.
 export function formatRelative(value) {
   if (!value) return "—";
   const seconds = Math.round((Date.now() - new Date(value).getTime()) / 1000);
@@ -40,13 +33,11 @@ export function formatRelative(value) {
   return days < 30 ? `hace ${days} d` : formatDate(value);
 }
 
-// Número con separadores de es-CO: 12345 -> "12.345".
 export function formatNumber(value, options) {
   const number = Number(value);
   return Number.isFinite(number) ? number.toLocaleString("es-CO", options) : "—";
 }
 
-// "andres@dominio.com" -> "an***@dominio.com"
 export function maskEmail(email) {
   const [name = "", domain = ""] = String(email || "").split("@");
   if (!domain) return String(email || "");
@@ -56,8 +47,6 @@ export function maskEmail(email) {
 export function initials(name) {
   return String(name || "?").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 }
-
-// ---------- Íconos ----------
 
 const PATHS = {
   users: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm7-6a3 3 0 1 1 0 6 3 3 0 1 1 0-6zm8 16v-2a3 3 0 0 0-3-3h-1",
@@ -110,8 +99,6 @@ export function icon(name, className = "") {
   return svg;
 }
 
-// ---------- Notificaciones ----------
-
 const TOAST_TONES = {
   success: { tone: "success", icon: "check" },
   error: { tone: "danger", icon: "alert" },
@@ -156,17 +143,10 @@ export const toast = {
   info: (message) => showToast(message, "info"),
 };
 
-// ---------- Exportar a CSV ----------
-
-/**
- * @param {object[]} rows      filas a exportar
- * @param {string}   filename  nombre del archivo
- * @param {[string, string][]} columns  pares [campo, encabezado]
- */
 export function exportToCsv(rows, filename, columns) {
   const escape = (value) => {
     let text = value === null || value === undefined ? "" : String(value);
-    // Evita inyección de fórmulas en Excel: = + - @ tab o CR al inicio
+    // evita inyección de fórmulas en Excel
     if (typeof value === "string" && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
     return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
@@ -182,8 +162,6 @@ export function exportToCsv(rows, filename, columns) {
   URL.revokeObjectURL(url);
 }
 
-// ---------- Almacenamiento del navegador ----------
-// Si el navegador bloquea localStorage, no rompe la aplicación.
 export const storage = {
   get: (key) => { try { return localStorage.getItem(key); } catch { return null; } },
   set: (key, value) => { try { localStorage.setItem(key, value); } catch { /* sin almacenamiento */ } },

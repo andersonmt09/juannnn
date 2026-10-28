@@ -1,7 +1,5 @@
-// DTO de petición (req) de /api/users: lo que envía el cliente, limpio.
 import { clean, QueryRequestDto } from "./comunes.js";
 
-// GET /api/users?page=&limit=
 export class ListUsersRequestDto extends QueryRequestDto {
   constructor({ page = 1, limit = 20 } = {}) {
     super();
@@ -10,14 +8,12 @@ export class ListUsersRequestDto extends QueryRequestDto {
   }
 }
 
-// GET /api/users/:id y DELETE /api/users/:id (el id va en la URL)
 export class UserIdRequestDto {
   constructor({ id }) {
     this.id = id;
   }
 }
 
-// POST /api/users
 export class CreateUserRequestDto {
   constructor({ name, email, role, password }) {
     this.name = clean(name);
@@ -27,7 +23,7 @@ export class CreateUserRequestDto {
   }
 }
 
-// PUT /api/users/:id — role undefined = no se envía (el rol propio no se cambia).
+// role undefined no se envía
 export class UpdateUserRequestDto {
   constructor({ name, email, role }) {
     this.name = clean(name);
@@ -36,7 +32,7 @@ export class UpdateUserRequestDto {
   }
 }
 
-// PATCH /api/users/:id/password — currentPassword solo se envía al cambiar la contraseña propia.
+// currentPassword solo al cambiar la propia
 export class ChangePasswordRequestDto {
   constructor({ password, currentPassword }) {
     this.password = password;

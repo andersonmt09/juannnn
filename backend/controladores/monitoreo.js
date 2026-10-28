@@ -1,4 +1,3 @@
-// Endpoints de /api/monitoring: ver con sesión; agregar y quitar, administrador.
 const { Router } = require("express");
 const { asyncHandler, ROLES } = require("../configuracion");
 const { authenticate, authorize } = require("../middlewares/autenticacion");
@@ -11,15 +10,15 @@ const {
 const router = Router();
 const adminOnly = [authenticate, authorize(ROLES.ADMIN)];
 
-// GET /api/monitoring/routes — administrador — rutas reales de la API
+// GET /api/monitoring/routes - admin
 router.get("/routes", adminOnly, listRoutes);
-// GET /api/monitoring/endpoints — con sesión — lista endpoints monitoreados
+// GET /api/monitoring/endpoints - con sesión
 router.get("/endpoints", authenticate, asyncHandler(list));
-// GET /api/monitoring/endpoints/:id — con sesión — detalle de un endpoint monitoreado
+// GET /api/monitoring/endpoints/:id - con sesión
 router.get("/endpoints/:id", authenticate, validateRequest(MonitoredEndpointIdRequestDto), asyncHandler(getById));
-// POST /api/monitoring/endpoints — administrador — agrega un endpoint al monitoreo
+// POST /api/monitoring/endpoints - admin
 router.post("/endpoints", adminOnly, validateRequest(CreateMonitoredEndpointRequestDto), asyncHandler(create));
-// DELETE /api/monitoring/endpoints/:id — administrador — quita un endpoint del monitoreo
+// DELETE /api/monitoring/endpoints/:id - admin
 router.delete("/endpoints/:id", adminOnly, validateRequest(MonitoredEndpointIdRequestDto), asyncHandler(remove));
 
 module.exports = router;

@@ -1,4 +1,3 @@
-// Modelo de un endpoint de la API que el administrador eligió monitorear (recurso /endpoints).
 const { db } = require("../externos");
 
 class MonitoredEndpoint {

@@ -1,9 +1,7 @@
-// DTO de petición (req) de /api/events: lo que envía el cliente, limpio y validado.
 const { BaseRequestDto } = require("./comunes");
 const eventService = require("../servicios/eventos");
 const { ConnectedEventDto, PongResponseDto } = require("../vistas/eventos");
 
-// GET /api/events/stream?token=
 class StreamRequestDto extends BaseRequestDto {
   constructor({ token } = {}) {
     super();
@@ -13,8 +11,6 @@ class StreamRequestDto extends BaseRequestDto {
     return this.token ? [] : ["El token es obligatorio"];
   }
 }
-
-// ---------- Funciones que reciben la petición (req) ----------
 
 function stream(req, res) {
   res.set({

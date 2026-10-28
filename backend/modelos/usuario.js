@@ -1,9 +1,8 @@
-// Modelo de usuario. Los datos viven en la base de datos externa (recurso /users).
 const bcrypt = require("bcryptjs");
 const { db } = require("../externos");
 const { ROLES } = require("../configuracion");
 
-// Hash fijo de una contraseña cualquiera: se compara cuando el correo no existe.
+// hash falso para comparar cuando el correo no existe
 const DUMMY_HASH = "$2a$10$1MVaMj1bzwHmRn7aveW3S.Elz4Um5fPWL2DbSLq2VmxLCVplq9ika";
 
 class User {
@@ -15,7 +14,6 @@ class User {
     this.role = row.role;
     this.emailVerified = Boolean(row.email_verified);
     this.createdById = row.created_by_id == null ? null : Number(row.created_by_id);
-    // Versión de sesión: ausente en la API externa = 0.
     this.tokenVersion = Number(row.token_version) || 0;
     this.createdDate = row.created_date;
     this.updatedDate = row.updated_date;
@@ -30,40 +28,33 @@ class User {
 
   static fromRow(row) { return row ? new User(row) : null; }
 
-  // ---------- Consultas ----------
-
   static async findById(id) {
     return User.fromRow(await db.find(`/users/${id}`));
   }
 
-  // Busca también entre los inactivos: el correo es único aunque la cuenta esté eliminada.
+  // busca también inactivos: el correo es único
   static async findByEmail(email) {
     const { data } = await db.get("/users", { email, includeInactive: true, limit: 1 });
     return User.fromRow(data[0]);
   }
 
-  // validarCredenciales(usu, contra) del diagrama de secuencia: User si coinciden, null si no ("( )").
   static async validateCredentials(email, password) {
     const user = await User.findByEmail(email);
     if (!user) {
-      await bcrypt.compare(password, DUMMY_HASH); // mismo costo que con un usuario real (tiempo constante)
+      await bcrypt.compare(password, DUMMY_HASH);
       return null;
     }
     return (await user.matchesPassword(password)) ? user : null;
   }
 
-  // Usuarios activos, paginados.
   static async findPage({ page, limit }) {
     const { data, total } = await db.get("/users", { page, limit });
     return { users: data.map(User.fromRow), total };
   }
 
-  // { admin, user, inactive }
   static async countByRole() {
     return db.get("/users/count-by-role");
   }
-
-  // ---------- Escritura ----------
 
   static async create({ name, email, passwordHash, role = ROLES.USER, emailVerified = false, createdById = null }) {
     const row = await db.post("/users", {
@@ -81,7 +72,7 @@ class User {
     return User.fromRow(await db.patch(`/users/${id}`, { name, email, role }));
   }
 
-  // Si llega tokenVersion también se guarda: así se cierran las demás sesiones.
+  // si llega tokenVersion se cierran las demás sesiones
   static async updatePassword(id, passwordHash, tokenVersion) {
     const changes = { password_hash: passwordHash };
     if (tokenVersion !== undefined) changes.token_version = tokenVersion;
@@ -92,7 +83,7 @@ class User {
     await db.patch(`/users/${id}`, { email_verified: true });
   }
 
-  // Eliminación lógica: el registro se conserva con rol inactive.
+  // eliminación lógica: queda con rol inactive
   static async softDelete(id) {
     await db.patch(`/users/${id}`, { role: ROLES.INACTIVE });
   }

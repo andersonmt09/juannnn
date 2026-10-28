@@ -1,4 +1,3 @@
-// DTO de petición (req) de /api/users: lo que envía el cliente, limpio y validado.
 const { BaseRequestDto, cleanText, nameErrors, emailErrors, passwordErrors } = require("./comunes");
 const { ROLES, PAGINATION, normalizeEmail, isPositiveInteger } = require("../configuracion");
 const userService = require("../servicios/usuarios");
@@ -8,10 +7,9 @@ const { SessionResponseDto } = require("../vistas/autenticacion");
 
 const ID_ERROR = "El id debe ser un número entero positivo";
 const ROLE_ERROR = "El rol debe ser admin o user";
-// Solo se pueden asignar estos roles (inactive lo pone el sistema al eliminar).
+// solo estos roles (inactive lo pone el sistema)
 const isAssignableRole = (value) => value === ROLES.ADMIN || value === ROLES.USER;
 
-// GET /api/users?page=&limit=
 class ListUsersRequestDto extends BaseRequestDto {
   constructor({ page, limit } = {}) {
     super();
@@ -20,14 +18,13 @@ class ListUsersRequestDto extends BaseRequestDto {
   }
 }
 
-// POST /api/users
 class CreateUserRequestDto extends BaseRequestDto {
   constructor({ name, email, password, role } = {}) {
     super();
     this.name = cleanText(name);
     this.email = normalizeEmail(email);
     this.password = password;
-    this.role = role === undefined || role === null ? ROLES.USER : role; // por defecto "user"
+    this.role = role === undefined || role === null ? ROLES.USER : role;
   }
   validate() {
     const errors = [...nameErrors(this.name), ...emailErrors(this.email), ...passwordErrors(this.password)];
@@ -36,7 +33,6 @@ class CreateUserRequestDto extends BaseRequestDto {
   }
 }
 
-// PUT /api/users/:id — solo cambia los campos enviados.
 class UpdateUserRequestDto extends BaseRequestDto {
   constructor({ id, name, email, role } = {}) {
     super();
@@ -58,7 +54,7 @@ class UpdateUserRequestDto extends BaseRequestDto {
   }
 }
 
-// PATCH /api/users/:id/password — currentPassword es obligatoria cuando el usuario cambia la suya.
+// currentPassword es obligatoria al cambiar la propia
 class ChangePasswordRequestDto extends BaseRequestDto {
   constructor({ id, currentPassword, password } = {}) {
     super();
@@ -75,7 +71,6 @@ class ChangePasswordRequestDto extends BaseRequestDto {
   }
 }
 
-// DELETE /api/users/:id
 class UserIdRequestDto extends BaseRequestDto {
   constructor({ id } = {}) {
     super();
@@ -85,8 +80,6 @@ class UserIdRequestDto extends BaseRequestDto {
     return isPositiveInteger(this.id) ? [] : [ID_ERROR];
   }
 }
-
-// ---------- Funciones que reciben la petición (req) ----------
 
 async function list(req, res) {
   res.json(new UserListResponseDto(await userService.list(req.dto)));
@@ -106,7 +99,7 @@ async function update(req, res) {
 
 async function changePassword(req, res) {
   const session = await userService.changePassword(req.dto.id, req.dto, req.user);
-  // Propia: sesión nueva (las demás quedan cerradas). De otro usuario: solo mensaje.
+  // propia: sesión nueva, las demás se cierran
   res.json(session ? new SessionResponseDto(session) : new MessageResponseDto("Contraseña actualizada"));
 }
 

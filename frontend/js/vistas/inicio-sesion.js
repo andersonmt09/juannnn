@@ -1,13 +1,8 @@
-// Vista de inicio de sesión (#/login). Solo dibuja y avisa al controlador.
 import { el, icon } from "../utilidades.js";
 import { architectureGraph, passwordField, statusDot } from "./componentes.js";
 
 const HEALTH_LABELS = { online: "API en línea", degraded: "API degradada", offline: "API sin conexión", checking: "Comprobando API…" };
 
-/**
- * Armazón de dos columnas compartido por login y registro.
- * Devuelve { layout, setHealth } para que el controlador pinte el estado de la API.
- */
 export function buildAuthShell(card) {
   const pillText = el("span", { class: "status-text" }, [HEALTH_LABELS.checking]);
   const pill = el("div", { class: "status-pill", role: "status", "aria-live": "polite", "data-status": "checking" }, [
@@ -38,10 +33,6 @@ export function buildAuthShell(card) {
   };
 }
 
-/**
- * @param {HTMLElement} container
- * @param {{ onSubmit: (data: { email: string, password: string }) => void }} handlers
- */
 export function renderLoginView(container, { onSubmit }) {
   const submit = el("button", { type: "submit", class: "btn btn-primary btn-block" }, [el("span", {}, ["Iniciar sesión"])]);
   const emailInput = el("input", { id: "login-email", name: "email", type: "email", class: "input", required: true, autocomplete: "email", placeholder: "tu@correo.com" });

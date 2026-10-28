@@ -1,11 +1,7 @@
-// Catálogo de piezas visuales reutilizables (sistema de diseño "sala de control").
-// Solo dibujan: no llaman a la API ni deciden acciones; los eventos salen por callbacks.
+// piezas visuales reutilizables
 import { el, initials, icon, formatNumber, formatDate } from "../utilidades.js";
 
 
-// ---------- Encabezado ----------
-
-/** pageHeader({ title, subtitle, actions }) */
 export function pageHeader({ title, subtitle, actions = [] }) {
   return el("div", { class: "page-header" }, [
     el("div", { class: "page-heading" }, [
@@ -16,9 +12,6 @@ export function pageHeader({ title, subtitle, actions = [] }) {
   ]);
 }
 
-// ---------- Estados: vacío, error y esqueleto ----------
-
-// action: un nodo (botón) o { label, onClick, icon }.
 function actionButton(action) {
   if (!action || action instanceof Node) return action || null;
   return el("button", { type: "button", class: "btn btn-primary", onclick: action.onClick }, [
@@ -26,7 +19,6 @@ function actionButton(action) {
   ]);
 }
 
-/** emptyState({ icon, title, text, action }) */
 export function emptyState({ icon: iconName = "layers", title, text, action }) {
   return el("div", { class: "empty" }, [
     el("div", { class: "empty-icon" }, [icon(iconName)]),
@@ -36,7 +28,6 @@ export function emptyState({ icon: iconName = "layers", title, text, action }) {
   ]);
 }
 
-/** errorState({ text, onRetry }) */
 export function errorState({ text = "No se pudo cargar la información.", onRetry } = {}) {
   return el("div", { class: "empty", "data-tone": "danger", role: "alert" }, [
     el("div", { class: "empty-icon" }, [icon("alert")]),
@@ -46,20 +37,13 @@ export function errorState({ text = "No se pudo cargar la información.", onRetr
   ]);
 }
 
-/** skeleton(lines) */
 export function skeleton(lines = 3) {
   return el("div", { class: "skeleton", "aria-hidden": "true" },
     Array.from({ length: lines }, (_, i) => el("div", { class: `skeleton-line${i === lines - 1 ? " is-short" : ""}` })));
 }
 
-// ---------- Ventana modal y confirmación ----------
-
 const FOCUSABLE = "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])";
 
-/**
- * createModal({ title, body, footer, onClose }) -> { element, open, close, setTitle }
- * footer: nodo o lista de nodos (botones). Se cierra con Esc o tocando el fondo.
- */
 export function createModal({ title, body, footer, onClose }) {
   const titleId = `modal-title-${Math.random().toString(36).slice(2, 8)}`;
   const heading = el("h2", { id: titleId, class: "modal-title" }, [title]);
@@ -101,7 +85,6 @@ export function createModal({ title, body, footer, onClose }) {
   return { element, open, close, setTitle: (text) => { heading.textContent = text; } };
 }
 
-/** confirmDialog({ title, message, confirmLabel, tone }) -> Promise<boolean> */
 export function confirmDialog({ title = "¿Confirmar?", message = "", confirmLabel = "Confirmar", cancelLabel = "Cancelar", tone = "danger" } = {}) {
   return new Promise((resolve) => {
     let answer = false;
@@ -121,9 +104,6 @@ export function confirmDialog({ title = "¿Confirmar?", message = "", confirmLab
   });
 }
 
-// ---------- Formularios ----------
-
-/** passwordField({ id, name, label, autocomplete, hint, required, minlength }) -> .field */
 export function passwordField({ id, name, label, autocomplete = "current-password", hint, required = true, minlength, placeholder } = {}) {
   const input = el("input", { id, name, type: "password", class: "input", autocomplete, required, minlength, placeholder, "aria-describedby": hint ? `${id}-hint` : undefined });
   const toggle = el("button", { type: "button", class: "input-toggle", "aria-label": "Mostrar contraseña", "aria-pressed": "false" }, [icon("eye")]);
@@ -143,7 +123,6 @@ export function passwordField({ id, name, label, autocomplete = "current-passwor
   return field;
 }
 
-/** segmented({ name, options: [{ value, label }], value, onChange }) -> .segmented (con setValue) */
 export function segmented({ name, options, value, onChange }) {
   const group = el("div", { class: "segmented", role: "radiogroup" });
   for (const option of options) {
@@ -157,9 +136,6 @@ export function segmented({ name, options, value, onChange }) {
   return group;
 }
 
-// ---------- Píldoras ----------
-
-/** badge(text, tone) con tone: accent | success | warning | danger | violet | live | neutral */
 export function badge(text, tone = "neutral") {
   return el("span", { class: "badge", "data-tone": tone }, [text]);
 }
@@ -168,19 +144,14 @@ export function methodBadge(method) {
   return el("span", { class: "badge method", "data-method": method }, [method]);
 }
 
-// code -> "2xx"... (5xx se dibuja con fondo sólido)
 export function statusCodeBadge(code) {
   return el("span", { class: "badge code", "data-class": `${Math.floor(code / 100)}xx` }, [el("i", { class: "badge-dot" }), String(code)]);
 }
 
-/** status: online | offline | degraded | console | healthy | failing | no-traffic | connected | disconnected */
 export function statusDot(status) {
   return el("span", { class: "dot", "data-status": status, "aria-hidden": "true" });
 }
 
-// ---------- KPI ----------
-
-/** kpiCard({ label, value, hint, icon, tone, loading }) -> .kpi (con setValue(value, hint)) */
 export function kpiCard({ label, value = "—", hint = "", icon: iconName = "activity", tone = "accent", loading = false }) {
   const valueEl = el("div", { class: "kpi-value num" }, [String(value)]);
   const hintEl = el("div", { class: "kpi-hint" }, [hint]);
@@ -200,14 +171,6 @@ export function kpiCard({ label, value = "—", hint = "", icon: iconName = "act
   return card;
 }
 
-// ---------- Tabla ----------
-
-/**
- * dataTable({ columns: [{ key, label, align, render }], rows, empty, onRowClick })
- * render(row, index) devuelve un nodo o texto. En móvil cada fila se vuelve tarjeta (data-label).
- * onRowClick(row): filas seleccionables (clic, Enter o Espacio). Los botones dentro de la fila
- * no la activan: se ignoran los eventos que vienen de button, a, input, select o textarea.
- */
 export function dataTable({ columns, rows, empty, onRowClick }) {
   if (!rows.length) return empty || emptyState({ title: "Sin datos", text: "No hay registros para mostrar." });
 
@@ -234,13 +197,6 @@ export function dataTable({ columns, rows, empty, onRowClick }) {
   return el("div", { class: "table-wrap" }, [el("table", { class: "table" }, [el("thead", {}, [head]), el("tbody", {}, body)])]);
 }
 
-// ---------- Detalle (drawer) ----------
-
-/**
- * detailDrawer({ title }) -> { element, open(contentNode, actions?), close, setTitle, showLoading }
- * Panel lateral sobre createModal (Esc y fondo lo cierran). actions: botones del pie.
- * El elemento se agrega al body la primera vez que se abre.
- */
 export function detailDrawer({ title = "Detalle" } = {}) {
   const body = el("div", { class: "drawer-content" });
   const footer = el("div", { class: "modal-footer" });
@@ -274,7 +230,6 @@ export function detailDrawer({ title = "Detalle" } = {}) {
   };
 }
 
-/** descriptionList([{ label, value }]) -> <dl class="detail-list"> (value: texto o nodo) */
 export function descriptionList(items) {
   return el("dl", { class: "detail-list" }, items.flatMap(({ label, value }) => [
     el("dt", {}, [label]),
@@ -282,7 +237,6 @@ export function descriptionList(items) {
   ]));
 }
 
-/** requestDetailContent(log) -> nodo con el detalle de una petición (log.user opcional) */
 export function requestDetailContent(log) {
   const who = log.user
     ? el("span", {}, [log.user.name, el("span", { class: "muted small" }, [` · ${log.user.email}`])])
@@ -299,9 +253,6 @@ export function requestDetailContent(log) {
   ]);
 }
 
-// ---------- Paginación ----------
-
-/** pagination({ page, totalPages, total, limit }, onChange) */
 export function pagination({ page, totalPages, total, limit }, onChange) {
   if (!total) return el("div", { class: "pagination" }, [el("span", { class: "pagination-info" }, ["Sin resultados"])]);
 
@@ -330,13 +281,10 @@ export function pagination({ page, totalPages, total, limit }, onChange) {
   ]);
 }
 
-// ---------- Gráficas (Chart.js) ----------
-
 const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const TONE_CYCLE = ["accent", "live", "success", "warning", "violet", "danger"];
 const METHOD_TONE = { GET: "success", POST: "accent", PUT: "warning", PATCH: "violet", DELETE: "danger" };
 
-// Crea la gráfica leyendo los colores de los tokens y la actualiza si cambia el tema.
 function buildChart({ title, items, type }) {
   const canvas = el("canvas", { role: "img", "aria-label": title });
   const box = el("div", { class: "chart-box" }, [canvas]);
@@ -402,17 +350,13 @@ function buildChart({ title, items, type }) {
   return { element, destroy };
 }
 
-/** doughnutChart({ title, items: [{ label, value, tone? }] }) -> { element, destroy } */
 export function doughnutChart({ title, items }) {
   return buildChart({ title, items, type: "doughnut" });
 }
 
-/** barChart({ title, items: [{ label, value, tone? }] }) -> { element, destroy } */
 export function barChart({ title, items }) {
   return buildChart({ title, items, type: "bar" });
 }
-
-// ---------- Arquitectura visual ----------
 
 const ARCH_LAYERS = [
   { key: "client", name: "Cliente / UI", tech: "Navegador · JS vanilla", icon: "globe" },
@@ -423,11 +367,6 @@ const ARCH_LAYERS = [
 const ARCH_SERVICE_OF = { client: null, api: "api", backend: "api", database: "database" };
 const ARCH_STEP_MS = 250;
 
-/**
- * architectureGraph({ layers, services }) -> { element, play(resultLayers), reset(), setServices(services) }
- * layers (opcional): [{ key, name, tech }] para cambiar textos. services: lista de GET /metrics/services.
- * play() devuelve una promesa que se resuelve al encender la última capa.
- */
 export function architectureGraph({ layers = [], services } = {}) {
   const definitions = ARCH_LAYERS.map((base) => ({ ...base, ...(layers.find((l) => l.key === base.key) || {}) }));
   const nodes = new Map();
@@ -488,8 +427,6 @@ export function architectureGraph({ layers = [], services } = {}) {
   return { element, play, reset, setServices };
 }
 
-// ---------- Consola de eventos ----------
-
 const MAX_EVENT_LINES = 100;
 const EVENT_TIME = new Intl.DateTimeFormat("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 
@@ -502,7 +439,6 @@ function eventSummary({ name, data }) {
   return "";
 }
 
-/** eventLog() -> { element, add({ name, data, at, summary? }), clear() } */
 export function eventLog() {
   const placeholder = el("div", { class: "event-empty" }, ["Esperando eventos…"]);
   const element = el("div", { class: "event-log", role: "log", "aria-live": "off", tabindex: "0", "aria-label": "Eventos en vivo" }, [placeholder]);
@@ -522,8 +458,6 @@ export function eventLog() {
     clear() { element.replaceChildren(placeholder); },
   };
 }
-
-// ---------- Layout privado: barra lateral, barra superior y contenido ----------
 
 const MENU = [
   { route: "#/dashboard", icon: "chart", label: "Panel", adminOnly: true },
@@ -545,15 +479,10 @@ function statusPill(label, status) {
   return pill;
 }
 
-// Un solo listener de Esc para todo el módulo (antes se sumaba uno por cada login).
+// un solo listener de Esc para todo el módulo
 let closeCurrentMenu = null;
 document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeCurrentMenu?.(); });
 
-/**
- * renderLayout(root, { user, isAdmin, theme, menu }, { onToggleTheme, onLogout })
- *   -> { content, setActive(route), setHealth(status), setStreamStatus(status) }
- * onToggleTheme() debe devolver el tema nuevo. menu: lista { route, icon, label, adminOnly } (opcional).
- */
 export function renderLayout(root, { user, isAdmin, theme, menu = MENU }, { onToggleTheme, onLogout }) {
   const items = menu.filter((item) => !item.adminOnly || isAdmin);
   const titles = Object.fromEntries(items.map((item) => [item.route, item.label]));
@@ -586,13 +515,13 @@ export function renderLayout(root, { user, isAdmin, theme, menu = MENU }, { onTo
   const scrim = el("div", { class: "scrim", onclick: close });
   const toggle = el("button", { type: "button", class: "icon-btn menu-toggle", "aria-label": "Abrir menú", "aria-controls": "sidebar", "aria-expanded": "false" }, [icon("menu")]);
   toggle.addEventListener("click", () => (sidebar.classList.contains("is-open") ? close() : openDrawer()));
-  closeCurrentMenu = close; // el único listener de Esc cierra el menú del layout actual
+  closeCurrentMenu = close;
 
   const title = el("div", { class: "topbar-title" }, [""]);
   const apiPill = statusPill(API_LABELS.unknown, "unknown");
   const streamPill = statusPill(STREAM_LABELS.DISCONNECTED, "disconnected");
   streamPill.classList.add("stream-pill");
-  if (!isAdmin) streamPill.classList.add("hidden"); // el tiempo real es solo del administrador
+  if (!isAdmin) streamPill.classList.add("hidden");
 
   let currentTheme = theme;
   const themeIcon = () => icon(currentTheme === "light" ? "moon" : "sun");
@@ -628,12 +557,10 @@ export function renderLayout(root, { user, isAdmin, theme, menu = MENU }, { onTo
       const key = API_LABELS[status] ? status : "offline";
       apiPill.setLabel(API_LABELS[key], key);
     },
-    // status: CONNECTED | CONNECTING | DISCONNECTED
     setStreamStatus(status) {
       streamPill.setLabel(STREAM_LABELS[status] || status, status.toLowerCase());
     },
   };
 }
 
-// Texto que ve el usuario para cada estado del tiempo real.
 export const STREAM_LABELS = Object.freeze({ CONNECTED: "En vivo", CONNECTING: "Conectando", DISCONNECTED: "Desconectado" });

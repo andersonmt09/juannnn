@@ -1,4 +1,3 @@
-// Vista de Actividad (#/activity): estado de la conexión en vivo, consola de eventos e historial paginado.
 import { pageHeader, kpiCard, eventLog, segmented, dataTable, pagination, emptyState, errorState, skeleton, methodBadge, statusCodeBadge, statusDot, detailDrawer, requestDetailContent, STREAM_LABELS } from "./componentes.js";
 import { el, icon, formatNumber, formatDate } from "../utilidades.js";
 
@@ -10,19 +9,9 @@ const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const TIME = new Intl.DateTimeFormat("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 const CONNECTION_TONE = { CONNECTED: "live", CONNECTING: "warning", DISCONNECTED: "danger" };
 
-/**
- * @param {HTMLElement} container
- * @param {{
- *   onSelectRequest: (request: object) => void,
- *   onPing: () => void, onReconnect: () => void, onTogglePause: () => void, onClear: () => void,
- *   onFilterChange: (filters: { statusClass: string, method: string }) => void,
- *   onPageChange: (page: number) => void, onExportPage: () => void, onRetryHistory: () => void,
- * }} handlers
- */
 export function renderActivityView(container, handlers) {
   const drawer = detailDrawer({ title: "Detalle de la petición" });
 
-  // ---- KPI ----
   const connection = kpiCard({ label: "Conexión", value: STREAM_LABELS.DISCONNECTED, icon: "radio", tone: "danger", hint: "Tiempo real (SSE)" });
   connection.querySelector(".kpi-value").style.fontSize = "var(--fs-2xl)";
   const reconnectButton = el("button", { type: "button", class: "btn btn-secondary btn-sm hidden", onclick: handlers.onReconnect }, [icon("refresh"), "Reconectar"]);
@@ -34,7 +23,6 @@ export function renderActivityView(container, handlers) {
   const pingButton = el("button", { type: "button", class: "btn btn-secondary btn-sm", onclick: handlers.onPing }, [icon("radio"), "Medir latencia"]);
   latency.append(pingButton);
 
-  // ---- Consola ----
   const log = eventLog();
   const pauseButton = el("button", { type: "button", class: "btn btn-secondary btn-sm", onclick: handlers.onTogglePause }, [icon("pause"), "Pausar"]);
   const pausedNote = el("span", { class: "badge hidden", "data-tone": "warning" }, ["En pausa"]);
@@ -55,7 +43,6 @@ export function renderActivityView(container, handlers) {
     consoleCard,
   ];
 
-  // ---- Historial ----
   let filters = { statusClass: "", method: "" };
   const historyBody = el("div", {}, [skeleton(5)]);
   const statusFilter = segmented({
@@ -90,7 +77,6 @@ export function renderActivityView(container, handlers) {
   return {
     log,
 
-    // Agrega una línea a la consola; si es una petición con id, se puede abrir.
     addEvent(event) {
       log.add(event);
       const id = event.name === "api:activity" ? event.data?.id : null;
@@ -109,7 +95,6 @@ export function renderActivityView(container, handlers) {
     showRequestDetail(logData) { drawer.open(requestDetailContent(logData)); },
     closeRequestDetail() { drawer.close(); },
 
-    // status: CONNECTED | CONNECTING | DISCONNECTED
     setConnection(status) {
       connection.setValue(STREAM_LABELS[status] || status);
       connection.dataset.tone = CONNECTION_TONE[status] || "danger";

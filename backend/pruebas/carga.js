@@ -1,5 +1,4 @@
-// Prueba de carga simple (RNF-02): 200 peticiones a /api/health con concurrencia de 20.
-// Uso: npm run pruebas:carga  (con el servidor encendido). URL opcional: BASE_URL=http://localhost:4000
+// uso: npm run pruebas:carga (con el servidor encendido)
 const BASE_URL = process.env.BASE_URL || "http://localhost:4000";
 const TOTAL = 200;
 const CONCURRENCY = 20;

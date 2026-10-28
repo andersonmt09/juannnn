@@ -1,11 +1,9 @@
-// DTO de petición (req) de /api/auth: lo que envía el cliente, limpio y validado.
 const { BaseRequestDto, cleanText, nameErrors, emailErrors, passwordErrors, codeErrors } = require("./comunes");
 const { normalizeEmail, CODE_PURPOSE } = require("../configuracion");
 const authService = require("../servicios/autenticacion");
 const { MessageResponseDto } = require("../vistas/comunes");
 const { VerificationRequiredResponseDto, EmailVerifiedResponseDto, SessionResponseDto } = require("../vistas/autenticacion");
 
-// POST /api/auth/register
 class RegisterRequestDto extends BaseRequestDto {
   constructor({ name, email, password } = {}) {
     super();
@@ -18,8 +16,6 @@ class RegisterRequestDto extends BaseRequestDto {
   }
 }
 
-// POST /api/auth/login
-// Lifeline "UsuarioDTO" del diagrama de secuencia: recibe usu y contra desde la Vista.
 class CredentialsRequestDto extends BaseRequestDto {
   constructor({ email, password } = {}) {
     super();
@@ -35,7 +31,6 @@ class CredentialsRequestDto extends BaseRequestDto {
   }
 }
 
-// POST /api/auth/register/verify y POST /api/auth/login/verify
 class VerifyCodeRequestDto extends BaseRequestDto {
   constructor({ email, code } = {}) {
     super();
@@ -47,7 +42,6 @@ class VerifyCodeRequestDto extends BaseRequestDto {
   }
 }
 
-// POST /api/auth/register/resend-code y POST /api/auth/login/resend-code
 class ResendCodeRequestDto extends BaseRequestDto {
   constructor({ email } = {}) {
     super();
@@ -58,7 +52,6 @@ class ResendCodeRequestDto extends BaseRequestDto {
   }
 }
 
-// POST /api/auth/refresh-token
 class RefreshTokenRequestDto extends BaseRequestDto {
   constructor({ refreshToken } = {}) {
     super();
@@ -68,8 +61,6 @@ class RefreshTokenRequestDto extends BaseRequestDto {
     return typeof this.refreshToken === "string" && this.refreshToken ? [] : ["El refresh token es obligatorio"];
   }
 }
-
-// ---------- Funciones que reciben la petición (req) ----------
 
 async function register(req, res) {
   const result = await authService.register(req.dto);
@@ -81,9 +72,8 @@ async function verifyRegistration(req, res) {
   res.json(new EmailVerifiedResponseDto());
 }
 
-// Secuencia del tablero: Vista → CredentialsRequestDto → login → validateCredentials → User (Modelo) → BD
 async function login(req, res) {
-  const user = await authService.validateCredentials(req.dto); // validarCredenciales(usu, contra)
+  const user = await authService.validateCredentials(req.dto);
   res.json(new VerificationRequiredResponseDto(await authService.startLoginVerification(user)));
 }
 

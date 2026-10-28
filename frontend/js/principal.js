@@ -1,5 +1,4 @@
-// Punto de entrada del frontend: solo es el router. Define las pantallas (#/...),
-// decide cuál mostrar según la sesión y el rol, y limpia la pantalla anterior al cambiar.
+// punto de entrada: router de pantallas
 import { showLogin } from "./controladores/inicio-sesion.js";
 import { showRegister } from "./controladores/registro.js";
 import { showVerify } from "./controladores/verificacion.js";
@@ -12,8 +11,7 @@ import { showLayout, hideLayout } from "./controladores/menu.js";
 import { session, preferences } from "./modelos/sesion.js";
 import { el } from "./utilidades.js";
 
-// ---------- Pantallas ----------
-// public = sin sesión, adminOnly = solo administradores.
+// public = sin sesión, adminOnly = solo administradores
 
 const ROUTES = {
   "#/login":      { controller: showLogin,      public: true },
@@ -28,12 +26,8 @@ const ROUTES = {
 
 const DEFAULT_PUBLIC_ROUTE = "#/login";
 
-// El administrador entra al panel; el usuario común, a monitoreo.
 const defaultPrivateRoute = () => (session.isAdmin() ? "#/dashboard" : "#/monitoring");
 
-// ---------- Navegación ----------
-
-// Devuelve la ruta que corresponde mostrar según la sesión y el rol.
 function resolve(hash) {
   const loggedIn = session.isLoggedIn();
   const route = ROUTES[hash];
@@ -45,16 +39,15 @@ function resolve(hash) {
   return hash;
 }
 
-let layout = null;      // layout privado actual (se dibuja una sola vez)
-let cleanup = null;     // limpieza de la pantalla actual
-let navigation = 0;     // número de navegación, para ignorar controladores lentos
+let layout = null;
+let cleanup = null;
+let navigation = 0;     // para ignorar controladores lentos
 
 function runCleanup() {
   try { cleanup?.(); } catch (error) { console.error("Error al limpiar la pantalla:", error); }
   cleanup = null;
 }
 
-// Un controlador puede devolver (o resolver) una función de limpieza.
 function mount(controller, container) {
   const current = ++navigation;
   Promise.resolve(controller(container)).then((result) => {
@@ -68,7 +61,7 @@ function navigate() {
   const root = document.getElementById("app");
   const target = resolve(location.hash);
   if (target !== location.hash) {
-    location.hash = target; // vuelve a llamar a navigate()
+    location.hash = target;
     return;
   }
 
@@ -89,8 +82,6 @@ function navigate() {
   window.scrollTo(0, 0);
   mount(route.controller, layout.content);
 }
-
-// ---------- Inicio ----------
 
 document.documentElement.dataset.theme = preferences.getTheme();
 window.addEventListener("hashchange", navigate);

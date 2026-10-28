@@ -1,9 +1,5 @@
-// DTO de petición (req) comunes a toda la API: lo que envía el cliente, limpio y validado.
 const { HttpError, SECURITY, isValidEmail } = require("../configuracion");
 
-// ---------- Validaciones de campos (siempre devuelven una lista de errores, nunca lanzan) ----------
-
-// Texto limpio: si es string lo recorta; si no, lo deja igual para que la validación lo rechace.
 const cleanText = (value) => (typeof value === "string" ? value.trim() : value);
 
 function nameErrors(name) {
@@ -24,16 +20,12 @@ function passwordErrors(password) {
 
 const codeErrors = (code) => (typeof code === "string" && /^\d{6}$/.test(code) ? [] : ["El código debe tener 6 dígitos"]);
 
-// ---------- Base de las peticiones ----------
-
-// Cada DTO de petición limpia los datos en el constructor y define validate().
+// cada DTO limpia en el constructor y define validate()
 class BaseRequestDto {
-  // @returns {string[]} lista de errores (vacía si es válido)
   validate() {
     return [];
   }
 
-  // Lanza 400 con todos los errores si los datos no son válidos.
   assertValid() {
     const errors = this.validate();
     if (errors.length) throw HttpError.badRequest(errors[0], errors);

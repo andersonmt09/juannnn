@@ -1,6 +1,4 @@
-// Vista (res) de /api/metrics y /api/health: lo que el servidor devuelve al cliente.
-// Una petición registrada (actividad reciente).
-// La IP (source) solo se incluye cuando se pide (administradores).
+// la IP solo se incluye para administradores
 class RequestLogDto {
   constructor(log, { includeSource = false } = {}) {
     this.id = log.id;
@@ -14,7 +12,6 @@ class RequestLogDto {
   }
 }
 
-// GET /api/metrics/requests/:id → { ok, data: { ...RequestLogDto, userId, user: { id, name, email } | null } }
 class RequestLogDetailResponseDto {
   constructor({ log, user }) {
     this.ok = true;
@@ -26,7 +23,6 @@ class RequestLogDetailResponseDto {
   }
 }
 
-// GET /api/metrics/dashboard → { ok, data: { summary, requestsByStatus, requestsByMethod, recentRequests } }
 class DashboardResponseDto {
   constructor({ summary, requestsByStatus, requestsByMethod, recentRequests }) {
     this.ok = true;
@@ -39,7 +35,6 @@ class DashboardResponseDto {
   }
 }
 
-// GET /api/metrics/requests → { ok, data: RequestLogDto[], meta: { total, page, limit, totalPages } }
 class RequestLogListResponseDto {
   constructor({ logs, total, page, limit }) {
     this.ok = true;
@@ -48,7 +43,6 @@ class RequestLogListResponseDto {
   }
 }
 
-// GET /api/metrics/services → { ok, data: [{ key, name, role, status, detail }] }
 class ServiceListResponseDto {
   constructor(services) {
     this.ok = true;
@@ -56,7 +50,6 @@ class ServiceListResponseDto {
   }
 }
 
-// GET /api/health
 class HealthResponseDto {
   constructor({ databaseAvailable, databaseLatencyMs, uptimeSeconds }) {
     this.ok = databaseAvailable;

@@ -1,7 +1,5 @@
-// Vista (res) de /api/users: lo que el servidor devuelve al cliente.
-// Ninguna expone el hash de la contraseña.
+// ninguna expone el hash de la contraseña
 
-// Datos públicos de un usuario (también se usa en la respuesta de sesión).
 class UserDto {
   constructor(user) {
     this.id = user.id;
@@ -14,7 +12,6 @@ class UserDto {
   }
 }
 
-// POST /api/users y PUT /api/users/:id → { ok, data }
 class UserResponseDto {
   constructor(user) {
     this.ok = true;
@@ -22,7 +19,6 @@ class UserResponseDto {
   }
 }
 
-// GET /api/users → { ok, data: [], meta: { total, page, limit, totalPages } }
 class UserListResponseDto {
   constructor({ users, total, page, limit }) {
     this.ok = true;

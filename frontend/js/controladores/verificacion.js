@@ -1,4 +1,3 @@
-// Controlador de #/verify: comprueba el código del registro o del inicio de sesión (paso 2).
 import { renderVerifyView } from "../vistas/verificacion.js";
 import { http } from "../modelos/api.js";
 import { resendRegistrationCode } from "./inicio-sesion.js";
@@ -6,11 +5,7 @@ import { VerifyCodeRequestDto, ResendCodeRequestDto } from "../dto/autenticacion
 import { session, VERIFICATION_PURPOSE } from "../modelos/sesion.js";
 import { toast } from "../utilidades.js";
 
-// ---------- Endpoints ----------
-// POST /auth/register/verify      (público)
-// POST /auth/login/verify         (público) paso 2; devuelve la sesión
-// POST /auth/login/resend-code    (público)
-// (POST /auth/register/resend-code está en inicio-sesion.js)
+// endpoints
 const verifyRegistration = (dto) => http.post("/auth/register/verify", dto);
 const verifyLogin = (dto) => http.post("/auth/login/verify", dto);
 const resendLoginCode = (dto) => http.post("/auth/login/resend-code", dto);

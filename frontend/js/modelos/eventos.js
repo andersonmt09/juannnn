@@ -1,7 +1,4 @@
-// Modelo del tiempo real: conexión SSE a /api/events/stream (solo administradores) y su estado.
-// Los oyentes reciben { name, data, at }. Nombres: stream:connected, stream:heartbeat,
-// api:activity, stream:closed (el servidor cerró), stream:status (cambió la conexión)
-// y stream:pong (resultado de ping()).
+// conexión SSE a /api/events/stream (solo administradores)
 import { session } from "./sesion.js";
 import { StreamRequestDto } from "../dto/eventos.js";
 import { ensureFreshSession, REFRESH } from "./api.js";
@@ -53,14 +50,13 @@ function scheduleReconnect() {
   retryTimer = setTimeout(async () => {
     retryTimer = null;
     if (!wanted) return;
-    const result = await ensureFreshSession(); // el token pudo vencer mientras estaba caído
-    if (result === REFRESH.INVALID) { wanted = false; return; } // sesión inválida: no se reabre
+    const result = await ensureFreshSession();
+    if (result === REFRESH.INVALID) { wanted = false; return; }
     if (wanted) open();
   }, RETRY_MS);
 }
 
-// El servidor avisa que cierra el stream (token vencido, tope de conexiones...).
-// No se reabre solo: se revisa la sesión y queda desconectado hasta stream.reconnect().
+// el servidor cerró el stream: no se reabre solo
 async function onClosedByServer(message) {
   onServerEvent("stream:closed", message);
   closeSource();
@@ -84,10 +80,10 @@ function open() {
   source.addEventListener("stream:closed", onClosedByServer);
 
   source.onerror = () => {
-    if (!source) return; // ya se cerró a propósito
+    if (!source) return;
     setStatus(STATUS.DISCONNECTED);
-    // CLOSED: el navegador desistió (p. ej. 401). Se renueva la sesión y se reintenta.
-    // CONNECTING: el navegador reintenta solo y onopen devolverá a CONNECTED.
+    // CLOSED: el navegador desistió (p. ej. 401), se renueva la sesión
+    // CONNECTING: el navegador reintenta solo
     if (source?.readyState === EventSource.CLOSED) {
       closeSource();
       scheduleReconnect();
@@ -104,7 +100,6 @@ export const stream = {
     if (!source) open();
   },
 
-  // Reconexión manual (botón "Reconectar"): renueva la sesión y abre de nuevo.
   async reconnect() {
     wanted = true;
     retries = 0;
@@ -128,7 +123,6 @@ export const stream = {
     setStatus(STATUS.DISCONNECTED);
   },
 
-  // Devuelve la función para cancelar la suscripción.
   subscribe(listener) {
     listeners.add(listener);
     return () => listeners.delete(listener);
@@ -136,7 +130,6 @@ export const stream = {
 
   getState: () => ({ ...state }),
 
-  // Mide el tiempo de ida y vuelta (ms) de la petición ping (la hace el controlador: sendPing).
   async ping(sendPing) {
     const started = performance.now();
     await sendPing();

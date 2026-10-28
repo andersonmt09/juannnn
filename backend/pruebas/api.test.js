@@ -1,6 +1,3 @@
-// Pruebas de la API completa. Levantan servidor.js en un puerto libre,
-// así que no hace falta tener el servidor encendido, pero sí backend/.env
-// con la API de la base de datos externa disponible.
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { validateEnvironment } = require("../configuracion");
@@ -130,12 +127,10 @@ test("token_version: tras cambiar la contraseña el token y el refresh viejos de
   await User.softDelete(user.id);
 });
 
-// ================= Grupo D: seguridad =================
-// Los límites de autenticación se comparten dentro de este proceso (misma IP 127.0.0.1):
-// las pruebas de validación usan POST /users (sin límite) y las de límites van al final y en orden.
+// los límites de autenticación van al final y en orden
 
 const stamp = Date.now();
-const created = []; // usuarios creados, para borrarlos al terminar
+const created = [];
 
 async function makeAccount(role, label) {
   const User = require("../modelos/usuario");
@@ -169,7 +164,6 @@ test("POST /users valida: correo con coma, password objeto, rol Admin y contrase
     assert.equal(status, 400, JSON.stringify(body));
     assert.match(data.message, message);
   }
-  // Con 8 y con 72 caracteres sí se crea; el correo repetido da 409.
   const ok = await authed("POST", "/users", token, base);
   assert.equal(ok.status, 201);
   created.push(ok.data.data.id);
@@ -187,15 +181,14 @@ test("usuario común: el detalle de un endpoint monitoreado no trae source; el a
   assert.equal(made.status, 201);
   const id = made.data.data.id;
   try {
-    await request("GET", "/health"); // genera una petición registrada para esa ruta
-    await new Promise((resolve) => setTimeout(resolve, 300)); // el registro se guarda sin bloquear la respuesta
+    await request("GET", "/health");
+    await new Promise((resolve) => setTimeout(resolve, 300));
     const asCommon = await authed("GET", `/monitoring/endpoints/${id}`, common.token);
     assert.equal(asCommon.status, 200);
     assert.ok(asCommon.data.data.recentRequests.length > 0);
     assert.ok(asCommon.data.data.recentRequests.every((r) => !("source" in r)));
     const asAdmin = await authed("GET", `/monitoring/endpoints/${id}`, admin.token);
     assert.ok(asAdmin.data.data.recentRequests.every((r) => "source" in r));
-    // /api/events/stream no es una ruta monitoreable
     const routes = await authed("GET", "/monitoring/routes", admin.token);
     assert.ok(!routes.data.data.some((r) => r.path === "/api/events/stream"));
   } finally {
@@ -203,19 +196,17 @@ test("usuario común: el detalle de un endpoint monitoreado no trae source; el a
   }
 });
 
-// Va después de las demás: agota los límites de autenticación de la IP de pruebas.
 test("resend-code: enfriamiento de 30 s (segundo envío → 429) y máximo 5 por IP contando las exitosas", async () => {
   const emails = Array.from({ length: 6 }, (_, i) => `reenvio${i}-${stamp}@axon.com`);
   const resend = (email, path = "/auth/login/resend-code") => request("POST", path, { email });
 
   assert.equal((await resend(emails[0])).status, 200);
-  const cooldown = await resend(emails[0]); // mismo correo, de inmediato
+  const cooldown = await resend(emails[0]);
   assert.equal(cooldown.status, 429);
   assert.match(cooldown.data.message, /Espera unos segundos/);
-  // También en el endpoint de registro (mismo correo y otro propósito no comparten enfriamiento, pero sí el límite por IP).
   assert.equal((await resend(emails[1])).status, 200);
   assert.equal((await resend(emails[2], "/auth/register/resend-code")).status, 200);
-  assert.equal((await resend(emails[3])).status, 200); // 5.ª petición de la IP
+  assert.equal((await resend(emails[3])).status, 200);
   const limited = await resend(emails[4]);
   assert.equal(limited.status, 429);
   assert.match(limited.data.message, /Demasiados intentos/);
@@ -233,7 +224,7 @@ test("un X-Forwarded-For falso no evita el 429 del login (trust proxy desactivad
   }
   const firstBlocked = statuses.indexOf(429);
   assert.ok(firstBlocked !== -1 && firstBlocked <= 5, `se esperaba 429 con máx. 5 intentos: ${statuses}`);
-  assert.ok(statuses.slice(firstBlocked).every((s) => s === 429)); // cambiar la IP declarada no ayuda
+  assert.ok(statuses.slice(firstBlocked).every((s) => s === 429));
 });
 
 test.after(async () => {

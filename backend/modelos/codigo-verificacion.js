@@ -1,4 +1,3 @@
-// Modelo de los códigos de verificación enviados por correo (recurso /verification-codes).
 const { db } = require("../externos");
 
 class VerificationCode {
@@ -27,12 +26,10 @@ class VerificationCode {
     return row.id;
   }
 
-  // Último código sin usar y sin vencer para un correo y propósito.
   static async findActive(email, purpose) {
     return VerificationCode.fromRow(await db.find("/verification-codes/active", { email, purpose }));
   }
 
-  // Suma un intento y devuelve el total ya incrementado (la API externa lo hace de forma atómica).
   static async incrementAttempts(id) {
     const row = await db.post(`/verification-codes/${id}/attempts`);
     return Number(row?.attempts);
@@ -42,7 +39,6 @@ class VerificationCode {
     await db.patch(`/verification-codes/${id}`, { used: true });
   }
 
-  // Invalida los códigos anteriores antes de generar uno nuevo.
   static async invalidateAll(email, purpose) {
     await db.post("/verification-codes/invalidate", { email, purpose });
   }

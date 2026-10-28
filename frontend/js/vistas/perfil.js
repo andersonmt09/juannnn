@@ -1,16 +1,9 @@
-// Vista de perfil (#/profile): tarjeta de identidad y formulario de cambio de contraseña.
 import { pageHeader, passwordField, badge } from "./componentes.js";
 import { el, initials, formatDate } from "../utilidades.js";
 
 const ROLE_LABEL = { admin: "Administrador", user: "Usuario" };
 
-/**
- * @param {HTMLElement} container
- * @param {{ user: { name: string, email: string, role: string } }} data
- * @param {{ onChangePassword: (data: { currentPassword: string, password: string, confirmPassword: string }) => void }} handlers
- */
 export function renderProfileView(container, { user }, { onChangePassword }) {
-  // ---- Identidad (se vuelve a pintar con setUser cuando llegan los datos frescos) ----
   const identity = el("div", { class: "card profile-card" });
 
   function setUser(next) {
@@ -27,7 +20,6 @@ export function renderProfileView(container, { user }, { onChangePassword }) {
   }
   setUser(user);
 
-  // ---- Contraseña ----
   const current = passwordField({ id: "profile-current-password", name: "currentPassword", label: "Contraseña actual", autocomplete: "current-password" });
   const next = passwordField({ id: "profile-password", name: "password", label: "Nueva contraseña", autocomplete: "new-password", hint: "Entre 8 y 72 caracteres", minlength: 8 });
   next.input.maxLength = 72;

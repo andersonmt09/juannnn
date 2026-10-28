@@ -1,4 +1,4 @@
-// Simulación de una petición que atraviesa las cuatro capas, midiendo el tiempo de cada una.
+// simulación de una petición por las cuatro capas
 const { performance } = require("perf_hooks");
 const User = require("../modelos/usuario");
 const MonitoredEndpoint = require("../modelos/endpoint-monitoreado");
@@ -7,8 +7,7 @@ const { HttpError } = require("../configuracion");
 
 const round = (ms) => Math.round(ms * 100) / 100;
 
-// Cada operación tiene dos partes: query (llama a un modelo) y shape (da forma a la respuesta).
-// La capa Backend mide la validación/preparación y el shape; la llamada al modelo cuenta como BD.
+// cada operación tiene query (modelo) y shape (respuesta)
 const OPERATIONS = {
   users: { query: () => User.countByRole(), shape: (roles) => ({ ...roles }) },
   endpoints: {
@@ -18,24 +17,23 @@ const OPERATIONS = {
   requests: { query: () => RequestLog.getSummary(), shape: (summary) => ({ ...summary }) },
 };
 
-// receivedAt: performance.now() tomado al entrar la petición (el controlador lo pasa).
 async function run({ operation, forceError }, receivedAt = performance.now()) {
   const startedAt = new Date().toISOString();
   const apiEnd = performance.now();
 
-  // Backend: validar la operación y preparar la consulta (antes de la BD)
+  // backend: validar y preparar
   const prepStart = performance.now();
   const operationDef = Object.hasOwn(OPERATIONS, operation) ? OPERATIONS[operation] : null;
   if (!operationDef) throw HttpError.badRequest("Operación no soportada");
   const prepMs = performance.now() - prepStart;
 
-  // Base de datos: llamada al modelo (o fallo simulado)
+  // base de datos
   const dbStart = performance.now();
   if (forceError) throw new HttpError(500, "Fallo simulado en la capa de base de datos");
   const raw = await operationDef.query();
   const databaseMs = performance.now() - dbStart;
 
-  // Backend: dar forma a la respuesta con el resultado de la BD
+  // backend: dar forma a la respuesta
   const shapeStart = performance.now();
   const data = operationDef.shape(raw);
   const backendMs = prepMs + (performance.now() - shapeStart);

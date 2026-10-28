@@ -1,4 +1,3 @@
-// Vista (res) de /api/simulations: lo que el servidor devuelve al cliente.
 const LAYER_NAMES = {
   client: "Cliente / UI",
   api: "Capa API",
@@ -6,7 +5,6 @@ const LAYER_NAMES = {
   database: "Base de datos",
 };
 
-// Las capas van siempre en este orden: client, api, backend, database.
 class SimulationResponseDto {
   constructor({ request, layers, data, totalMs }, { path = "/api/simulations" } = {}) {
     this.ok = true;

@@ -1,4 +1,3 @@
-// Controlador de #/activity (solo administradores): consola en vivo del stream, ping e historial paginado.
 import { renderActivityView } from "../vistas/actividad.js";
 import { stream } from "../modelos/eventos.js";
 import { http } from "../modelos/api.js";
@@ -6,9 +5,7 @@ import { getRequest } from "./panel.js";
 import { ListRequestLogsRequestDto, RequestLogIdRequestDto } from "../dto/metricas.js";
 import { toast, exportToCsv } from "../utilidades.js";
 
-// ---------- Endpoints ----------
-// GET  /metrics/requests?page&limit&method&statusClass (admin) devuelve { data, meta }
-// POST /events/ping                                    (admin)
+// endpoints
 const listRequests = (dto) => http.get(`/metrics/requests${dto.toQuery()}`);
 const pingEvents = () => http.post("/events/ping");
 
@@ -22,7 +19,7 @@ export function showActivity(container) {
   let filters = { statusClass: "", method: "" };
   let currentPage = 1;
   let pageRows = [];
-  let request = 0; // para ignorar respuestas viejas del historial
+  let request = 0; // ignora respuestas viejas del historial
   let active = true;
   let ticket = 0; // ignora respuestas viejas del detalle
 
@@ -67,7 +64,7 @@ export function showActivity(container) {
     async onPing() {
       view.setPinging(true);
       try {
-        await stream.ping(pingEvents); // el modelo mide, emite stream:pong y el oyente actualiza la pantalla
+        await stream.ping(pingEvents);
       } catch (error) {
         toast.error(error.message);
       } finally {

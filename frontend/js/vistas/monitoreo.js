@@ -1,14 +1,11 @@
-// Vista de monitoreo (#/monitoring): mini KPI y tabla de endpoints vigilados con sus estadísticas reales.
-// El botón de agregar y el de quitar solo se dibujan para administradores.
 import { pageHeader, emptyState, errorState, skeleton, kpiCard, dataTable, createModal, methodBadge, statusDot, statusCodeBadge, detailDrawer, descriptionList, requestDetailContent } from "./componentes.js";
 import { el, icon, formatNumber, formatRelative, formatDate } from "../utilidades.js";
 
-const HIGH_ERROR_RATE = 0.2; // 20 % o más de respuestas con error = fallando
+const HIGH_ERROR_RATE = 0.2; // 20 % o más con error = fallando
 const STATUS_LABEL = { healthy: "Saludable", failing: "Con errores", "no-traffic": "Sin tráfico" };
 
 const rateOf = ({ requests, errors, errorRate }) => errorRate ?? (requests ? errors / requests : 0);
 
-// Número de errores y una barra fina con la tasa.
 function errorsCell(stats) {
   const rate = rateOf(stats);
   const tone = rate >= HIGH_ERROR_RATE ? "danger" : rate > 0 ? "warning" : "success";
@@ -19,11 +16,6 @@ function errorsCell(stats) {
   ]);
 }
 
-/**
- * @param {HTMLElement} container
- * @param {{ canManage: boolean }} data
- * @param {{ onSelect: (endpoint: object) => void, onSelectRequest: (request: object) => void, onOpenForm: () => void, onSave: (data: object) => void, onDelete: (endpoint: object) => void, onRefresh: () => void }} handlers
- */
 export function renderMonitoringView(container, { canManage }, handlers) {
   const kpis = {
     total: kpiCard({ label: "Monitoreados", icon: "link", tone: "accent", loading: true }),
@@ -33,7 +25,6 @@ export function renderMonitoringView(container, { canManage }, handlers) {
   };
   const tableCard = el("div", { class: "card card-flush" }, [skeleton(5)]);
 
-  // ---- Modal para agregar ----
   const routeSelect = el("select", { id: "mon-route", name: "route", class: "input mono", required: true });
   const form = el("form", { id: "mon-form" }, [
     el("div", { class: "field" }, [el("label", { class: "field-label", for: "mon-route" }, ["Ruta de la API"]), routeSelect]),
@@ -60,7 +51,6 @@ export function renderMonitoringView(container, { canManage }, handlers) {
     handlers.onSave({ method, path, name, description });
   });
 
-  // ---- Drawer de detalle ----
   const drawer = detailDrawer({ title: "Detalle del endpoint" });
   const backButton = (endpoint) => el("button", { type: "button", class: "btn btn-secondary", onclick: () => handlers.onSelect(endpoint) }, ["Volver al endpoint"]);
 
@@ -79,7 +69,6 @@ export function renderMonitoringView(container, { canManage }, handlers) {
       { label: "Última petición", value: stats.lastRequestAt ? formatDate(stats.lastRequestAt) : "—" },
       { label: "Agregado", value: formatDate(ep.createdAt) },
     ]);
-    // Peticiones recientes: el admin puede abrir cada una.
     const onClick = canManage ? { onRowClick: (row) => handlers.onSelectRequest(row) } : {};
     const table = dataTable({
       columns: [
@@ -176,7 +165,6 @@ export function renderMonitoringView(container, { canManage }, handlers) {
       tableCard.replaceChildren(errorState({ text: "No se pudo cargar el monitoreo.", onRetry: handlers.onRefresh }));
     },
 
-    // routes: rutas de la API que todavía no se monitorean.
     openForm(routes) {
       routeSelect.replaceChildren(...routes.map(({ method, path }) =>
         el("option", { value: `${method} ${path}` }, [`${method} ${path}`])));

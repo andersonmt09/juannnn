@@ -1,4 +1,3 @@
-// Controlador de #/monitoring: muestra las estadísticas y, si es administrador, agrega o quita endpoints.
 import { renderMonitoringView } from "../vistas/monitoreo.js";
 import { confirmDialog } from "../vistas/componentes.js";
 import { http } from "../modelos/api.js";
@@ -9,12 +8,7 @@ import { session } from "../modelos/sesion.js";
 import { toast } from "../utilidades.js";
 
 
-// ---------- Endpoints ----------
-// GET    /monitoring/endpoints      (con sesión)
-// GET    /monitoring/endpoints/:id  (con sesión) endpoint con estadísticas y recentRequests (hasta 10)
-// GET    /monitoring/routes         (admin) rutas reales de la API
-// POST   /monitoring/endpoints      (admin)
-// DELETE /monitoring/endpoints/:id  (admin)
+// endpoints
 const listEndpoints = () => http.get("/monitoring/endpoints").then((res) => res.data);
 const getEndpoint = (dto) => http.get(`/monitoring/endpoints/${dto.id}`).then((res) => res.data);
 const listApiRoutes = () => http.get("/monitoring/routes").then((res) => res.data);
@@ -24,7 +18,7 @@ const removeEndpoint = (dto) => http.delete(`/monitoring/endpoints/${dto.id}`);
 export async function showMonitoring(container) {
   let endpoints = [];
   let active = true;
-  let selected = null; // endpoint abierto en el drawer
+  let selected = null;
   let ticket = 0; // ignora respuestas viejas del detalle
 
   async function loadEndpoints() {

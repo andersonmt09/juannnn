@@ -1,15 +1,9 @@
-// Vista de verificación con código de 6 dígitos (#/verify), para el registro y el inicio de sesión.
 import { el, icon, maskEmail } from "../utilidades.js";
 
 const RESEND_SECONDS = 30; // espera entre reenvíos
 
 const clock = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
-/**
- * @param {HTMLElement} container
- * @param {{ email: string, isRegistration: boolean, expiresAt: number }} data (expiresAt en ms)
- * @param {{ onSubmit: (code: string) => void, onResend: () => void }} handlers
- */
 export function renderVerifyView(container, { email, isRegistration, expiresAt }, { onSubmit, onResend }) {
   let loading = false;
   let expired = false;
@@ -34,7 +28,7 @@ export function renderVerifyView(container, { email, isRegistration, expiresAt }
   }
 
   form.addEventListener("submit", (event) => { event.preventDefault(); send(); });
-  // Solo dígitos; con 6 dígitos (escritos o pegados) se envía solo.
+  // con 6 dígitos (escritos o pegados) se envía solo
   input.addEventListener("input", () => {
     input.value = input.value.replace(/\D/g, "").slice(0, 6);
     if (input.value.length === 6) send();
@@ -112,7 +106,6 @@ export function renderVerifyView(container, { email, isRegistration, expiresAt }
       refreshControls();
       if (!value && !expired) input.focus();
     },
-    // Tras un reenvío correcto: limpia el campo y reinicia ambos contadores.
     restartTimers(newExpiresAt) {
       input.value = "";
       startExpiry(newExpiresAt);
@@ -120,7 +113,6 @@ export function renderVerifyView(container, { email, isRegistration, expiresAt }
       input.focus();
     },
     clearCode() { input.value = ""; input.focus(); },
-    // Limpieza al salir de la pantalla.
     destroy() {
       clearInterval(expiryTimer);
       clearInterval(resendTimer);

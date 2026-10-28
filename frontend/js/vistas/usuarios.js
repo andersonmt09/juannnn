@@ -1,27 +1,12 @@
-// Vista de gestión de usuarios (#/users). Dibuja la tabla, la paginación y el formulario; las acciones las decide el controlador.
 import { pageHeader, createModal, emptyState, errorState, dataTable, pagination, badge, skeleton, detailDrawer, descriptionList } from "./componentes.js";
 import { el, icon, initials, formatDate, formatNumber } from "../utilidades.js";
 
 const ROLE_LABEL = { admin: "Administrador", user: "Usuario" };
 
-/**
- * @param {HTMLElement} container
- * @param {{
- *   onNew: () => void,
- *   onSelect: (user: object) => void,
- *   onEdit: (user: object) => void,
- *   onDelete: (user: object) => void,
- *   onSave: (data: { name: string, email: string, role: string, password: string }) => void,
- *   onPageChange: (page: number) => void,
- *   onExport: () => void,
- *   onRetry: () => void,
- * }} handlers
- */
 export function renderUsersView(container, handlers) {
   const subtitle = el("span", {}, ["Gestión de cuentas y roles"]);
   const tableCard = el("div", { class: "card" }, [skeleton(5)]);
 
-  // ---- Formulario del modal ----
   const nameInput = el("input", { id: "user-name", name: "name", class: "input", required: true, minlength: "2", maxlength: "100", autocomplete: "off" });
   const emailInput = el("input", { id: "user-email", name: "email", class: "input", type: "email", required: true, autocomplete: "off" });
   const roleSelect = el("select", { id: "user-role", name: "role", class: "input" }, [
@@ -49,11 +34,10 @@ export function renderUsersView(container, handlers) {
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    // Con el select deshabilitado FormData omite el rol: se lee directo.
+    // con el select deshabilitado FormData omite el rol
     handlers.onSave({ ...Object.fromEntries(new FormData(form)), role: roleSelect.value });
   });
 
-  // ---- Drawer de detalle ----
   const drawer = detailDrawer({ title: "Detalle del usuario" });
 
   container.replaceChildren(
@@ -147,7 +131,7 @@ export function renderUsersView(container, handlers) {
       tableCard.replaceChildren(errorState({ text: "No se pudieron cargar los usuarios.", onRetry: handlers.onRetry }));
     },
 
-    // isSelf: la contraseña propia se cambia en "Mi perfil" (pide la actual) y el rol propio no se cambia.
+    // isSelf: la contraseña propia se cambia en Mi perfil
     openForm(user = null, { isSelf = false } = {}) {
       modal.setTitle(user ? "Editar usuario" : "Nuevo usuario");
       form.reset();

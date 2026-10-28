@@ -1,10 +1,7 @@
-// Configuración general del backend: variables de entorno (.env), constantes y utilidades compartidas.
+// variables de entorno y constantes
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
-// ---------- Variables de entorno ----------
-
-// "false"/vacío -> false; un número -> ese número de saltos; "true" -> true; otro texto se pasa tal cual (IP o lista).
 function parseTrustProxy(raw) {
   const value = String(raw || "").trim();
   if (!value || value.toLowerCase() === "false") return false;
@@ -17,10 +14,8 @@ const env = {
   port: Number(process.env.PORT) || 4000,
   nodeEnv: process.env.NODE_ENV || "development",
 
-  // Proxies de confianza para leer la IP real (req.ip). Por defecto false: se ignora X-Forwarded-For.
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
 
-  // La base de datos es externa: el backend solo conoce la dirección de su API.
   databaseApi: {
     url: process.env.DATABASE_API_URL || "",
     key: process.env.DATABASE_API_KEY || "",
@@ -43,7 +38,6 @@ const env = {
   },
 };
 
-// Detiene el arranque si falta alguna variable obligatoria.
 function validateEnvironment() {
   const missing = [];
   if (!/^https?:\/\//.test(env.databaseApi.url)) missing.push("DATABASE_API_URL (debe empezar por http:// o https://)");
@@ -60,9 +54,7 @@ function validateEnvironment() {
   }
 }
 
-// ---------- Constantes ----------
-
-// INACTIVE marca una cuenta eliminada de forma lógica.
+// INACTIVE marca una cuenta eliminada
 const ROLES = Object.freeze({ ADMIN: "admin", USER: "user", INACTIVE: "inactive" });
 
 const SECURITY = Object.freeze({
@@ -83,16 +75,11 @@ const SECURITY = Object.freeze({
 
 const PAGINATION = Object.freeze({ DEFAULT_LIMIT: 20, MAX_LIMIT: 100 });
 
-// Para qué se envió un código de verificación.
 const CODE_PURPOSE = Object.freeze({ LOGIN: "login", REGISTRATION: "registration" });
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
-// ---------- Errores HTTP ----------
-
-// Los servicios lanzan HttpError y el middleware de errores lo convierte en respuesta.
 class HttpError extends Error {
-  // code: texto estable para que el frontend distinga casos; path y method los completa el 404.
   constructor(statusCode, message, details, code) {
     super(message);
     this.name = "HttpError";
@@ -109,20 +96,16 @@ class HttpError extends Error {
   static tooManyRequests(message = "Demasiados intentos. Intenta más tarde.") { return new HttpError(429, message); }
 }
 
-// Envuelve un controlador async para que sus errores lleguen al middleware de errores.
 const asyncHandler = (handler) => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
-
-// ---------- Validaciones ----------
 
 const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
 const isValidEmail = (value) => typeof value === "string" && value.length <= SECURITY.EMAIL_MAX_LENGTH && EMAIL_REGEX.test(value);
-// Si no es texto devuelve "" (así nunca pasa la validación ni lanza error).
 const normalizeEmail = (value) => (typeof value === "string" ? value.trim().toLowerCase() : "");
 const isValidHttpMethod = (value) => HTTP_METHODS.includes(String(value || "").toUpperCase());
 const isPositiveInteger = (value) => Number.isInteger(Number(value)) && Number(value) > 0;
 
-// "/api/users/15?x=1" -> "/api/users/:id". Así se agrupan las peticiones por ruta.
+// /api/users/15 pasa a /api/users/:id
 const toRoutePattern = (url) => String(url || "").split("?")[0].replace(/\/\d+(?=\/|$)/g, "/:id");
 
 module.exports = {

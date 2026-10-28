@@ -1,8 +1,5 @@
-// Modelo del estado del cliente, guardado en localStorage:
-// la sesión (tokens, usuario actual y verificación pendiente) y las preferencias (tema).
+// estado del cliente en localStorage: sesión y tema
 import { storage } from "../utilidades.js";
-
-// ---------- Sesión ----------
 
 const KEYS = Object.freeze({
   ACCESS_TOKEN: "axon_access_token",
@@ -13,7 +10,6 @@ const KEYS = Object.freeze({
   CODE_EXPIRES_AT: "axon_code_expires_at",
 });
 
-// Para qué se pide el código de verificación (lo usan los tres controladores de acceso).
 export const VERIFICATION_PURPOSE = Object.freeze({ LOGIN: "login", REGISTRATION: "registration" });
 
 const CODE_VALID_MS = 5 * 60 * 1000; // el código vence a los 5 minutos
@@ -35,7 +31,6 @@ export const session = {
     if (user) storage.set(KEYS.USER, JSON.stringify(user));
   },
 
-  // Reemplaza solo los datos del usuario (por ejemplo tras consultar GET /users/:id).
   updateUser(user) {
     if (user) storage.set(KEYS.USER, JSON.stringify(user));
   },
@@ -46,13 +41,11 @@ export const session = {
     storage.remove(KEYS.USER);
   },
 
-  // Verificación pendiente: entre el registro o el inicio de sesión y la pantalla del código.
   setPendingVerification(email, purpose) {
     storage.set(KEYS.PENDING_EMAIL, email);
     storage.set(KEYS.PENDING_PURPOSE, purpose);
     this.restartCodeExpiry();
   },
-  // Hora (ms) en que vence el código; se guarda para que el contador sobreviva a recargas.
   restartCodeExpiry() {
     storage.set(KEYS.CODE_EXPIRES_AT, String(Date.now() + CODE_VALID_MS));
   },
@@ -72,8 +65,6 @@ export const session = {
     storage.remove(KEYS.CODE_EXPIRES_AT);
   },
 };
-
-// ---------- Preferencias ----------
 
 const THEME_KEY = "axon_theme";
 const THEMES = ["dark", "light"];

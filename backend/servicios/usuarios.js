@@ -1,4 +1,4 @@
-// Reglas de gestión de usuarios. Devuelve modelos User; el controlador arma la vista de respuesta.
+// reglas de gestión de usuarios
 const bcrypt = require("bcryptjs");
 const User = require("../modelos/usuario");
 const authService = require("./autenticacion");
@@ -10,14 +10,13 @@ async function findActiveOrFail(id) {
   return user;
 }
 
-// 409 si el correo ya existe (también en cuentas eliminadas: el correo es único).
 async function ensureEmailFree(email, ownId) {
   const other = await User.findByEmail(email);
   if (!other || other.id === ownId) return;
   throw HttpError.conflict(other.isActive() ? "El correo ya está registrado" : "El correo pertenece a una cuenta eliminada");
 }
 
-// Impide dejar el sistema sin administradores activos.
+// no puede quedar el sistema sin administradores
 async function ensureAnotherAdminExists(user) {
   if (!user.isAdmin()) return;
   const roles = await User.countByRole();
@@ -29,13 +28,11 @@ async function list({ page, limit }) {
   return { users, total, page, limit };
 }
 
-// Un usuario ve su propio perfil; el administrador ve cualquiera.
 async function getById(id, requester) {
   if (requester.id !== id && !requester.isAdmin()) throw HttpError.forbidden();
   return findActiveOrFail(id);
 }
 
-// Los usuarios creados por un administrador quedan verificados.
 async function create({ name, email, password, role }, requester) {
   await ensureEmailFree(email);
 
@@ -55,10 +52,9 @@ async function update(id, changes, requester) {
   return User.update(id, changes);
 }
 
-// Para cambiar la propia contraseña hay que dar la actual. El administrador puede cambiar la de otros sin ella.
-// Devuelve la sesión nueva si es la propia; null si la cambió un administrador a otro usuario.
+// para cambiar la propia contraseña hay que dar la actual
 async function changePassword(id, { currentPassword, password }, requester) {
-  // Primero el permiso (403) y después la existencia (404).
+  // primero el permiso (403), después la existencia (404)
   const isOwner = requester.id === id;
   if (!isOwner && !requester.isAdmin()) throw HttpError.forbidden();
   const user = await findActiveOrFail(id);
@@ -68,16 +64,15 @@ async function changePassword(id, { currentPassword, password }, requester) {
     if (!valid) throw HttpError.badRequest("La contraseña actual no es correcta");
   }
 
-  // token_version + 1 cierra todas las sesiones del usuario.
+  // token_version + 1 cierra todas las sesiones
   const tokenVersion = user.tokenVersion + 1;
   await User.updatePassword(id, await bcrypt.hash(password, SECURITY.BCRYPT_ROUNDS), tokenVersion);
 
-  // Si cambia la propia, devuelve una sesión nueva para seguir conectado en este dispositivo.
   if (isOwner) return authService.issueSession(await findActiveOrFail(id));
   return null;
 }
 
-// Eliminación lógica. Nadie puede eliminarse a sí mismo ni al último administrador.
+// nadie se elimina a sí mismo ni al último administrador
 async function remove(id, requester) {
   const user = await findActiveOrFail(id);
   if (requester.id === user.id) throw HttpError.badRequest("No puedes eliminar tu propio usuario");

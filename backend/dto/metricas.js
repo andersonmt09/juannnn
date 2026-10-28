@@ -1,4 +1,3 @@
-// DTO de petición (req) de /api/metrics y /api/health: lo que envía el cliente, limpio y validado.
 const { BaseRequestDto } = require("./comunes");
 const { PAGINATION, isValidHttpMethod, isPositiveInteger } = require("../configuracion");
 const metricService = require("../servicios/metricas");
@@ -6,7 +5,6 @@ const { DashboardResponseDto, HealthResponseDto, RequestLogListResponseDto, Requ
 
 const STATUS_CLASSES = ["2xx", "3xx", "4xx", "5xx"];
 
-// GET /api/metrics/requests?page=&limit=&method=&statusClass=
 class ListRequestLogsRequestDto extends BaseRequestDto {
   constructor({ page, limit, method, statusClass } = {}) {
     super();
@@ -25,7 +23,6 @@ class ListRequestLogsRequestDto extends BaseRequestDto {
   }
 }
 
-// GET /api/metrics/requests/:id
 class RequestLogIdRequestDto extends BaseRequestDto {
   constructor({ id } = {}) {
     super();
@@ -35,8 +32,6 @@ class RequestLogIdRequestDto extends BaseRequestDto {
     return isPositiveInteger(this.id) ? [] : ["El id debe ser un número entero positivo"];
   }
 }
-
-// ---------- Funciones que reciben la petición (req) ----------
 
 async function getDashboard(req, res) {
   res.json(new DashboardResponseDto(await metricService.getDashboard()));

@@ -1,4 +1,3 @@
-// DTO de petición (req) de /api/monitoring: lo que envía el cliente, limpio y validado.
 const { BaseRequestDto } = require("./comunes");
 const { ROLES, HTTP_METHODS, SECURITY, isValidHttpMethod, isPositiveInteger } = require("../configuracion");
 const monitoringService = require("../servicios/monitoreo");
@@ -10,7 +9,6 @@ const {
   ApiRouteListResponseDto,
 } = require("../vistas/monitoreo");
 
-// POST /api/monitoring/endpoints
 class CreateMonitoredEndpointRequestDto extends BaseRequestDto {
   constructor({ name, method, path, description } = {}) {
     super();
@@ -33,7 +31,6 @@ class CreateMonitoredEndpointRequestDto extends BaseRequestDto {
   }
 }
 
-// DELETE /api/monitoring/endpoints/:id
 class MonitoredEndpointIdRequestDto extends BaseRequestDto {
   constructor({ id } = {}) {
     super();
@@ -44,9 +41,6 @@ class MonitoredEndpointIdRequestDto extends BaseRequestDto {
   }
 }
 
-// ---------- Funciones que reciben la petición (req) ----------
-
-// Rutas reales de la API; las calcula servidor.js con listApiRoutes de controladores/index.js.
 const apiRoutes = (req) => req.app.locals.apiRoutes || [];
 
 function listRoutes(req, res) {

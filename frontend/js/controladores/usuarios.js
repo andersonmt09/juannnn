@@ -1,4 +1,3 @@
-// Controlador de #/users (solo administradores): listar por páginas, crear, editar, eliminar y exportar usuarios.
 import { renderUsersView } from "../vistas/usuarios.js";
 import { confirmDialog } from "../vistas/componentes.js";
 import { http } from "../modelos/api.js";
@@ -6,22 +5,15 @@ import { ListUsersRequestDto, UserIdRequestDto, CreateUserRequestDto, UpdateUser
 import { session } from "../modelos/sesion.js";
 import { toast, exportToCsv } from "../utilidades.js";
 
-// ---------- Endpoints ----------
-// GET    /users?page&limit      (admin) devuelve { data, meta: { total, page, limit, totalPages } }
-// GET    /users/:id             (con sesión)
-// POST   /users                 (admin)
-// PUT    /users/:id             (admin)
-// PATCH  /users/:id/password    (con sesión; también lo usa perfil)
-// DELETE /users/:id             (admin)
+// endpoints
 const listUsers = (dto) => http.get(`/users${dto.toQuery()}`);
 export const getUser = (dto) => http.get(`/users/${dto.id}`).then((res) => res.data);
 const createUser = (dto) => http.post("/users", dto).then((res) => res.data);
 const updateUser = (idDto, dto) => http.put(`/users/${idDto.id}`, dto).then((res) => res.data);
-// Si es la contraseña propia, la respuesta trae una sesión nueva { accessToken, refreshToken, user }.
+// si es la propia, trae una sesión nueva
 export const changePassword = (idDto, dto) => http.patch(`/users/${idDto.id}/password`, dto);
 const removeUser = (dto) => http.delete(`/users/${dto.id}`);
 
-// Todos los usuarios (recorre todas las páginas), para exportar a CSV.
 async function listAllUsers() {
   const all = [];
   for (let page = 1, totalPages = 1; page <= totalPages; page++) {
@@ -49,7 +41,7 @@ export async function showUsers(container) {
     try {
       const { data, meta } = await listUsers(new ListUsersRequestDto({ page, limit: PAGE_SIZE }));
       if (!active) return;
-      // Si se eliminó el último de una página, vuelve a la anterior.
+      // si se eliminó el último de la página, vuelve a la anterior
       if (!data.length && page > 1) return loadUsers(page - 1);
       currentPage = meta.page;
       view.showUsers(data, meta, currentUserId);
@@ -67,7 +59,7 @@ export async function showUsers(container) {
       return;
     }
     const isSelf = editingUser.id === currentUserId;
-    // El rol propio no se cambia: no se envía.
+    // el rol propio no se cambia
     await updateUser(new UserIdRequestDto({ id: editingUser.id }), new UpdateUserRequestDto({ name, email, role: isSelf ? undefined : role }));
     if (password && !isSelf) await changePassword(new UserIdRequestDto({ id: editingUser.id }), new ChangePasswordRequestDto({ password }));
     toast.success("Usuario actualizado");

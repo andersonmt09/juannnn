@@ -1,5 +1,3 @@
-// Vista (res) de /api/events: eventos SSE y respuestas del stream.
-// stream:connected
 class ConnectedEventDto {
   constructor({ clientId }) {
     this.clientId = clientId;
@@ -7,7 +5,6 @@ class ConnectedEventDto {
   }
 }
 
-// stream:heartbeat
 class HeartbeatEventDto {
   constructor({ clients, uptimeSeconds }) {
     this.serverTime = new Date().toISOString();
@@ -16,7 +13,6 @@ class HeartbeatEventDto {
   }
 }
 
-// api:activity (sin usuario, IP ni query)
 class ActivityEventDto {
   constructor(log) {
     this.id = log.id ?? null;
@@ -28,7 +24,6 @@ class ActivityEventDto {
   }
 }
 
-// POST /api/events/ping
 class PongResponseDto {
   constructor() {
     this.ok = true;

@@ -1,4 +1,3 @@
-// Datos del panel (usuarios, endpoints monitoreados y peticiones) y estado de los servicios.
 const User = require("../modelos/usuario");
 const MonitoredEndpoint = require("../modelos/endpoint-monitoreado");
 const RequestLog = require("../modelos/registro-peticion");
@@ -18,7 +17,7 @@ async function getDashboard() {
   const users = roles[ROLES.USER] || 0;
   const inactive = roles[ROLES.INACTIVE] || 0;
 
-  // Errores = peticiones con código >= 400
+  // errores = código >= 400
   const errorsTotal = logs.byStatus
     .filter((item) => Number(item.status) >= 400)
     .reduce((sum, item) => sum + (Number(item.count) || 0), 0);
@@ -26,7 +25,7 @@ async function getDashboard() {
 
   return {
     summary: {
-      usersTotal: admins + users, // solo cuentas activas
+      usersTotal: admins + users,
       usersActive: admins + users,
       usersAdmin: admins,
       usersInactive: inactive,
@@ -43,13 +42,11 @@ async function getDashboard() {
   };
 }
 
-// Historial de peticiones paginado y filtrado.
 async function listRequests({ page, limit, method, statusClass }) {
   const { logs, total } = await RequestLog.findPage({ page, limit, method, statusClass });
   return { logs, total, page, limit };
 }
 
-// Una petición registrada y el usuario que la hizo (si hubo).
 async function getRequest(id) {
   const log = await RequestLog.findById(id);
   if (!log) throw HttpError.notFound("Petición no encontrada");
@@ -57,7 +54,6 @@ async function getRequest(id) {
   return { log, user };
 }
 
-// ¿Responde la API de la base de datos externa?
 async function checkHealth() {
   const { available, latencyMs } = await Database.ping();
   return {
@@ -67,7 +63,6 @@ async function checkHealth() {
   };
 }
 
-// Estado de cada servicio: base de datos, API, tiempo real y correo.
 async function getServices() {
   const { available, latencyMs } = await Database.ping();
   const clients = eventService.countClients();

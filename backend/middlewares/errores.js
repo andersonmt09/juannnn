@@ -1,17 +1,14 @@
-// Respuesta para rutas inexistentes y formato único para todos los errores.
 const { ErrorResponseDto } = require("../vistas/comunes");
 const { env, HttpError } = require("../configuracion");
 
-// 404 con la ruta (sin query string) y el método.
 function notFound(req, res, next) {
-  res.locals.notFound = true; // el registro de peticiones no guarda rutas inexistentes
+  res.locals.notFound = true;
   const error = HttpError.notFound("Endpoint no encontrado");
   error.path = req.originalUrl.split("?")[0];
   error.method = req.method;
   next(error);
 }
 
-// Errores de body-parser traducidos al español.
 function normalizeError(error) {
   if (error.type === "entity.parse.failed") {
     return HttpError.badRequest("El cuerpo de la petición no es un JSON válido");
@@ -22,7 +19,6 @@ function normalizeError(error) {
   return error;
 }
 
-// Formato único para todos los errores (ErrorResponseDto).
 // eslint-disable-next-line no-unused-vars
 function errorHandler(rawError, req, res, next) {
   const error = normalizeError(rawError);

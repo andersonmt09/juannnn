@@ -1,6 +1,3 @@
-// Vista (res) de respuestas comunes a toda la API: lo que el servidor devuelve al cliente.
-
-// { ok: true, message }
 class MessageResponseDto {
   constructor(message) {
     this.ok = true;
@@ -8,7 +5,6 @@ class MessageResponseDto {
   }
 }
 
-// { ok: false, message, errors?, code?, path?, method? }
 class ErrorResponseDto {
   constructor(message, { errors, code, path, method } = {}) {
     this.ok = false;

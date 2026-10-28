@@ -1,4 +1,3 @@
-// Vista del panel (#/dashboard). Solo dibuja los datos que recibe y avisa por callbacks.
 import {
   pageHeader, kpiCard, architectureGraph, doughnutChart, barChart, dataTable, emptyState,
   errorState, skeleton, segmented, badge, methodBadge, statusCodeBadge, statusDot, detailDrawer, requestDetailContent,
@@ -24,7 +23,6 @@ const card = (title, body, extra = null, className = "") =>
     body,
   ]);
 
-// Agrupa los códigos HTTP por clase (2xx..5xx) para la dona.
 function statusItems(byStatus = []) {
   const totals = {};
   for (const { status, count } of byStatus) {
@@ -34,7 +32,7 @@ function statusItems(byStatus = []) {
   return STATUS_CLASSES.filter(({ key }) => totals[key]).map(({ key, tone }) => ({ label: key, value: totals[key], tone }));
 }
 
-// Sin Chart.js (CDN caído) se dibujan barras simples con los mismos datos.
+// sin Chart.js se dibujan barras simples
 function fallbackChart(title, items) {
   const max = Math.max(1, ...items.map((i) => i.value));
   const rows = items.map((item) => {
@@ -86,10 +84,6 @@ function servicesList(services) {
   ])));
 }
 
-/**
- * createDashboardView(container, { userName }, { onRefresh, onExport, onSelectRequest })
- *  -> { showLoading, showError, showData, update, setRefreshing, setUpdatedAt, bindSimulation, playSimulation, destroy }
- */
 export function createDashboardView(container, { userName }, { onRefresh, onExport, onSelectRequest }) {
   const drawer = detailDrawer({ title: "Detalle de la petición" });
   let charts = [];
@@ -126,7 +120,6 @@ export function createDashboardView(container, { userName }, { onRefresh, onExpo
     body.replaceChildren(el("div", { class: "card" }, [errorState({ text: "No se pudo cargar el panel de control.", onRetry })]));
   }
 
-  // Actualiza los KPI y la tabla de actividad (también en vivo).
   function update(summary, recent) {
     if (!kpis) return;
     const errorPct = (summary.errorRate || 0) * 100;
@@ -158,7 +151,6 @@ export function createDashboardView(container, { userName }, { onRefresh, onExpo
     chartOrFallback("bar", "Peticiones por método", (dashboard.requestsByMethod || []).map((m) => ({ label: m.method, value: m.count }))),
   ];
 
-  // Actualización suave: KPI, tabla y gráficos sin tocar la simulación ni el grafo.
   function refreshData({ dashboard, recent }) {
     if (!kpis) return;
     const old = charts;
@@ -205,10 +197,8 @@ export function createDashboardView(container, { userName }, { onRefresh, onExpo
     update,
     setRefreshing(on) { refreshBtn.classList.toggle("is-loading", on); refreshBtn.disabled = on; },
     setUpdatedAt(date) { subtitle.textContent = `Hola, ${userName || ""} · Actualizado ${TIME.format(date)}`; },
-    // run({ operation, forceError }) lo atiende el controlador.
     bindSimulation(handler) { onRun = handler; },
     setRunning(on) { simUi?.runBtn.classList.toggle("is-loading", on); if (simUi) simUi.runBtn.disabled = on; },
-    // result: { layers, totalMs, data } o, si falló, { failed: true, message, totalMs }.
     async playSimulation(result) {
       if (!graph || !simUi) return;
       const out = simUi.result;

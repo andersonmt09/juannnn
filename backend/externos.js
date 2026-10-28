@@ -1,12 +1,8 @@
-// Sistemas externos al proyecto: la API de la base de datos, el correo (SMTP) y los tokens JWT.
+// sistemas externos: API de la base de datos, correo y JWT
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const { env, HttpError, CODE_PURPOSE, SECURITY } = require("./configuracion");
-
-// ---------- API de la base de datos externa ----------
-// El proyecto no contiene SQL ni se conecta directamente a la base: los modelos
-// piden y guardan los datos llamando a esta API (DATABASE_API_URL en backend/.env).
 
 function buildUrl(path, query) {
   const url = new URL(env.databaseApi.url.replace(/\/$/, "") + path);
@@ -34,7 +30,6 @@ async function request(method, path, { query, body, allowNotFound = false } = {}
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    // No se reenvía el mensaje externo al cliente.
     if (response.status === 409) throw new HttpError(409, "El recurso ya existe");
     throw new HttpError(502, "La base de datos externa respondió con un error");
   }
@@ -43,15 +38,14 @@ async function request(method, path, { query, body, allowNotFound = false } = {}
 
 const db = {
   get: (path, query) => request("GET", path, { query }),
-  find: (path, query) => request("GET", path, { query, allowNotFound: true }), // null si no existe
+  find: (path, query) => request("GET", path, { query, allowNotFound: true }),
   post: (path, body) => request("POST", path, { body }),
   patch: (path, body) => request("PATCH", path, { body }),
   delete: (path) => request("DELETE", path),
   ping: () => request("GET", "/health"),
 };
 
-// ---------- Correo ----------
-// Sin SMTP configurado, el mensaje se muestra en la consola.
+// sin SMTP configurado, el mensaje sale en la consola
 
 const transporter = env.smtp.host
   ? nodemailer.createTransport({
@@ -62,7 +56,6 @@ const transporter = env.smtp.host
     })
   : null;
 
-// Asunto del correo según el propósito del código.
 const MAIL_SUBJECTS = {
   [CODE_PURPOSE.REGISTRATION]: "AXON Security · Código de verificación",
   [CODE_PURPOSE.LOGIN]: "AXON Security · Código de inicio de sesión",
@@ -85,9 +78,7 @@ const mail = {
   },
 };
 
-// ---------- Tokens JWT ----------
-// Llevan el id del usuario (sub) y su versión de sesión (ver): el rol y el estado se consultan en cada petición.
-// Si cambia la contraseña, sube token_version y los tokens con otra versión dejan de servir.
+// el token lleva id y versión; si cambia token_version dejan de servir
 
 const tokens = {
   issue(user) {
@@ -98,7 +89,6 @@ const tokens = {
     return { accessToken, refreshToken };
   },
 
-  // Devuelven { id, ver } del dueño del token (ver ausente = 0).
   verifyAccess(token) {
     try {
       const payload = jwt.verify(token, env.jwt.secret);

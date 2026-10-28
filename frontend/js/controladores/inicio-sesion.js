@@ -1,8 +1,3 @@
-// Controlador de #/login: valida credenciales (paso 1) y lleva a la verificación del código.
-// Secuencia del tablero (login):
-//   Usuario -> Vista (onSubmit) -> login -> POST /auth/login
-//   -> CredentialsRequestDto -> ControlUsu.login -> validateCredentials -> User (Modelo) -> BD.
-//   Correcto: código al correo -> #/verify -> panel. Error (NO): toast.
 import { renderLoginView } from "../vistas/inicio-sesion.js";
 import { http } from "../modelos/api.js";
 import { getHealth } from "./panel.js";
@@ -10,9 +5,7 @@ import { CredentialsRequestDto, ResendCodeRequestDto } from "../dto/autenticacio
 import { session, VERIFICATION_PURPOSE } from "../modelos/sesion.js";
 import { toast } from "../utilidades.js";
 
-// ---------- Endpoints ----------
-// POST /auth/login                (público) paso 1
-// POST /auth/register/resend-code (público) correo sin verificar
+// endpoints
 export const login = (dto) => http.post("/auth/login", dto);
 export const resendRegistrationCode = (dto) => http.post("/auth/register/resend-code", dto);
 
@@ -34,7 +27,7 @@ export function showLogin(container) {
     },
   });
 
-  // Correo sin verificar: pide un código de registro nuevo y sigue en #/verify.
+  // correo sin verificar: pide un código nuevo y sigue en #/verify
   async function goVerifyEmail(email) {
     session.setPendingVerification(email, VERIFICATION_PURPOSE.REGISTRATION);
     try {
@@ -46,7 +39,6 @@ export function showLogin(container) {
     location.hash = "#/verify";
   }
 
-  // Píldora de estado de la API (no bloquea el formulario si falla).
   getHealth()
     .then((health) => view.setHealth(health?.status))
     .catch(() => view.setHealth("offline"));

@@ -1,5 +1,4 @@
-// Modelo del registro de peticiones a la API (recurso /request-logs).
-// route guarda la ruta en forma de patrón (/api/users/:id) para poder agrupar las estadísticas.
+// route es el patrón de la ruta (/api/users/:id)
 const { db } = require("../externos");
 
 class RequestLog {
@@ -27,10 +26,9 @@ class RequestLog {
       source,
       user_id: userId,
     });
-    return row?.id ?? null; // id del registro nuevo (lo usa api:activity)
+    return row?.id ?? null;
   }
 
-  // Un registro por id, o null si no existe.
   static async findById(id) {
     return RequestLog.fromRow(await db.find(`/request-logs/${id}`));
   }
@@ -40,13 +38,11 @@ class RequestLog {
     return data.map(RequestLog.fromRow);
   }
 
-  // Página de registros (del más nuevo al más viejo) con filtros opcionales: { logs, total }
   static async findPage({ page = 1, limit = 20, method, statusClass, route } = {}) {
     const { data, total } = await db.get("/request-logs", { page, limit, method, statusClass, route });
     return { logs: data.map(RequestLog.fromRow), total: Number(total) || 0 };
   }
 
-  // Totales, últimas 24 horas, latencia promedio y conteos por código y método.
   static async getSummary() {
     const summary = await db.get("/request-logs/summary");
     return {
@@ -58,7 +54,6 @@ class RequestLog {
     };
   }
 
-  // Estadísticas agrupadas por método y ruta: [{ method, route, total, errors, avgLatencyMs, lastRequestAt }]
   static async getStatsByRoute() {
     const { data } = await db.get("/request-logs/stats-by-route");
     return data.map((row) => ({

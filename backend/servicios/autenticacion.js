@@ -1,13 +1,10 @@
-// Reglas de registro, inicio de sesión en dos pasos (contraseña + código al correo), renovación de sesión
-// y validación del token. Devuelve datos del dominio; el controlador los convierte en la vista de respuesta.
+// registro, inicio de sesión en dos pasos y renovación de sesión
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const User = require("../modelos/usuario");
 const VerificationCode = require("../modelos/codigo-verificacion");
 const { mail, tokens } = require("../externos");
 const { HttpError, ROLES, SECURITY, CODE_PURPOSE } = require("../configuracion");
-
-// ---------- Registro ----------
 
 async function register({ name, email, password }) {
   if (await User.findByEmail(email)) throw HttpError.conflict("El correo ya está registrado");
@@ -25,9 +22,6 @@ async function verifyRegistration({ email, code }) {
   if (user) await User.markEmailVerified(user.id);
 }
 
-// ---------- Inicio de sesión ----------
-
-// validarCredenciales(usu, contra): consulta al Modelo y aplica las reglas de la cuenta.
 async function validateCredentials({ email, password }) {
   const user = await User.validateCredentials(email, password);
   if (!user) throw HttpError.unauthorized("Credenciales incorrectas");
@@ -36,26 +30,24 @@ async function validateCredentials({ email, password }) {
   return user;
 }
 
-// Paso 1 (después de validar): envía el código al correo.
 async function startLoginVerification(user) {
   await issueCode({ userId: user.id, email: user.email, purpose: CODE_PURPOSE.LOGIN });
   return { email: user.email };
 }
 
-// Paso 2: valida el código y entrega los tokens.
 async function verifyLogin({ email, code }) {
   await verifyCode({ email, code, purpose: CODE_PURPOSE.LOGIN });
   const user = ensureActive(await User.findByEmail(email));
   return issueSession(user);
 }
 
-// Enfriamiento en memoria por correo y propósito: { clave -> hora del último envío }.
+// enfriamiento en memoria por correo y propósito
 const lastResend = new Map();
 
 function enforceResendCooldown(email, purpose) {
   const now = Date.now();
   for (const [key, time] of lastResend) {
-    if (now - time >= SECURITY.RESEND_COOLDOWN_MS) lastResend.delete(key); // limpia los vencidos
+    if (now - time >= SECURITY.RESEND_COOLDOWN_MS) lastResend.delete(key);
   }
   const key = `${purpose}:${email}`;
   if (lastResend.has(key)) throw HttpError.tooManyRequests("Espera unos segundos antes de pedir otro código");
@@ -63,18 +55,14 @@ function enforceResendCooldown(email, purpose) {
 }
 
 async function resendCode({ email, purpose }) {
-  // El enfriamiento se aplica exista o no el correo, para no revelarlo.
+  // se aplica exista o no el correo, para no revelarlo
   enforceResendCooldown(email, purpose);
-  // Respuesta genérica: no revela si el correo existe, está desactivado o ya verificado.
   const user = await User.findByEmail(email);
   if (!user || !user.isActive()) return;
   if (purpose === CODE_PURPOSE.REGISTRATION && user.emailVerified) return;
   await issueCode({ userId: user.id, email, purpose });
 }
 
-// ---------- Sesión ----------
-
-// Entrega tokens nuevos con la versión actual del usuario.
 function issueSession(user) {
   return { ...tokens.issue(user), user };
 }
@@ -84,7 +72,6 @@ async function refreshSession({ refreshToken }) {
   return issueSession(user);
 }
 
-// Lo usa el middleware authenticate en cada petición: un usuario desactivado pierde el acceso de inmediato.
 async function authenticateToken(accessToken) {
   return findActiveUser(tokens.verifyAccess(accessToken));
 }
@@ -94,20 +81,17 @@ function ensureActive(user) {
   return user;
 }
 
-// { id, ver } viene del token: si la versión no coincide, la sesión fue cerrada (cambio de contraseña).
+// si la versión no coincide, la sesión fue cerrada
 async function findActiveUser({ id, ver }) {
   const user = ensureActive(await User.findById(id));
   if (user.tokenVersion !== ver) throw HttpError.unauthorized("La sesión ya no es válida");
   return user;
 }
 
-// ---------- Códigos de verificación (6 dígitos) ----------
-
 function generateCode() {
   return String(crypto.randomInt(0, 10 ** SECURITY.CODE_LENGTH)).padStart(SECURITY.CODE_LENGTH, "0");
 }
 
-// Invalida los códigos anteriores, crea uno nuevo y lo envía por correo.
 async function issueCode({ userId, email, purpose }) {
   await VerificationCode.invalidateAll(email, purpose);
 
@@ -119,14 +103,13 @@ async function issueCode({ userId, email, purpose }) {
   await mail.sendVerificationCode(email, code, purpose);
 }
 
-const INVALID_CODE_MESSAGE = "Código inválido o expirado"; // igual si no existe o es incorrecto
+const INVALID_CODE_MESSAGE = "Código inválido o expirado";
 
-// Comprueba el código; si es correcto lo marca como usado.
 async function verifyCode({ email, purpose, code }) {
   const record = await VerificationCode.findActive(email, purpose);
   if (!record) throw HttpError.unauthorized(INVALID_CODE_MESSAGE);
 
-  // Primero se cuenta el intento (atómico en la API) y luego se compara: así las peticiones en paralelo no se saltan el límite.
+  // se cuenta el intento antes de comparar (por las peticiones en paralelo)
   const attempts = await VerificationCode.incrementAttempts(record.id);
   if (!Number.isFinite(attempts) || attempts > SECURITY.CODE_MAX_ATTEMPTS) {
     throw HttpError.tooManyRequests("Demasiados intentos para este código. Solicita uno nuevo.");

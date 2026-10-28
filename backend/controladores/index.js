@@ -1,26 +1,22 @@
-// Une los controladores de la API (servidor.js la monta en /api).
-// Cada controlador solo declara endpoints (método, ruta, acceso y qué función de dto/ responde).
 const { Router } = require("express");
 
 const simulationRouter = require("./simulacion");
 
 const MODULES = [
-  ["", require("./metricas")], // /health y /metrics/dashboard
+  ["", require("./metricas")],
   ["/auth", require("./autenticacion")],
   ["/users", require("./usuarios")],
   ["/monitoring", require("./monitoreo")],
   ["/simulations", simulationRouter],
-  ["/axonApi", simulationRouter], // alias del documento para la simulación
+  ["/axonApi", simulationRouter],
   ["/events", require("./eventos")],
 ];
 
 const router = Router();
 for (const [prefix, moduleRouter] of MODULES) router.use(prefix, moduleRouter);
 
-// El stream SSE no se puede monitorear (no se registra como petición).
 const NOT_MONITORABLE = new Set(["GET /api/events/stream"]);
 
-// [{ method: "POST", path: "/api/auth/login" }, ...] — lo usa el monitoreo para aceptar solo rutas reales.
 function listApiRoutes() {
   return MODULES.flatMap(([prefix, moduleRouter]) =>
     moduleRouter.stack

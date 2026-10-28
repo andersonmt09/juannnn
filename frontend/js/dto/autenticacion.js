@@ -1,7 +1,5 @@
-// DTO de petición (req) de /api/auth: lo que envía el cliente, limpio.
 import { clean } from "./comunes.js";
 
-// POST /api/auth/register
 export class RegisterRequestDto {
   constructor({ name, email, password }) {
     this.name = clean(name);
@@ -10,7 +8,6 @@ export class RegisterRequestDto {
   }
 }
 
-// POST /api/auth/login
 export class CredentialsRequestDto {
   constructor({ email, password }) {
     this.email = clean(email);
@@ -18,7 +15,6 @@ export class CredentialsRequestDto {
   }
 }
 
-// POST /api/auth/register/verify y POST /api/auth/login/verify
 export class VerifyCodeRequestDto {
   constructor({ email, code }) {
     this.email = clean(email);
@@ -26,14 +22,12 @@ export class VerifyCodeRequestDto {
   }
 }
 
-// POST /api/auth/register/resend-code y POST /api/auth/login/resend-code
 export class ResendCodeRequestDto {
   constructor({ email }) {
     this.email = clean(email);
   }
 }
 
-// POST /api/auth/refresh-token
 export class RefreshTokenRequestDto {
   constructor({ refreshToken }) {
     this.refreshToken = refreshToken;
