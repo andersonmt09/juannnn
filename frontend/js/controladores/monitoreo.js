@@ -1,9 +1,24 @@
 // Controlador de #/monitoring: muestra las estadísticas y, si es administrador, agrega o quita endpoints.
 import { renderMonitoringView } from "../vistas/monitoreo.js";
 import { confirmDialog } from "../vistas/componentes.js";
-import { monitoringApi, metricApi } from "../modelos/api.js";
+import { http } from "../modelos/api.js";
+import { getRequest } from "./panel.js";
+import { CreateMonitoredEndpointRequestDto } from "../vistas/dto.js";
 import { session } from "../modelos/sesion.js";
 import { toast } from "../utilidades.js";
+
+
+// ---------- Endpoints ----------
+// GET    /monitoring/endpoints      (con sesión)
+// GET    /monitoring/endpoints/:id  (con sesión) endpoint con estadísticas y recentRequests (hasta 10)
+// GET    /monitoring/routes         (admin) rutas reales de la API
+// POST   /monitoring/endpoints      (admin)
+// DELETE /monitoring/endpoints/:id  (admin)
+const listEndpoints = () => http.get("/monitoring/endpoints").then((res) => res.data);
+const getEndpoint = (id) => http.get(`/monitoring/endpoints/${id}`).then((res) => res.data);
+const listApiRoutes = () => http.get("/monitoring/routes").then((res) => res.data);
+const addEndpoint = (dto) => http.post("/monitoring/endpoints", dto).then((res) => res.data);
+const removeEndpoint = (id) => http.delete(`/monitoring/endpoints/${id}`);
 
 export async function showMonitoring(container) {
   let endpoints = [];
@@ -13,7 +28,7 @@ export async function showMonitoring(container) {
 
   async function loadEndpoints() {
     try {
-      const list = await monitoringApi.listEndpoints();
+      const list = await listEndpoints();
       if (!active) return;
       endpoints = list;
       view.showEndpoints(endpoints);
@@ -29,7 +44,7 @@ export async function showMonitoring(container) {
       const mine = ++ticket;
       view.showDetailLoading();
       try {
-        const detail = await monitoringApi.getEndpoint(endpoint.id);
+        const detail = await getEndpoint(endpoint.id);
         if (!active || mine !== ticket) return;
         selected = detail;
         view.showEndpointDetail(detail);
@@ -44,7 +59,7 @@ export async function showMonitoring(container) {
       const mine = ++ticket;
       view.showDetailLoading();
       try {
-        const log = await metricApi.getRequest(request.id);
+        const log = await getRequest(request.id);
         if (!active || mine !== ticket) return;
         view.showRequestDetail(log, selected);
       } catch (error) {
@@ -56,7 +71,7 @@ export async function showMonitoring(container) {
     async onOpenForm() {
       try {
         const monitored = new Set(endpoints.map((e) => `${e.method} ${e.path}`));
-        const available = (await monitoringApi.listApiRoutes()).filter((r) => !monitored.has(`${r.method} ${r.path}`));
+        const available = (await listApiRoutes()).filter((r) => !monitored.has(`${r.method} ${r.path}`));
         if (!available.length) {
           toast.info("Todas las rutas de la API ya se están monitoreando");
           return;
@@ -69,7 +84,7 @@ export async function showMonitoring(container) {
     async onSave(data) {
       view.setSaving(true);
       try {
-        await monitoringApi.addEndpoint(data);
+        await addEndpoint(new CreateMonitoredEndpointRequestDto(data));
         toast.success("Endpoint agregado al monitoreo");
         view.closeForm();
         await loadEndpoints();
@@ -87,7 +102,7 @@ export async function showMonitoring(container) {
       });
       if (!confirmed) return;
       try {
-        await monitoringApi.removeEndpoint(endpoint.id);
+        await removeEndpoint(endpoint.id);
         ticket++;
         selected = null;
         view.closeDetail();

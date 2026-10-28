@@ -1,6 +1,7 @@
 // Controlador de #/profile: muestra los datos frescos del usuario (GET /users/:id) y cambia la contraseña propia.
 import { renderProfileView } from "../vistas/perfil.js";
-import { userApi } from "../modelos/api.js";
+import { getUser, changePassword } from "./usuarios.js";
+import { ChangePasswordRequestDto } from "../vistas/dto.js";
 import { session } from "../modelos/sesion.js";
 import { toast } from "../utilidades.js";
 
@@ -16,7 +17,7 @@ export function showProfile(container) {
       }
       view.setSaving(true);
       try {
-        const result = await userApi.changePassword(user.id, password, currentPassword);
+        const result = await changePassword(user.id, new ChangePasswordRequestDto({ password, currentPassword }));
         // Las demás sesiones se cierran: se guarda la sesión nueva para seguir conectado aquí.
         if (result?.accessToken) session.save(result);
         toast.success("Contraseña actualizada");
@@ -30,7 +31,7 @@ export function showProfile(container) {
   });
 
   // Trae los datos del servidor: pueden haber cambiado desde el inicio de sesión.
-  userApi.get(user.id).then((fresh) => {
+  getUser(user.id).then((fresh) => {
     if (!active || !fresh) return;
     session.updateUser(fresh);
     view.setUser(fresh);

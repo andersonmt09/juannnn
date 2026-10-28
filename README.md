@@ -44,9 +44,8 @@ axon-stack-flow/
 ├── backend/
 │   ├── modelos/            usuario, codigo-verificacion, endpoint-monitoreado, registro-peticion, base-datos
 │   ├── vistas/             comunes, autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
-│   ├── controladores/      autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
+│   ├── controladores/      index (une los módulos) + autenticacion, usuarios, monitoreo, metricas, simulacion, eventos (cada uno declara sus endpoints)
 │   ├── servicios/          autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
-│   ├── rutas/              index + un archivo por recurso
 │   ├── middlewares/        autenticacion, validacion, registro-peticiones, errores
 │   ├── pruebas/            unitarias.test.js, api.test.js, carga.js
 │   ├── configuracion.js    Variables de entorno, constantes (roles, seguridad), errores y validaciones
@@ -59,10 +58,10 @@ axon-stack-flow/
 │   ├── css/                estilos.css (tokens de diseño, componentes y pantallas)
 │   ├── img/                favicon.svg
 │   ├── js/
-│   │   ├── modelos/        sesion (sesión y tema), api (un llamado por endpoint), eventos (tiempo real)
+│   │   ├── modelos/        sesion (sesión y tema), api (solo el cliente HTTP), eventos (tiempo real)
 │   │   ├── vistas/         inicio-sesion, registro, verificacion, recuperar-contrasena, panel, usuarios, monitoreo, actividad, perfil
-│   │   │                   + componentes (menú, tablas, tarjetas, modal, panel lateral de detalle, gráficas, arquitectura...)
-│   │   ├── controladores/  los mismos nombres que vistas/ + menu (tema, cierre de sesión y estado)
+│   │   │                   + dto (DTO de petición) + componentes (menú, tablas, tarjetas, modal, panel lateral de detalle, gráficas, arquitectura...)
+│   │   ├── controladores/  los mismos nombres que vistas/ + menu; cada uno declara los endpoints que usa
 │   │   ├── principal.js    Pantallas (#/...), permisos por rol y navegación
 │   │   └── utilidades.js   Elementos HTML, íconos, notificaciones, formatos, CSV y almacenamiento
 │   └── index.html
@@ -77,18 +76,17 @@ axon-stack-flow/
 |---|---|---|
 | **Modelo** | `modelos/` | Una clase por entidad; única capa que pide y guarda datos (en la API externa) |
 | **Vista** | `vistas/` | Los DTO de cada recurso en un solo archivo. **Petición (req):** reúne body, `:id` y `?query`, los limpia y los valida. **Respuesta (res):** define el JSON que sale; nunca se envía un modelo directo ni el hash de la contraseña |
-| **Controlador** | `controladores/` | Recibe la petición ya validada (`req.dto`), llama al servicio y responde con la vista |
+| **Controlador** | `controladores/` | Declara sus endpoints (Router: método, URL, acceso, DTO de petición y función), recibe la petición ya validada (`req.dto`), llama al servicio y responde con la vista. `controladores/index.js` los une |
 | Servicios | `servicios/` | Reglas de negocio. Devuelven datos del dominio, no respuestas HTTP |
-| Rutas | `rutas/` | Cada endpoint: método, URL, quién puede entrar, qué vista valida y qué controlador responde |
 | Middlewares | `middlewares/` | Token y roles, límite de intentos, validación, registro de peticiones y errores |
 
 ### Frontend
 
 | Capa | Carpeta | Responsabilidad |
 |---|---|---|
-| **Modelo** | `js/modelos/` | Estado del cliente (sesión y tema), las llamadas al backend y la conexión en tiempo real |
+| **Modelo** | `js/modelos/` | Estado del cliente (sesión y tema), el cliente HTTP (`api.js`) y la conexión en tiempo real |
 | **Vista** | `js/vistas/` | Una por pantalla. Solo dibuja los datos que recibe y avisa de los eventos (`onSave`, `onDelete`…). No llama a la API ni navega |
-| **Controlador** | `js/controladores/` | Uno por pantalla. Pide los datos al modelo, se los pasa a la vista, atiende sus eventos, muestra los mensajes y las confirmaciones y decide la navegación |
+| **Controlador** | `js/controladores/` | Uno por pantalla. Declara sus endpoints, arma el DTO de petición (`vistas/dto.js`) con los datos de la vista, se los pasa a la vista, atiende sus eventos, muestra los mensajes y las confirmaciones y decide la navegación |
 
 Cada recurso tiene el mismo nombre en todas las capas. Por ejemplo, **usuarios**:
 
@@ -96,8 +94,7 @@ Cada recurso tiene el mismo nombre en todas las capas. Por ejemplo, **usuarios**
 |---|---|
 | Vista (frontend) | `frontend/js/vistas/usuarios.js` |
 | Controlador (frontend) | `frontend/js/controladores/usuarios.js` |
-| Llamado a la API | `userApi` en `frontend/js/modelos/api.js` |
-| Ruta | `backend/rutas/usuarios.js` |
+| DTO de petición (frontend) | `frontend/js/vistas/dto.js` |
 | Vista (DTO de petición y respuesta) | `backend/vistas/usuarios.js` |
 | Controlador (backend) | `backend/controladores/usuarios.js` |
 | Servicio | `backend/servicios/usuarios.js` |
@@ -107,38 +104,38 @@ Los nombres de carpetas y archivos están en español; el código interno (varia
 
 ## Endpoints
 
-Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador. Las vistas están en `backend/vistas/` con el nombre del recurso, y el llamado está en `frontend/js/modelos/api.js`. `LoginRequestDto` se conserva como alias de `CredentialsRequestDto`.
+Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador. Las vistas están en `backend/vistas/` con el nombre del recurso, y los endpoints del frontend están al inicio de cada archivo de `frontend/js/controladores/`. `LoginRequestDto` se conserva como alias de `CredentialsRequestDto`.
 
 | Método | Ruta | Acceso | Vista de petición (req) | Vista de respuesta (res) | Llamado en el frontend |
 |---|---|---|---|---|---|
-| GET | `/health` | Público | — | `HealthResponseDto` | `systemApi.getHealth` |
-| POST | `/auth/register` | Público | `RegisterRequestDto` | `VerificationRequiredResponseDto` | `authApi.register` |
-| POST | `/auth/register/verify` | Público | `VerifyCodeRequestDto` | `EmailVerifiedResponseDto` | `authApi.verifyRegistration` |
-| POST | `/auth/register/resend-code` | Público | `ResendCodeRequestDto` | `MessageResponseDto` | `authApi.resendRegistrationCode` |
-| POST | `/auth/login` | Público | `CredentialsRequestDto` | `VerificationRequiredResponseDto` | `authApi.login` |
-| POST | `/auth/login/verify` | Público | `VerifyCodeRequestDto` | `SessionResponseDto` | `authApi.verifyLogin` |
-| POST | `/auth/login/resend-code` | Público | `ResendCodeRequestDto` | `MessageResponseDto` | `authApi.resendLoginCode` |
-| POST | `/auth/password/forgot` | Público (límite de 5 cada 15 min) | `ForgotPasswordRequestDto` | `MessageResponseDto` | `authApi.forgotPassword` |
-| POST | `/auth/password/reset` | Público | `ResetPasswordRequestDto` | `MessageResponseDto` | `authApi.resetPassword` |
-| POST | `/auth/refresh-token` | Público | `RefreshTokenRequestDto` | `SessionResponseDto` | `authApi.refreshToken` (automático) |
-| GET | `/users?page=&limit=` | Admin | `ListUsersRequestDto` | `UserListResponseDto` | `userApi.list`, `userApi.listAll` |
-| GET | `/users/:id` | Sesión (propio o admin) | `UserIdRequestDto` | `UserResponseDto` | `userApi.get` |
-| POST | `/users` | Admin | `CreateUserRequestDto` | `UserResponseDto` | `userApi.create` |
-| PUT | `/users/:id` | Admin | `UpdateUserRequestDto` | `UserResponseDto` | `userApi.update` |
-| PATCH | `/users/:id/password` | Sesión (propio o admin) | `ChangePasswordRequestDto` | `SessionResponseDto` (contraseña propia) o `MessageResponseDto` (la de otro usuario) | `userApi.changePassword` |
-| DELETE | `/users/:id` | Admin | `UserIdRequestDto` | `MessageResponseDto` | `userApi.remove` |
-| GET | `/monitoring/routes` | Admin | — | `ApiRouteListResponseDto` | `monitoringApi.listApiRoutes` |
-| GET | `/monitoring/endpoints` | Sesión | — | `MonitoredEndpointListResponseDto` | `monitoringApi.listEndpoints` |
-| GET | `/monitoring/endpoints/:id` | Sesión | `MonitoredEndpointIdRequestDto` | `MonitoredEndpointDetailResponseDto` | `monitoringApi.getEndpoint` |
-| POST | `/monitoring/endpoints` | Admin | `CreateMonitoredEndpointRequestDto` | `MonitoredEndpointResponseDto` | `monitoringApi.addEndpoint` |
-| DELETE | `/monitoring/endpoints/:id` | Admin | `MonitoredEndpointIdRequestDto` | `MessageResponseDto` | `monitoringApi.removeEndpoint` |
-| GET | `/metrics/dashboard` | Admin | — | `DashboardResponseDto` | `metricApi.getDashboard` |
-| GET | `/metrics/requests?page=&limit=&method=&statusClass=` | Admin | `ListRequestLogsRequestDto` | `RequestLogListResponseDto` | `metricApi.listRequests` |
-| GET | `/metrics/requests/:id` | Admin | `RequestLogIdRequestDto` | `RequestLogDetailResponseDto` | `metricApi.getRequest` |
-| GET | `/metrics/services` | Admin | — | `ServiceListResponseDto` | `metricApi.getServices` |
-| POST | `/simulations` (alias `/axonApi`) | Admin | `RunSimulationRequestDto` | `SimulationResponseDto` | `simulationApi.run` |
+| GET | `/health` | Público | — | `HealthResponseDto` | `getHealth` |
+| POST | `/auth/register` | Público | `RegisterRequestDto` | `VerificationRequiredResponseDto` | `register` |
+| POST | `/auth/register/verify` | Público | `VerifyCodeRequestDto` | `EmailVerifiedResponseDto` | `verifyRegistration` |
+| POST | `/auth/register/resend-code` | Público | `ResendCodeRequestDto` | `MessageResponseDto` | `resendRegistrationCode` |
+| POST | `/auth/login` | Público | `CredentialsRequestDto` | `VerificationRequiredResponseDto` | `login` |
+| POST | `/auth/login/verify` | Público | `VerifyCodeRequestDto` | `SessionResponseDto` | `verifyLogin` |
+| POST | `/auth/login/resend-code` | Público | `ResendCodeRequestDto` | `MessageResponseDto` | `resendLoginCode` |
+| POST | `/auth/password/forgot` | Público (límite de 5 cada 15 min) | `ForgotPasswordRequestDto` | `MessageResponseDto` | `forgotPassword` |
+| POST | `/auth/password/reset` | Público | `ResetPasswordRequestDto` | `MessageResponseDto` | `resetPassword` |
+| POST | `/auth/refresh-token` | Público | `RefreshTokenRequestDto` | `SessionResponseDto` | `refreshSession` (automático) |
+| GET | `/users?page=&limit=` | Admin | `ListUsersRequestDto` | `UserListResponseDto` | `listUsers`, `listAllUsers` |
+| GET | `/users/:id` | Sesión (propio o admin) | `UserIdRequestDto` | `UserResponseDto` | `getUser` |
+| POST | `/users` | Admin | `CreateUserRequestDto` | `UserResponseDto` | `createUser` |
+| PUT | `/users/:id` | Admin | `UpdateUserRequestDto` | `UserResponseDto` | `updateUser` |
+| PATCH | `/users/:id/password` | Sesión (propio o admin) | `ChangePasswordRequestDto` | `SessionResponseDto` (contraseña propia) o `MessageResponseDto` (la de otro usuario) | `changePassword` |
+| DELETE | `/users/:id` | Admin | `UserIdRequestDto` | `MessageResponseDto` | `removeUser` |
+| GET | `/monitoring/routes` | Admin | — | `ApiRouteListResponseDto` | `listApiRoutes` |
+| GET | `/monitoring/endpoints` | Sesión | — | `MonitoredEndpointListResponseDto` | `listEndpoints` |
+| GET | `/monitoring/endpoints/:id` | Sesión | `MonitoredEndpointIdRequestDto` | `MonitoredEndpointDetailResponseDto` | `getEndpoint` |
+| POST | `/monitoring/endpoints` | Admin | `CreateMonitoredEndpointRequestDto` | `MonitoredEndpointResponseDto` | `addEndpoint` |
+| DELETE | `/monitoring/endpoints/:id` | Admin | `MonitoredEndpointIdRequestDto` | `MessageResponseDto` | `removeEndpoint` |
+| GET | `/metrics/dashboard` | Admin | — | `DashboardResponseDto` | `getDashboard` |
+| GET | `/metrics/requests?page=&limit=&method=&statusClass=` | Admin | `ListRequestLogsRequestDto` | `RequestLogListResponseDto` | `listRequests` |
+| GET | `/metrics/requests/:id` | Admin | `RequestLogIdRequestDto` | `RequestLogDetailResponseDto` | `getRequest` |
+| GET | `/metrics/services` | Admin | — | `ServiceListResponseDto` | `getServices` |
+| POST | `/simulations` (alias `/axonApi`) | Admin | `RunSimulationRequestDto` | `SimulationResponseDto` | `runSimulation` |
 | GET | `/events/stream?token=` | Admin | `StreamRequestDto` | Eventos SSE (ver abajo) | `stream.connect` en `js/modelos/eventos.js` |
-| POST | `/events/ping` | Admin | — | `PongResponseDto` | `eventApi.ping` |
+| POST | `/events/ping` | Admin | — | `PongResponseDto` | `pingEvents` |
 
 Cualquier error responde con `ErrorResponseDto`: `{ "ok": false, "message": "...", "errors": [...], "code": "..." }`. Una ruta que no existe responde 404 con `{ "message": "Endpoint no encontrado", "path", "method" }`.
 
@@ -171,7 +168,7 @@ El login sigue el diagrama de secuencia del tablero. Cada participante tiene su 
 | Participante del diagrama | En AXON |
 |---|---|
 | Usuario | La persona en el navegador |
-| Vista | `frontend/js/vistas/inicio-sesion.js` (`onSubmit({ email, password })`). Su controlador, `controladores/inicio-sesion.js`, llama a `authApi.login(email, password)` |
+| Vista | `frontend/js/vistas/inicio-sesion.js` (`onSubmit({ email, password })`). Su controlador, `controladores/inicio-sesion.js`, llama a `login(new CredentialsRequestDto({ email, password }))` |
 | DTO de entrada (usu, contra) | `CredentialsRequestDto` en `backend/vistas/autenticacion.js` |
 | Controlador | `login` en `backend/controladores/autenticacion.js` |
 | `validateCredentials(usu, contra)` | `authService.validateCredentials({ email, password })`, que llama a `User.validateCredentials(email, password)` |
@@ -194,8 +191,8 @@ El hash de la contraseña nunca sale del backend: la Vista solo recibe un `UserD
 
 Entrada: el enlace "¿Olvidaste tu contraseña?" del inicio de sesión (`#/forgot-password`, pantalla pública con dos pasos).
 
-1. **Solicitar el código.** El usuario escribe su correo y el frontend llama a `authApi.forgotPassword` (`POST /api/auth/password/forgot`, `ForgotPasswordRequestDto`). Si la cuenta existe, está activa y verificada, se invalidan los códigos anteriores y se envía un código de 6 dígitos con `purpose: "password_reset"` (asunto "AXON Security · Código para restablecer tu contraseña").
-2. **Restablecer.** En el mismo formulario escribe el código, la contraseña nueva y su confirmación (que se comprueba en el navegador). El frontend llama a `authApi.resetPassword` (`POST /api/auth/password/reset`, `ResetPasswordRequestDto`: `email`, `code` de 6 dígitos y `password`).
+1. **Solicitar el código.** El usuario escribe su correo y el frontend llama a `forgotPassword` (`POST /api/auth/password/forgot`, `ForgotPasswordRequestDto`). Si la cuenta existe, está activa y verificada, se invalidan los códigos anteriores y se envía un código de 6 dígitos con `purpose: "password_reset"` (asunto "AXON Security · Código para restablecer tu contraseña").
+2. **Restablecer.** En el mismo formulario escribe el código, la contraseña nueva y su confirmación (que se comprueba en el navegador). El frontend llama a `resetPassword` (`POST /api/auth/password/reset`, `ResetPasswordRequestDto`: `email`, `code` de 6 dígitos y `password`).
 3. El backend comprueba el código (vence en 5 minutos, 5 intentos y uso único), guarda la contraseña con bcrypt, incrementa `token_version`, invalida los códigos de inicio de sesión pendientes y responde "Contraseña actualizada. Ya puedes iniciar sesión.". El frontend vuelve a `#/login`.
 4. El pie de la pantalla permite reenviar el código (con una espera de 30 segundos) y volver al inicio de sesión.
 

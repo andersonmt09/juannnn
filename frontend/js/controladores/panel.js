@@ -1,9 +1,41 @@
 // Controlador de #/dashboard: carga métricas y servicios, corre simulaciones y sigue el stream en vivo.
 import { createDashboardView } from "../vistas/panel.js";
-import { metricApi, simulationApi } from "../modelos/api.js";
+import { http } from "../modelos/api.js";
+import { RunSimulationRequestDto } from "../vistas/dto.js";
 import { stream } from "../modelos/eventos.js";
 import { session } from "../modelos/sesion.js";
 import { toast, exportToCsv } from "../utilidades.js";
+
+// ---------- Endpoints ----------
+// GET  /metrics/dashboard   (admin)
+// GET  /metrics/services    (admin)
+// GET  /metrics/requests/:id (admin) — también lo usan actividad y monitoreo
+// GET  /health              (público) — también lo usan inicio de sesión, recuperar contraseña y menú
+// POST /simulations         (admin; alias /axonApi)
+export const getDashboard = () => http.get("/metrics/dashboard").then((res) => res.data);
+export const getServices = () => http.get("/metrics/services").then((res) => res.data);
+// Detalle de una petición registrada, con el usuario que la hizo (o null).
+export const getRequest = (id) => http.get(`/metrics/requests/${id}`).then((res) => res.data);
+
+// Con la BD caída el backend responde 503 pero con cuerpo útil: se devuelve igual.
+export async function getHealth() {
+  try {
+    return await http.get("/health");
+  } catch (error) {
+    if (error.data?.status) return error.data;
+    throw error;
+  }
+}
+
+// dto: RunSimulationRequestDto. Devuelve { request, layers, data, totalMs }
+const runSimulation = (dto) => http.post("/simulations", dto);
+
+// Medición (no regla de negocio): la capa Cliente es el tiempo total menos el del servidor.
+function withClientLayer(result, totalMs) {
+  const layers = result.layers.map((layer) => ({ ...layer }));
+  layers[0].durationMs = Math.max(0, totalMs - result.totalMs);
+  return { ...result, layers, totalMs };
+}
 
 const CSV_COLUMNS = [
   ["method", "metodo"], ["path", "ruta"], ["statusCode", "estado"],
@@ -25,7 +57,7 @@ export function showDashboard(container) {
       const mine = ++ticket;
       view.showRequestLoading();
       try {
-        const log = await metricApi.getRequest(row.id);
+        const log = await getRequest(row.id);
         if (alive && mine === ticket) view.showRequestDetail(log);
       } catch (error) {
         if (mine !== ticket) return;
@@ -48,7 +80,7 @@ export function showDashboard(container) {
     loading = true;
     if (loaded) view.setRefreshing(true); else view.showLoading();
     try {
-      const [data, services] = await Promise.all([metricApi.getDashboard(), metricApi.getServices()]);
+      const [data, services] = await Promise.all([getDashboard(), getServices()]);
       if (!alive) return;
       recent = [...data.recentRequests];
       view.showData({ dashboard: data, services, recent });
@@ -70,11 +102,11 @@ export function showDashboard(container) {
     view.setRunning(true);
     const started = performance.now();
     try {
-      const result = await simulationApi.run({ operation, forceError });
+      const result = await runSimulation(new RunSimulationRequestDto({ operation, forceError }));
       const totalMs = performance.now() - started;
       toast.success(`Simulación completada en ${Math.round(totalMs)} ms`);
       view.setRunning(false);
-      await view.playSimulation(simulationApi.withClientLayer(result, totalMs));
+      await view.playSimulation(withClientLayer(result, totalMs));
     } catch (error) {
       view.setRunning(false);
       toast.error(`Error ${error.status || ""}: ${error.message}`.replace("Error : ", "Error: "));
@@ -86,7 +118,7 @@ export function showDashboard(container) {
   async function softReload() {
     if (!alive || loading) return;
     try {
-      const data = await metricApi.getDashboard();
+      const data = await getDashboard();
       if (!alive) return;
       recent = [...data.recentRequests];
       view.refreshData({ dashboard: data, recent });

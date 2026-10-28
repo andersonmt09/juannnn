@@ -7,6 +7,10 @@ const {
   EmailVerifiedResponseDto,
   SessionResponseDto,
 } = require("../vistas/autenticacion");
+const { Router } = require("express");
+const views = require("../vistas/autenticacion");
+const { authRateLimiter, loginEmailLimiter, passwordResetLimiter, resendIpLimiter, resendEmailLimiter } = require("../middlewares/autenticacion");
+const { validateRequest } = require("../middlewares/validacion");
 
 const register = asyncHandler(async (req, res) => {
   const result = await authService.register(req.dto);
@@ -53,7 +57,31 @@ const refreshToken = asyncHandler(async (req, res) => {
   res.json(new SessionResponseDto(await authService.refreshSession(req.dto)));
 });
 
+// ---------- Endpoints de /api/auth (públicos, con límite de intentos) ----------
+
+const router = Router();
+
+// POST /api/auth/register (público)
+router.post("/register", authRateLimiter, validateRequest(views.RegisterRequestDto), register);
+// POST /api/auth/register/verify (público)
+router.post("/register/verify", authRateLimiter, validateRequest(views.VerifyCodeRequestDto), verifyRegistration);
+// POST /api/auth/register/resend-code (público)
+router.post("/register/resend-code", resendIpLimiter, resendEmailLimiter, validateRequest(views.ResendCodeRequestDto), resendRegistrationCode);
+// POST /api/auth/login (público)
+router.post("/login", authRateLimiter, loginEmailLimiter, validateRequest(views.CredentialsRequestDto), login);
+// POST /api/auth/login/verify (público)
+router.post("/login/verify", authRateLimiter, validateRequest(views.VerifyCodeRequestDto), verifyLogin);
+// POST /api/auth/login/resend-code (público)
+router.post("/login/resend-code", resendIpLimiter, resendEmailLimiter, validateRequest(views.ResendCodeRequestDto), resendLoginCode);
+// POST /api/auth/password/forgot (público)
+router.post("/password/forgot", passwordResetLimiter, resendEmailLimiter, validateRequest(views.ForgotPasswordRequestDto), forgotPassword);
+// POST /api/auth/password/reset (público)
+router.post("/password/reset", authRateLimiter, validateRequest(views.ResetPasswordRequestDto), resetPassword);
+// POST /api/auth/refresh-token (público: usa el refresh token del cuerpo)
+router.post("/refresh-token", validateRequest(views.RefreshTokenRequestDto), refreshToken);
+
 module.exports = {
+  router,
   register,
   verifyRegistration,
   login,

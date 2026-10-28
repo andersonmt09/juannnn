@@ -686,7 +686,7 @@ test("metricsService.getRequest: 404, con usuario y sin usuario", async () => {
 
 const { EventEmitter } = require("node:events");
 const { requestLogger } = require("../middlewares/registro-peticiones");
-const { listApiRoutes } = require("../rutas");
+const { listApiRoutes } = require("../controladores");
 const { db } = require("../externos");
 
 // ---------- Intentos del código atómicos ----------

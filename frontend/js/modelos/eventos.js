@@ -3,7 +3,7 @@
 // api:activity, stream:closed (el servidor cerró), stream:status (cambió la conexión)
 // y stream:pong (resultado de ping()).
 import { session } from "./sesion.js";
-import { ensureFreshSession, eventApi, REFRESH } from "./api.js";
+import { ensureFreshSession, REFRESH } from "./api.js";
 
 const STREAM_URL = "/api/events/stream";
 const SERVER_EVENTS = ["stream:connected", "stream:heartbeat", "api:activity"];
@@ -135,10 +135,10 @@ export const stream = {
 
   getState: () => ({ ...state }),
 
-  // Mide el tiempo de ida y vuelta (ms) con POST /api/events/ping.
-  async ping() {
+  // Mide el tiempo de ida y vuelta (ms) de la petición ping (la hace el controlador: sendPing).
+  async ping(sendPing) {
     const started = performance.now();
-    await eventApi.ping();
+    await sendPing();
     state.latencyMs = Math.round(performance.now() - started);
     emit("stream:pong", { latencyMs: state.latencyMs });
     return state.latencyMs;

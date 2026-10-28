@@ -1,8 +1,16 @@
 // Controlador de #/activity (solo administradores): consola en vivo del stream, ping e historial paginado.
 import { renderActivityView } from "../vistas/actividad.js";
 import { stream } from "../modelos/eventos.js";
-import { metricApi } from "../modelos/api.js";
+import { http } from "../modelos/api.js";
+import { getRequest } from "./panel.js";
+import { ListRequestLogsRequestDto } from "../vistas/dto.js";
 import { toast, exportToCsv } from "../utilidades.js";
+
+// ---------- Endpoints ----------
+// GET  /metrics/requests?page&limit&method&statusClass (admin) devuelve { data, meta }
+// POST /events/ping                                    (admin)
+const listRequests = (dto) => http.get(`/metrics/requests${dto.toQuery()}`);
+const pingEvents = () => http.post("/events/ping");
 
 const PAGE_SIZE = 20;
 const CSV_COLUMNS = [
@@ -30,7 +38,7 @@ export function showActivity(container) {
     const current = ++request;
     view.showHistoryLoading();
     try {
-      const { data, meta } = await metricApi.listRequests({ page, limit: PAGE_SIZE, ...filters });
+      const { data, meta } = await listRequests(new ListRequestLogsRequestDto({ page, limit: PAGE_SIZE, ...filters }));
       if (!active || current !== request) return;
       currentPage = meta.page;
       pageRows = data;
@@ -48,7 +56,7 @@ export function showActivity(container) {
       const mine = ++ticket;
       view.showRequestLoading();
       try {
-        const log = await metricApi.getRequest(row.id);
+        const log = await getRequest(row.id);
         if (active && mine === ticket) view.showRequestDetail(log);
       } catch (error) {
         if (mine !== ticket) return;
@@ -59,7 +67,7 @@ export function showActivity(container) {
     async onPing() {
       view.setPinging(true);
       try {
-        await stream.ping(); // el modelo emite stream:pong y el oyente actualiza la pantalla
+        await stream.ping(pingEvents); // el modelo mide, emite stream:pong y el oyente actualiza la pantalla
       } catch (error) {
         toast.error(error.message);
       } finally {

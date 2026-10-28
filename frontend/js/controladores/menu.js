@@ -2,7 +2,8 @@
 // mantiene los indicadores de salud de la API y del stream en tiempo real.
 import { renderLayout } from "../vistas/componentes.js";
 import { session, preferences } from "../modelos/sesion.js";
-import { SESSION_EXPIRED_EVENT, systemApi } from "../modelos/api.js";
+import { SESSION_EXPIRED_EVENT } from "../modelos/api.js";
+import { getHealth } from "./panel.js";
 import { stream } from "../modelos/eventos.js";
 import { toast } from "../utilidades.js";
 
@@ -53,7 +54,7 @@ export function showLayout(root) {
 
   async function refreshHealth() {
     try {
-      const health = await systemApi.getHealth();
+      const health = await getHealth();
       layout.setHealth(health.status === "online" ? "online" : "degraded");
     } catch {
       layout.setHealth("offline");

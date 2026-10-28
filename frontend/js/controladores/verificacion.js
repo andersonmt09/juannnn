@@ -1,8 +1,19 @@
 // Controlador de #/verify: comprueba el código del registro o del inicio de sesión (paso 2).
 import { renderVerifyView } from "../vistas/verificacion.js";
-import { authApi } from "../modelos/api.js";
+import { http } from "../modelos/api.js";
+import { resendRegistrationCode } from "./inicio-sesion.js";
+import { VerifyCodeRequestDto, ResendCodeRequestDto } from "../vistas/dto.js";
 import { session, VERIFICATION_PURPOSE } from "../modelos/sesion.js";
 import { toast } from "../utilidades.js";
+
+// ---------- Endpoints ----------
+// POST /auth/register/verify      (público)
+// POST /auth/login/verify         (público) paso 2; devuelve la sesión
+// POST /auth/login/resend-code    (público)
+// (POST /auth/register/resend-code está en inicio-sesion.js)
+const verifyRegistration = (dto) => http.post("/auth/register/verify", dto);
+const verifyLogin = (dto) => http.post("/auth/login/verify", dto);
+const resendLoginCode = (dto) => http.post("/auth/login/resend-code", dto);
 
 export function showVerify(container) {
   const { email, purpose } = session.getPendingVerification();
@@ -14,13 +25,13 @@ export function showVerify(container) {
 
   async function verify(code) {
     if (isRegistration) {
-      await authApi.verifyRegistration(email, code);
+      await verifyRegistration(new VerifyCodeRequestDto({ email, code }));
       session.clearPendingVerification();
       toast.success("Correo verificado. Ya puedes iniciar sesión.");
       location.hash = "#/login";
       return;
     }
-    const result = await authApi.verifyLogin(email, code);
+    const result = await verifyLogin(new VerifyCodeRequestDto({ email, code }));
     session.save(result);
     session.clearPendingVerification();
     toast.success(`Bienvenido, ${result.user.name}`);
@@ -41,7 +52,7 @@ export function showVerify(container) {
     },
     async onResend() {
       try {
-        await (isRegistration ? authApi.resendRegistrationCode(email) : authApi.resendLoginCode(email));
+        await (isRegistration ? resendRegistrationCode(new ResendCodeRequestDto({ email })) : resendLoginCode(new ResendCodeRequestDto({ email })));
         toast.success("Si el correo existe, te enviamos un código nuevo");
         session.restartCodeExpiry();
         view.restartTimers(session.getCodeExpiry());
