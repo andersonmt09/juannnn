@@ -42,9 +42,9 @@ La base de datos **no forma parte del proyecto**: aquí no hay SQL (`SELECT`, `D
 axon-stack-flow/
 ├── backend/
 │   ├── modelos/            usuario, codigo-verificacion, endpoint-monitoreado, registro-peticion, base-datos
-│   ├── dto/                DTO de petición (req): comunes, autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
+│   ├── dto/                req: clases de petición y funciones que la reciben (comunes, autenticacion, usuarios, monitoreo, metricas, simulacion, eventos)
 │   ├── vistas/             Respuestas (res): comunes, autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
-│   ├── controladores/      index (une los módulos) + autenticacion, usuarios, monitoreo, metricas, simulacion, eventos (cada uno declara sus endpoints)
+│   ├── controladores/      index (une los módulos) + autenticacion, usuarios, monitoreo, metricas, simulacion, eventos (solo endpoints, sin lógica)
 │   ├── servicios/          autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
 │   ├── middlewares/        autenticacion, validacion, registro-peticiones, errores
 │   ├── pruebas/            unitarias.test.js, api.test.js, carga.js
@@ -76,9 +76,9 @@ axon-stack-flow/
 | Capa | Carpeta | Responsabilidad |
 |---|---|---|
 | **Modelo** | `modelos/` | Una clase por entidad; única capa que pide y guarda datos (en la API externa) |
-| **DTO de petición (req)** | `dto/` | Un archivo por recurso. Reúne body, `:id` y `?query`, los limpia y los valida (`BaseRequestDto` y las validaciones están en `dto/comunes.js`) |
+| **DTO de petición (req)** | `dto/` | Un archivo por recurso. Arriba, las clases `*RequestDto`: reúnen body, `:id` y `?query`, los limpian y los validan; debajo, las funciones que reciben la petición (`req`): leen `req.dto` y `req.user`, llaman al servicio y responden con la vista (`BaseRequestDto` y las validaciones están en `dto/comunes.js`) |
 | **Vista (res)** | `vistas/` | Solo las respuestas: define el JSON que sale; nunca se envía un modelo directo ni el hash de la contraseña |
-| **Controlador** | `controladores/` | Arriba declara sus endpoints (Router: `router.<método>(ruta, middlewares, validateRequest(XRequestDto), función)`) y debajo las funciones; recibe la petición ya validada (`req.dto`), llama al servicio y responde con la vista. `controladores/index.js` los une |
+| **Controlador** | `controladores/` | Solo endpoints: una línea por ruta (`router.<método>(ruta, middlewares, validateRequest(XRequestDto), función)`) con la función importada de `dto/`. Sin lógica. `controladores/index.js` los une |
 | Servicios | `servicios/` | Reglas de negocio. Devuelven datos del dominio, no respuestas HTTP |
 | Middlewares | `middlewares/` | Token y roles, límite de intentos, validación, registro de peticiones y errores |
 
@@ -170,7 +170,7 @@ El login sigue el diagrama de secuencia del tablero. Cada participante tiene su 
 | Usuario | La persona en el navegador |
 | Vista | `frontend/js/vistas/inicio-sesion.js` (`onSubmit({ email, password })`). Su controlador, `controladores/inicio-sesion.js`, llama a `login(new CredentialsRequestDto({ email, password }))` |
 | DTO de entrada (usu, contra) | `CredentialsRequestDto` en `backend/dto/autenticacion.js` |
-| Controlador | `login` en `backend/controladores/autenticacion.js` |
+| Endpoint | `POST /api/auth/login` en `backend/controladores/autenticacion.js`; la función `login` está en `backend/dto/autenticacion.js` |
 | `validateCredentials(usu, contra)` | `authService.validateCredentials({ email, password })`, que llama a `User.validateCredentials(email, password)` |
 | Modelo | `backend/modelos/usuario.js`: convierte la fila de la base en un `User` |
 | Base de datos | API externa: `GET /users?email=&includeInactive=true&limit=1` |

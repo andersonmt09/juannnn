@@ -1,6 +1,9 @@
 // DTO de petición (req) de /api/auth: lo que envía el cliente, limpio y validado.
 const { BaseRequestDto, cleanText, nameErrors, emailErrors, passwordErrors, codeErrors } = require("./comunes");
-const { normalizeEmail } = require("../configuracion");
+const { normalizeEmail, CODE_PURPOSE } = require("../configuracion");
+const authService = require("../servicios/autenticacion");
+const { MessageResponseDto } = require("../vistas/comunes");
+const { VerificationRequiredResponseDto, EmailVerifiedResponseDto, SessionResponseDto } = require("../vistas/autenticacion");
 
 // POST /api/auth/register
 class RegisterRequestDto extends BaseRequestDto {
@@ -66,4 +69,40 @@ class RefreshTokenRequestDto extends BaseRequestDto {
   }
 }
 
-module.exports = { RegisterRequestDto, CredentialsRequestDto, VerifyCodeRequestDto, ResendCodeRequestDto, RefreshTokenRequestDto };
+// ---------- Funciones que reciben la petición (req) ----------
+
+async function register(req, res) {
+  const result = await authService.register(req.dto);
+  res.status(201).json(new VerificationRequiredResponseDto(result));
+}
+
+async function verifyRegistration(req, res) {
+  await authService.verifyRegistration(req.dto);
+  res.json(new EmailVerifiedResponseDto());
+}
+
+// Secuencia del tablero: Vista → CredentialsRequestDto → login → validateCredentials → User (Modelo) → BD
+async function login(req, res) {
+  const user = await authService.validateCredentials(req.dto); // validarCredenciales(usu, contra)
+  res.json(new VerificationRequiredResponseDto(await authService.startLoginVerification(user)));
+}
+
+async function verifyLogin(req, res) {
+  res.json(new SessionResponseDto(await authService.verifyLogin(req.dto)));
+}
+
+async function resendLoginCode(req, res) {
+  await authService.resendCode({ email: req.dto.email, purpose: CODE_PURPOSE.LOGIN });
+  res.json(new MessageResponseDto("Código reenviado"));
+}
+
+async function resendRegistrationCode(req, res) {
+  await authService.resendCode({ email: req.dto.email, purpose: CODE_PURPOSE.REGISTRATION });
+  res.json(new MessageResponseDto("Código reenviado"));
+}
+
+async function refreshToken(req, res) {
+  res.json(new SessionResponseDto(await authService.refreshSession(req.dto)));
+}
+
+module.exports = { RegisterRequestDto, CredentialsRequestDto, VerifyCodeRequestDto, ResendCodeRequestDto, RefreshTokenRequestDto, register, verifyRegistration, login, verifyLogin, resendLoginCode, resendRegistrationCode, refreshToken };

@@ -1,5 +1,8 @@
 // DTO de petición (req) de /api/simulations: lo que envía el cliente, limpio y validado.
 const { BaseRequestDto } = require("./comunes");
+const { performance } = require("perf_hooks");
+const simulationService = require("../servicios/simulacion");
+const { SimulationResponseDto } = require("../vistas/simulacion");
 
 const OPERATIONS = ["users", "endpoints", "requests"];
 
@@ -15,4 +18,11 @@ class RunSimulationRequestDto extends BaseRequestDto {
   }
 }
 
-module.exports = { RunSimulationRequestDto, OPERATIONS };
+// ---------- Funciones que reciben la petición (req) ----------
+
+async function run(req, res) {
+  const result = await simulationService.run(req.dto, req.receivedAt ?? performance.now());
+  res.json(new SimulationResponseDto(result, { path: req.baseUrl }));
+}
+
+module.exports = { RunSimulationRequestDto, OPERATIONS, run };

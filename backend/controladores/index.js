@@ -1,18 +1,17 @@
 // Une los controladores de la API (servidor.js la monta en /api).
-// Cada controlador declara sus propios endpoints: abre el archivo para ver método, ruta,
-// quién puede entrar, qué DTO de petición valida los datos y qué función responde.
+// Cada controlador solo declara endpoints (método, ruta, acceso y qué función de dto/ responde).
 const { Router } = require("express");
 
-const simulationRouter = require("./simulacion").router;
+const simulationRouter = require("./simulacion");
 
 const MODULES = [
-  ["", require("./metricas").router], // /health y /metrics/dashboard
-  ["/auth", require("./autenticacion").router],
-  ["/users", require("./usuarios").router],
-  ["/monitoring", require("./monitoreo").router],
+  ["", require("./metricas")], // /health y /metrics/dashboard
+  ["/auth", require("./autenticacion")],
+  ["/users", require("./usuarios")],
+  ["/monitoring", require("./monitoreo")],
   ["/simulations", simulationRouter],
   ["/axonApi", simulationRouter], // alias del documento para la simulación
-  ["/events", require("./eventos").router],
+  ["/events", require("./eventos")],
 ];
 
 const router = Router();

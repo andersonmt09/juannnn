@@ -41,4 +41,4 @@ class BaseRequestDto {
   }
 }
 
-module.exports = { cleanText, nameErrors, emailErrors, passwordErrors, codeErrors, BaseRequestDto };
+module.exports = { cleanText, nameErrors, emailErrors, passwordErrors, codeErrors, BaseRequestDto  };

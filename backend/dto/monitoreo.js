@@ -1,6 +1,14 @@
 // DTO de petición (req) de /api/monitoring: lo que envía el cliente, limpio y validado.
 const { BaseRequestDto } = require("./comunes");
-const { HTTP_METHODS, SECURITY, isValidHttpMethod, isPositiveInteger } = require("../configuracion");
+const { ROLES, HTTP_METHODS, SECURITY, isValidHttpMethod, isPositiveInteger } = require("../configuracion");
+const monitoringService = require("../servicios/monitoreo");
+const { MessageResponseDto } = require("../vistas/comunes");
+const {
+  MonitoredEndpointListResponseDto,
+  MonitoredEndpointResponseDto,
+  MonitoredEndpointDetailResponseDto,
+  ApiRouteListResponseDto,
+} = require("../vistas/monitoreo");
 
 // POST /api/monitoring/endpoints
 class CreateMonitoredEndpointRequestDto extends BaseRequestDto {
@@ -36,4 +44,33 @@ class MonitoredEndpointIdRequestDto extends BaseRequestDto {
   }
 }
 
-module.exports = { CreateMonitoredEndpointRequestDto, MonitoredEndpointIdRequestDto };
+// ---------- Funciones que reciben la petición (req) ----------
+
+// Rutas reales de la API; las calcula servidor.js con listApiRoutes de controladores/index.js.
+const apiRoutes = (req) => req.app.locals.apiRoutes || [];
+
+function listRoutes(req, res) {
+  res.json(new ApiRouteListResponseDto(apiRoutes(req)));
+}
+
+async function list(req, res) {
+  res.json(new MonitoredEndpointListResponseDto(await monitoringService.list()));
+}
+
+async function getById(req, res) {
+  res.json(new MonitoredEndpointDetailResponseDto(
+    await monitoringService.getById(req.dto.id),
+    { isAdmin: req.user.role === ROLES.ADMIN },
+  ));
+}
+
+async function create(req, res) {
+  res.status(201).json(new MonitoredEndpointResponseDto(await monitoringService.create(req.dto, apiRoutes(req))));
+}
+
+async function remove(req, res) {
+  await monitoringService.remove(req.dto.id);
+  res.json(new MessageResponseDto("Endpoint eliminado del monitoreo"));
+}
+
+module.exports = { CreateMonitoredEndpointRequestDto, MonitoredEndpointIdRequestDto, listRoutes, list, getById, create, remove };

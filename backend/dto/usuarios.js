@@ -1,6 +1,10 @@
 // DTO de petición (req) de /api/users: lo que envía el cliente, limpio y validado.
 const { BaseRequestDto, cleanText, nameErrors, emailErrors, passwordErrors } = require("./comunes");
 const { ROLES, PAGINATION, normalizeEmail, isPositiveInteger } = require("../configuracion");
+const userService = require("../servicios/usuarios");
+const { MessageResponseDto } = require("../vistas/comunes");
+const { UserResponseDto, UserListResponseDto } = require("../vistas/usuarios");
+const { SessionResponseDto } = require("../vistas/autenticacion");
 
 const ID_ERROR = "El id debe ser un número entero positivo";
 const ROLE_ERROR = "El rol debe ser admin o user";
@@ -82,4 +86,33 @@ class UserIdRequestDto extends BaseRequestDto {
   }
 }
 
-module.exports = { ListUsersRequestDto, CreateUserRequestDto, UpdateUserRequestDto, ChangePasswordRequestDto, UserIdRequestDto };
+// ---------- Funciones que reciben la petición (req) ----------
+
+async function list(req, res) {
+  res.json(new UserListResponseDto(await userService.list(req.dto)));
+}
+
+async function getById(req, res) {
+  res.json(new UserResponseDto(await userService.getById(req.dto.id, req.user)));
+}
+
+async function create(req, res) {
+  res.status(201).json(new UserResponseDto(await userService.create(req.dto, req.user)));
+}
+
+async function update(req, res) {
+  res.json(new UserResponseDto(await userService.update(req.dto.id, req.dto.changes(), req.user)));
+}
+
+async function changePassword(req, res) {
+  const session = await userService.changePassword(req.dto.id, req.dto, req.user);
+  // Propia: sesión nueva (las demás quedan cerradas). De otro usuario: solo mensaje.
+  res.json(session ? new SessionResponseDto(session) : new MessageResponseDto("Contraseña actualizada"));
+}
+
+async function remove(req, res) {
+  await userService.remove(req.dto.id, req.user);
+  res.json(new MessageResponseDto("Usuario eliminado"));
+}
+
+module.exports = { ListUsersRequestDto, CreateUserRequestDto, UpdateUserRequestDto, ChangePasswordRequestDto, UserIdRequestDto, list, getById, create, update, changePassword, remove };

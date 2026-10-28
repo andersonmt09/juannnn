@@ -1,6 +1,8 @@
 // DTO de petición (req) de /api/metrics y /api/health: lo que envía el cliente, limpio y validado.
 const { BaseRequestDto } = require("./comunes");
 const { PAGINATION, isValidHttpMethod, isPositiveInteger } = require("../configuracion");
+const metricService = require("../servicios/metricas");
+const { DashboardResponseDto, HealthResponseDto, RequestLogListResponseDto, RequestLogDetailResponseDto, ServiceListResponseDto } = require("../vistas/metricas");
 
 const STATUS_CLASSES = ["2xx", "3xx", "4xx", "5xx"];
 
@@ -34,4 +36,27 @@ class RequestLogIdRequestDto extends BaseRequestDto {
   }
 }
 
-module.exports = { ListRequestLogsRequestDto, RequestLogIdRequestDto };
+// ---------- Funciones que reciben la petición (req) ----------
+
+async function getDashboard(req, res) {
+  res.json(new DashboardResponseDto(await metricService.getDashboard()));
+}
+
+async function listRequests(req, res) {
+  res.json(new RequestLogListResponseDto(await metricService.listRequests(req.dto)));
+}
+
+async function getRequest(req, res) {
+  res.json(new RequestLogDetailResponseDto(await metricService.getRequest(req.dto.id)));
+}
+
+async function getServices(req, res) {
+  res.json(new ServiceListResponseDto(await metricService.getServices()));
+}
+
+async function checkHealth(req, res) {
+  const status = await metricService.checkHealth();
+  res.status(status.databaseAvailable ? 200 : 503).json(new HealthResponseDto(status));
+}
+
+module.exports = { ListRequestLogsRequestDto, RequestLogIdRequestDto, getDashboard, listRequests, getRequest, getServices, checkHealth };
