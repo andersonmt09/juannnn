@@ -49,7 +49,6 @@ export function renderLoginView(container, { onSubmit }) {
   const form = el("form", { novalidate: false }, [
     el("div", { class: "field" }, [el("label", { class: "field-label", for: "login-email" }, ["Correo electrónico"]), emailInput]),
     password,
-    el("a", { href: "#/forgot-password", class: "auth-forgot" }, ["¿Olvidaste tu contraseña?"]),
     submit,
   ]);
   form.addEventListener("submit", (event) => {

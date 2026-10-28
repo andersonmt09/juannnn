@@ -65,9 +65,6 @@ const authRateLimiter = createRateLimiter({ skipSuccessful: true });
 // El login también se limita por correo (evita repartir intentos entre varias IP).
 const loginEmailLimiter = createRateLimiter({ skipSuccessful: true, keyGenerator: emailKey });
 
-// Solicitudes de código de recuperación: cuenta también las exitosas, porque forgot siempre responde 200.
-const passwordResetLimiter = createRateLimiter();
-
 // Reenvío de códigos: máx. 5 cada 15 min por IP y por correo, contando también las exitosas.
 const resendIpLimiter = createRateLimiter({ max: SECURITY.RESEND_MAX_PER_WINDOW });
 const resendEmailLimiter = createRateLimiter({ max: SECURITY.RESEND_MAX_PER_WINDOW, keyGenerator: emailKey });
@@ -79,7 +76,6 @@ module.exports = {
   createRateLimiter,
   authRateLimiter,
   loginEmailLimiter,
-  passwordResetLimiter,
   resendIpLimiter,
   resendEmailLimiter,
 };

@@ -2,14 +2,12 @@
 const { Router } = require("express");
 const authService = require("../servicios/autenticacion");
 const { asyncHandler, CODE_PURPOSE } = require("../configuracion");
-const { authRateLimiter, loginEmailLimiter, passwordResetLimiter, resendIpLimiter, resendEmailLimiter } = require("../middlewares/autenticacion");
+const { authRateLimiter, loginEmailLimiter, resendIpLimiter, resendEmailLimiter } = require("../middlewares/autenticacion");
 const { validateRequest } = require("../middlewares/validacion");
 // DTO de petición (req): lo que envía el cliente
 const {
   RegisterRequestDto,
   CredentialsRequestDto,
-  ForgotPasswordRequestDto,
-  ResetPasswordRequestDto,
   VerifyCodeRequestDto,
   ResendCodeRequestDto,
   RefreshTokenRequestDto,
@@ -35,10 +33,6 @@ router.post("/login", authRateLimiter, loginEmailLimiter, validateRequest(Creden
 router.post("/login/verify", authRateLimiter, validateRequest(VerifyCodeRequestDto), asyncHandler(verifyLogin));
 // POST /api/auth/login/resend-code (público)
 router.post("/login/resend-code", resendIpLimiter, resendEmailLimiter, validateRequest(ResendCodeRequestDto), asyncHandler(resendLoginCode));
-// POST /api/auth/password/forgot (público)
-router.post("/password/forgot", passwordResetLimiter, resendEmailLimiter, validateRequest(ForgotPasswordRequestDto), asyncHandler(forgotPassword));
-// POST /api/auth/password/reset (público)
-router.post("/password/reset", authRateLimiter, validateRequest(ResetPasswordRequestDto), asyncHandler(resetPassword));
 // POST /api/auth/refresh-token (público: usa el refresh token del cuerpo)
 router.post("/refresh-token", validateRequest(RefreshTokenRequestDto), asyncHandler(refreshToken));
 
@@ -58,17 +52,6 @@ async function verifyRegistration(req, res) {
 async function login(req, res) {
   const user = await authService.validateCredentials(req.dto); // validarCredenciales(usu, contra)
   res.json(new VerificationRequiredResponseDto(await authService.startLoginVerification(user)));
-}
-
-// Respuesta genérica: no revela si el correo existe.
-async function forgotPassword(req, res) {
-  await authService.requestPasswordReset(req.dto);
-  res.json(new MessageResponseDto("Si el correo está registrado, te enviamos un código para restablecer tu contraseña"));
-}
-
-async function resetPassword(req, res) {
-  await authService.resetPassword(req.dto);
-  res.json(new MessageResponseDto("Contraseña actualizada. Ya puedes iniciar sesión."));
 }
 
 async function verifyLogin(req, res) {
@@ -94,8 +77,6 @@ module.exports = {
   register,
   verifyRegistration,
   login,
-  forgotPassword,
-  resetPassword,
   verifyLogin,
   resendLoginCode,
   resendRegistrationCode,

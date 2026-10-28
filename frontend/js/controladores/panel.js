@@ -11,7 +11,7 @@ import { toast, exportToCsv } from "../utilidades.js";
 // GET  /metrics/dashboard   (admin)
 // GET  /metrics/services    (admin)
 // GET  /metrics/requests/:id (admin) — también lo usan actividad y monitoreo
-// GET  /health              (público) — también lo usan inicio de sesión, recuperar contraseña y menú
+// GET  /health              (público) — también lo usan inicio de sesión y menú
 // POST /simulations         (admin; alias /axonApi)
 export const getDashboard = () => http.get("/metrics/dashboard").then((res) => res.data);
 export const getServices = () => http.get("/metrics/services").then((res) => res.data);

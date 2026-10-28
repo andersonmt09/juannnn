@@ -33,22 +33,6 @@ export class ResendCodeRequestDto {
   }
 }
 
-// POST /api/auth/password/forgot
-export class ForgotPasswordRequestDto {
-  constructor({ email }) {
-    this.email = clean(email);
-  }
-}
-
-// POST /api/auth/password/reset
-export class ResetPasswordRequestDto {
-  constructor({ email, code, password }) {
-    this.email = clean(email);
-    this.code = clean(code);
-    this.password = password;
-  }
-}
-
 // POST /api/auth/refresh-token
 export class RefreshTokenRequestDto {
   constructor({ refreshToken }) {

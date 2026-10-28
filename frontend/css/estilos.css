@@ -585,10 +585,6 @@ body:has(.modal[data-variant="drawer"]:not(.hidden)) .toast-wrap { top: auto; bo
 .detail-list dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 @keyframes drawer-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
 
-/* ---- Recuperar contraseña ---- */
-.auth-forgot { align-self: flex-end; margin-top: calc(var(--sp-2) * -1); font-size: var(--fs-sm); }
-.auth-step[hidden] { display: none; }
-
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes shimmer { to { background-position: -200% 0; } }
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 3px var(--live-soft); } 50% { box-shadow: 0 0 0 6px transparent; } }

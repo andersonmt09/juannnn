@@ -2,7 +2,7 @@
 // Secuencia del tablero (login):
 //   Usuario -> Vista (onSubmit) -> login -> POST /auth/login
 //   -> CredentialsRequestDto -> ControlUsu.login -> validateCredentials -> User (Modelo) -> BD.
-//   Correcto: código al correo -> #/verify -> panel. Error (NO): toast + enlace "¿Olvidaste tu contraseña?".
+//   Correcto: código al correo -> #/verify -> panel. Error (NO): toast.
 import { renderLoginView } from "../vistas/inicio-sesion.js";
 import { http } from "../modelos/api.js";
 import { getHealth } from "./panel.js";

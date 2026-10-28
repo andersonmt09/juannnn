@@ -2,7 +2,6 @@
 // decide cuál mostrar según la sesión y el rol, y limpia la pantalla anterior al cambiar.
 import { showLogin } from "./controladores/inicio-sesion.js";
 import { showRegister } from "./controladores/registro.js";
-import { showForgotPassword } from "./controladores/recuperar-contrasena.js";
 import { showVerify } from "./controladores/verificacion.js";
 import { showDashboard } from "./controladores/panel.js";
 import { showUsers } from "./controladores/usuarios.js";
@@ -20,7 +19,6 @@ const ROUTES = {
   "#/login":      { controller: showLogin,      public: true },
   "#/register":   { controller: showRegister,   public: true },
   "#/verify":     { controller: showVerify,     public: true },
-  "#/forgot-password": { controller: showForgotPassword, public: true },
   "#/dashboard":  { controller: showDashboard,  adminOnly: true },
   "#/users":      { controller: showUsers,      adminOnly: true },
   "#/monitoring": { controller: showMonitoring },

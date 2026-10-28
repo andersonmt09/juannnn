@@ -111,18 +111,6 @@ test("las rutas de detalle sin token devuelven 401", async () => {
   assert.equal((await request("GET", "/metrics/requests/1")).status, 401);
 });
 
-test("forgot con un correo inexistente responde 200 genérico", async () => {
-  const { status, data } = await request("POST", "/auth/password/forgot", { email: "nadie-existe@axon.com" });
-  assert.equal(status, 200);
-  assert.match(data.message, /Si el correo está registrado/);
-});
-
-test("reset con body inválido devuelve 400 y con código falso 401", async () => {
-  assert.equal((await request("POST", "/auth/password/reset", { email: "x", code: "1", password: "1" })).status, 400);
-  const fake = await request("POST", "/auth/password/reset", { email: "nadie-existe@axon.com", code: "123456", password: "nueva123" });
-  assert.equal(fake.status, 401);
-});
-
 test("token_version: tras cambiar la contraseña el token y el refresh viejos devuelven 401", async () => {
   const User = require("../modelos/usuario");
   const { tokens } = require("../externos");

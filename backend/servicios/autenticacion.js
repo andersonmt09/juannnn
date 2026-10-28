@@ -72,28 +72,6 @@ async function resendCode({ email, purpose }) {
   await issueCode({ userId: user.id, email, purpose });
 }
 
-// ---------- Recuperar contraseña ----------
-
-// Respuesta siempre genérica: si no existe, está inactivo o sin verificar, no hace nada.
-async function requestPasswordReset({ email }) {
-  // Mismo enfriamiento que el reenvío: evita inundar de correos a una cuenta.
-  enforceResendCooldown(email, CODE_PURPOSE.PASSWORD_RESET);
-  const user = await User.findByEmail(email);
-  if (!user || !user.isActive() || !user.emailVerified) return;
-  await issueCode({ userId: user.id, email, purpose: CODE_PURPOSE.PASSWORD_RESET });
-}
-
-// Comprueba el código, guarda la contraseña nueva y cierra todas las sesiones (token_version + 1).
-async function resetPassword({ email, code, password }) {
-  await verifyCode({ email, code, purpose: CODE_PURPOSE.PASSWORD_RESET });
-  const user = await User.findByEmail(email);
-  if (!user || !user.isActive()) throw HttpError.unauthorized("Código inválido o expirado");
-
-  const passwordHash = await bcrypt.hash(password, SECURITY.BCRYPT_ROUNDS);
-  await User.updatePassword(user.id, passwordHash, user.tokenVersion + 1);
-  await VerificationCode.invalidateAll(email, CODE_PURPOSE.LOGIN);
-}
-
 // ---------- Sesión ----------
 
 // Entrega tokens nuevos con la versión actual del usuario.
@@ -165,8 +143,6 @@ module.exports = {
   validateCredentials,
   startLoginVerification,
   verifyLogin,
-  requestPasswordReset,
-  resetPassword,
   issueSession,
   resendCode,
   refreshSession,

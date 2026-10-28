@@ -11,8 +11,7 @@ Aplicación web para administrar usuarios con inicio de sesión en dos pasos (co
 ## Funcionalidades
 
 - Registro con verificación del correo e inicio de sesión en dos pasos (código de 6 dígitos).
-- Recuperación de contraseña con código al correo ("¿Olvidaste tu contraseña?").
-- Sesión con token de 15 minutos que se renueva sola. Al restablecer o cambiar la contraseña se cierran las demás sesiones.
+- Sesión con token de 15 minutos que se renueva sola. Al cambiar la contraseña se cierran las demás sesiones.
 - Gestión de usuarios por roles (administrador y usuario), con paginación, confirmaciones y eliminación lógica.
 - Panel de control (solo administradores): cinco indicadores, arquitectura visual, gráficas, estado de los servicios y actividad reciente.
 - Simulación de una petición que recorre las cuatro capas: Cliente, API, Backend y Base de datos.
@@ -61,7 +60,7 @@ axon-stack-flow/
 │   ├── js/
 │   │   ├── modelos/        sesion (sesión y tema), api (solo el cliente HTTP), eventos (tiempo real)
 │   │   ├── dto/            DTO de petición (req): comunes, autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
-│   │   ├── vistas/         inicio-sesion, registro, verificacion, recuperar-contrasena, panel, usuarios, monitoreo, actividad, perfil
+│   │   ├── vistas/         inicio-sesion, registro, verificacion, panel, usuarios, monitoreo, actividad, perfil
 │   │   │                   + componentes (menú, tablas, tarjetas, modal, panel lateral de detalle, gráficas, arquitectura...)
 │   │   ├── controladores/  los mismos nombres que vistas/ + menu; cada uno declara los endpoints que usa
 │   │   ├── principal.js    Pantallas (#/...), permisos por rol y navegación
@@ -119,8 +118,6 @@ Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el tok
 | POST | `/auth/login` | Público | `CredentialsRequestDto` | `VerificationRequiredResponseDto` | `login` |
 | POST | `/auth/login/verify` | Público | `VerifyCodeRequestDto` | `SessionResponseDto` | `verifyLogin` |
 | POST | `/auth/login/resend-code` | Público | `ResendCodeRequestDto` | `MessageResponseDto` | `resendLoginCode` |
-| POST | `/auth/password/forgot` | Público (límite de 5 cada 15 min) | `ForgotPasswordRequestDto` | `MessageResponseDto` | `forgotPassword` |
-| POST | `/auth/password/reset` | Público | `ResetPasswordRequestDto` | `MessageResponseDto` | `resetPassword` |
 | POST | `/auth/refresh-token` | Público | `RefreshTokenRequestDto` | `SessionResponseDto` | `refreshSession` (automático) |
 | GET | `/users?page=&limit=` | Admin | `ListUsersRequestDto` | `UserListResponseDto` | `listUsers`, `listAllUsers` |
 | GET | `/users/:id` | Sesión (propio o admin) | `UserIdRequestDto` | `UserResponseDto` | `getUser` |
@@ -162,8 +159,7 @@ El navegador no permite enviar encabezados con `EventSource`, por eso el token v
 - Solo se pueden monitorear rutas que existen en la API, y cada una una sola vez. Un endpoint está "con errores" si el 20 % o más de sus respuestas fallan.
 - En cada petición se comprueba que el usuario del token siga activo: una cuenta eliminada pierde el acceso de inmediato.
 - El reenvío de código responde lo mismo exista o no el correo, para no revelar qué cuentas existen.
-- La recuperación de contraseña responde lo mismo exista o no el correo (y esté activo y verificado o no).
-- Al restablecer o cambiar una contraseña se cierran las demás sesiones (ver "Sesiones y `token_version`").
+- Al cambiar una contraseña se cierran las demás sesiones (ver "Sesiones y `token_version`").
 
 ## Secuencia del inicio de sesión
 
@@ -187,22 +183,9 @@ Pasos:
 3. El controlador llama a `validateCredentials`. El servicio pide al Modelo `User.validateCredentials`, que busca el correo en la API externa y compara la contraseña con bcrypt.
 4. **Credenciales válidas:** el Modelo devuelve el `User`. El servicio comprueba que la cuenta esté activa y verificada, y `startLoginVerification` genera el código de 6 dígitos y lo envía al correo. La respuesta es `VerificationRequiredResponseDto` y la Vista pasa a `#/verify`.
 5. El usuario escribe el código (`POST /api/auth/login/verify`). Si es correcto, el backend responde con `SessionResponseDto` (`accessToken`, `refreshToken` y `user` como `UserDto`) y se muestra el panel: `#/dashboard` para el administrador y `#/monitoring` para el usuario común.
-6. **Credenciales inválidas** (el correo no existe o la contraseña no coincide, el "( )" vacío del diagrama): el Modelo devuelve `null`, el servicio responde 401 "Credenciales incorrectas" con `ErrorResponseDto` y la Vista muestra el error junto al enlace "¿Olvidaste tu contraseña?". Una cuenta desactivada responde 403, y una sin verificar, 403 con el código `EMAIL_NOT_VERIFIED`.
+6. **Credenciales inválidas** (el correo no existe o la contraseña no coincide, el "( )" vacío del diagrama): el Modelo devuelve `null`, el servicio responde 401 "Credenciales incorrectas" con `ErrorResponseDto` y la Vista muestra el error. Una cuenta desactivada responde 403, y una sin verificar, 403 con el código `EMAIL_NOT_VERIFIED`.
 
 El hash de la contraseña nunca sale del backend: la Vista solo recibe un `UserDto`.
-
-## Recuperar contraseña
-
-Entrada: el enlace "¿Olvidaste tu contraseña?" del inicio de sesión (`#/forgot-password`, pantalla pública con dos pasos).
-
-1. **Solicitar el código.** El usuario escribe su correo y el frontend llama a `forgotPassword` (`POST /api/auth/password/forgot`, `ForgotPasswordRequestDto`). Si la cuenta existe, está activa y verificada, se invalidan los códigos anteriores y se envía un código de 6 dígitos con `purpose: "password_reset"` (asunto "AXON Security · Código para restablecer tu contraseña").
-2. **Restablecer.** En el mismo formulario escribe el código, la contraseña nueva y su confirmación (que se comprueba en el navegador). El frontend llama a `resetPassword` (`POST /api/auth/password/reset`, `ResetPasswordRequestDto`: `email`, `code` de 6 dígitos y `password`).
-3. El backend comprueba el código (vence en 5 minutos, 5 intentos y uso único), guarda la contraseña con bcrypt, incrementa `token_version`, invalida los códigos de inicio de sesión pendientes y responde "Contraseña actualizada. Ya puedes iniciar sesión.". El frontend vuelve a `#/login`.
-4. El pie de la pantalla permite reenviar el código (con una espera de 30 segundos) y volver al inicio de sesión.
-
-**Respuesta genérica.** `forgot` siempre responde 200 con el mismo mensaje ("Si el correo está registrado, te enviamos un código para restablecer tu contraseña"), exista o no el correo, para no revelar qué cuentas existen. Un código incorrecto o vencido en `reset` responde 401 "Código inválido o expirado".
-
-**Límite.** `forgot` admite como máximo 5 solicitudes por IP cada 15 minutos, cuenten o no como éxito; la sexta responde 429. `reset` usa el límite de intentos fallidos de autenticación (5 cada 15 minutos).
 
 ## Ver detalle
 
@@ -222,12 +205,12 @@ Cada usuario tiene un número de versión de sesión, `token_version` (entero, 0
 
 - Los dos tokens (acceso y renovación) llevan `ver`, la versión del usuario al emitirse.
 - En cada petición y en cada renovación se compara `ver` con la versión actual. Si no coincide, responde 401 "La sesión ya no es válida".
-- Restablecer la contraseña (`/auth/password/reset`) y cambiarla (`PATCH /users/:id/password`, propia o hecha por el administrador) suman 1 a `token_version`, así que se cierran las demás sesiones, incluidos los tokens de renovación robados.
+- Cambiar la contraseña (`PATCH /users/:id/password`, propia o hecha por el administrador) suman 1 a `token_version`, así que se cierran las demás sesiones, incluidos los tokens de renovación robados.
 - Quien cambia **su propia** contraseña recibe un `SessionResponseDto` con tokens nuevos y el frontend los guarda, así que sigue conectado en ese dispositivo. Si el administrador cambia la de otro usuario, la respuesta es solo un `MessageResponseDto`.
 
 ## Equivalencias con el documento de requerimientos
 
-`POST /auth/verify-code` del documento corresponde a `POST /auth/register/verify` y `POST /auth/login/verify`; `/auth/verify-registration`, a `/auth/register/verify`; `/auth/resend-registration`, a `/auth/register/resend-code`; y `/auth/resend-code`, a `/auth/login/resend-code`. La recuperación de contraseña (`/auth/password/forgot` y `/auth/password/reset`) y el detalle (`/monitoring/endpoints/:id` y `/metrics/requests/:id`) son ampliaciones del tablero. `POST /api/axonApi` se mantiene como alias de `POST /api/simulations`. Socket.IO se reemplazó por Server-Sent Events, que no necesita dependencias adicionales.
+`POST /auth/verify-code` del documento corresponde a `POST /auth/register/verify` y `POST /auth/login/verify`; `/auth/verify-registration`, a `/auth/register/verify`; `/auth/resend-registration`, a `/auth/register/resend-code`; y `/auth/resend-code`, a `/auth/login/resend-code`. El detalle (`/monitoring/endpoints/:id` y `/metrics/requests/:id`) es una ampliación del tablero. `POST /api/axonApi` se mantiene como alias de `POST /api/simulations`. Socket.IO se reemplazó por Server-Sent Events, que no necesita dependencias adicionales.
 
 Se usa un único servidor (puerto 4000) en lugar de dos (5173 y 4000). Los DTO de los diagramas (`UsuarioDTO.cs`) equivalen a los de `backend/dto/autenticacion.js` y `backend/vistas/autenticacion.js`, y `validarCredenciales` a `validateCredentials`.
 
@@ -242,7 +225,7 @@ Los modelos usan los siguientes recursos de la API externa. Cada petición enví
 | `/endpoints` | `id`, `name`, `method`, `path`, `description`, `created_at` |
 | `/request-logs` | `id`, `method`, `path`, `route`, `status_code`, `latency_ms`, `source`, `user_id`, `created_at` |
 
-`token_version` es una columna entera nueva de `/users` (0 por defecto). `purpose` de `/verification-codes` admite `login`, `registration` y `password_reset`.
+`token_version` es una columna entera nueva de `/users` (0 por defecto). `purpose` de `/verification-codes` admite `login` y `registration`.
 
 | Modelo | Método | Ruta | Uso |
 |---|---|---|---|
@@ -337,7 +320,6 @@ Para revisar las dependencias: `npm outdated` (versiones nuevas) y `npm audit` (
 - La IP real del cliente solo se toma de `X-Forwarded-For` si hay un proxy de confianza (`TRUST_PROXY`, por defecto desactivado).
 - Tiempo real: máximo 3 conexiones por usuario; en cada latido se revalida la sesión y se cierra si dejó de ser válida.
 - Las exportaciones CSV neutralizan las fórmulas de Excel.
-- Máximo 5 solicitudes de código de recuperación por IP cada 15 minutos.
 - Las sesiones se cierran al cambiar la contraseña (`token_version`).
 - Validación de todos los datos de entrada antes de enviarlos a la base de datos.
 - El proyecto no tiene acceso directo a la base: solo usa su API, con una clave y un tiempo máximo de espera.

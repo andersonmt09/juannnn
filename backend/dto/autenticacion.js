@@ -32,30 +32,6 @@ class CredentialsRequestDto extends BaseRequestDto {
   }
 }
 
-// POST /api/auth/password/forgot
-class ForgotPasswordRequestDto extends BaseRequestDto {
-  constructor({ email } = {}) {
-    super();
-    this.email = normalizeEmail(email);
-  }
-  validate() {
-    return emailErrors(this.email);
-  }
-}
-
-// POST /api/auth/password/reset
-class ResetPasswordRequestDto extends BaseRequestDto {
-  constructor({ email, code, password } = {}) {
-    super();
-    this.email = normalizeEmail(email);
-    this.code = cleanText(code);
-    this.password = password;
-  }
-  validate() {
-    return [...emailErrors(this.email), ...codeErrors(this.code), ...passwordErrors(this.password)];
-  }
-}
-
 // POST /api/auth/register/verify y POST /api/auth/login/verify
 class VerifyCodeRequestDto extends BaseRequestDto {
   constructor({ email, code } = {}) {
@@ -90,4 +66,4 @@ class RefreshTokenRequestDto extends BaseRequestDto {
   }
 }
 
-module.exports = { RegisterRequestDto, CredentialsRequestDto, ForgotPasswordRequestDto, ResetPasswordRequestDto, VerifyCodeRequestDto, ResendCodeRequestDto, RefreshTokenRequestDto };
+module.exports = { RegisterRequestDto, CredentialsRequestDto, VerifyCodeRequestDto, ResendCodeRequestDto, RefreshTokenRequestDto };

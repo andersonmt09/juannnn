@@ -8,7 +8,7 @@ const bcrypt = require("bcryptjs");
 const { HttpError, isValidEmail, isValidHttpMethod, isPositiveInteger, toRoutePattern } = require("../configuracion");
 const { MessageResponseDto, ErrorResponseDto } = require("../vistas/comunes");
 // DTO de petición (req)
-const { CredentialsRequestDto, ForgotPasswordRequestDto, ResetPasswordRequestDto, RegisterRequestDto, VerifyCodeRequestDto } = require("../dto/autenticacion");
+const { CredentialsRequestDto, RegisterRequestDto, VerifyCodeRequestDto } = require("../dto/autenticacion");
 const { ListUsersRequestDto, UserIdRequestDto, CreateUserRequestDto, UpdateUserRequestDto, ChangePasswordRequestDto } = require("../dto/usuarios");
 const { CreateMonitoredEndpointRequestDto, MonitoredEndpointIdRequestDto } = require("../dto/monitoreo");
 const { ListRequestLogsRequestDto, RequestLogIdRequestDto } = require("../dto/metricas");
@@ -79,7 +79,6 @@ test("contraseña: 8 a 72 caracteres; correo con coma o contraseña no texto →
   assert.equal(dto("a".repeat(73)).validate().length, 1);
   assert.equal(dto({ $ne: 1 }).validate().length, 1);
   assert.equal(new RegisterRequestDto({ name: "Ana", email: "a@b.com,c@d.com", password: "12345678" }).validate().length, 1);
-  assert.equal(new ForgotPasswordRequestDto({ email: "a@b.com,c@d.com" }).validate().length, 1);
 });
 
 test("UpdateUserRequestDto valida el :id e ignora los campos no enviados", () => {
@@ -455,7 +454,7 @@ test("eventService.publish escribe el evento SSE en cada cliente y unsubscribe l
   assert.equal(writes.length, 2);
 });
 
-// ================= Grupo T: login, recuperación, token_version y detalles =================
+// ================= Grupo T: login, token_version y detalles =================
 
 // ---------- T1: User.validateCredentials ----------
 
@@ -488,13 +487,6 @@ test("CredentialsRequestDto normaliza el correo y ya no existe el alias LoginReq
   const dto = new CredentialsRequestDto({ email: " A@B.com ", password: "x" });
   assert.equal(dto.email, "a@b.com");
   assert.deepEqual(dto.validate(), []);
-});
-
-test("ForgotPasswordRequestDto y ResetPasswordRequestDto validan correo, código y contraseña", () => {
-  assert.equal(new ForgotPasswordRequestDto({ email: "malo" }).validate().length, 1);
-  assert.deepEqual(new ForgotPasswordRequestDto({ email: "A@b.com" }).validate(), []);
-  assert.equal(new ResetPasswordRequestDto({ email: "a@b.com", code: "123456", password: "nueva123" }).validate().length, 0);
-  assert.equal(new ResetPasswordRequestDto({ email: "x", code: "12", password: "1" }).validate().length, 3);
 });
 
 test("RequestLogIdRequestDto valida el id", () => {
@@ -559,47 +551,6 @@ test("startLoginVerification emite un código de propósito login", async () => 
   assert.equal(send.mock.calls[0].arguments[2], "login");
 });
 
-test("requestPasswordReset no hace nada si no existe, está inactivo o sin verificar", async () => {
-  const { create } = mockCodes();
-  const find = test.mock.method(User, "findByEmail", async () => null);
-  await authService.requestPasswordReset({ email: "nadie@axon.com" });
-  find.mock.restore();
-  // Un correo distinto en cada llamada para no chocar con el enfriamiento de 30 s.
-  for (const [i, data] of [{ id: 3, role: "inactive" }, { id: 3, role: "user", email_verified: false }].entries()) {
-    test.mock.method(User, "findByEmail", async () => makeUser(data));
-    await authService.requestPasswordReset({ email: `x${i}@axon.com` });
-    User.findByEmail.mock.restore();
-  }
-  assert.equal(create.mock.callCount(), 0);
-  test.mock.method(User, "findByEmail", async () => ana);
-  await authService.requestPasswordReset({ email: "ana@axon.com" });
-  assert.equal(create.mock.callCount(), 1);
-  assert.equal(create.mock.calls[0].arguments[0].purpose, "password_reset");
-  // Una segunda solicitud inmediata para el mismo correo se frena.
-  await assert.rejects(authService.requestPasswordReset({ email: "ana@axon.com" }), { statusCode: 429 });
-});
-
-test("resetPassword: código malo → 401 sin updatePassword; código bueno → updatePassword + invalidar login", async () => {
-  const update = test.mock.method(User, "updatePassword", async () => {});
-  const invalidate = test.mock.method(VerificationCode, "invalidateAll", async () => {});
-  test.mock.method(User, "findByEmail", async () => makeUser({ id: 2, role: "user", token_version: 4 }));
-  test.mock.method(VerificationCode, "markUsed", async () => {});
-  test.mock.method(VerificationCode, "incrementAttempts", async () => 1);
-  const find = test.mock.method(VerificationCode, "findActive", async () => null);
-
-  await assert.rejects(authService.resetPassword({ email: "ana@axon.com", code: "000000", password: "nueva12" }), { statusCode: 401 });
-  find.mock.restore();
-  const record = { id: 1, attempts: 0, codeHash: bcrypt.hashSync("123456", 4) };
-  test.mock.method(VerificationCode, "findActive", async () => record);
-  await assert.rejects(authService.resetPassword({ email: "ana@axon.com", code: "999999", password: "nueva12" }), { statusCode: 401 });
-  assert.equal(update.mock.callCount(), 0);
-
-  await authService.resetPassword({ email: "ana@axon.com", code: "123456", password: "nueva12" });
-  assert.equal(update.mock.callCount(), 1);
-  assert.equal(update.mock.calls[0].arguments[2], 5); // token_version + 1
-  assert.deepEqual(invalidate.mock.calls.at(-1).arguments, ["ana@axon.com", "login"]);
-});
-
 // ---------- token_version ----------
 
 test("un token de acceso con versión vieja devuelve 401; con la versión actual sirve", async () => {
@@ -609,26 +560,6 @@ test("un token de acceso con versión vieja devuelve 401; con la versión actual
   await assert.rejects(authService.authenticateToken(old.accessToken), { statusCode: 401, message: /ya no es válida/ });
   const fresh = tokens.issue(current);
   assert.equal((await authService.authenticateToken(fresh.accessToken)).id, 2);
-});
-
-test("tras resetPassword el refresh token viejo devuelve 401 y el nuevo sirve", async () => {
-  let stored = makeUser({ id: 2, role: "user", token_version: 0 });
-  const oldSession = tokens.issue(stored);
-  test.mock.method(User, "findById", async () => stored);
-  test.mock.method(User, "findByEmail", async () => stored);
-  test.mock.method(User, "updatePassword", async (id, hash, version) => {
-    stored = makeUser({ id, role: "user", token_version: version });
-  });
-  test.mock.method(VerificationCode, "invalidateAll", async () => {});
-  test.mock.method(VerificationCode, "incrementAttempts", async () => 1);
-  test.mock.method(VerificationCode, "markUsed", async () => {});
-  test.mock.method(VerificationCode, "findActive", async () => ({ id: 1, attempts: 0, codeHash: bcrypt.hashSync("123456", 4) }));
-
-  assert.equal((await authService.refreshSession({ refreshToken: oldSession.refreshToken })).user.id, 2);
-  await authService.resetPassword({ email: "a@b.com", code: "123456", password: "nueva12" });
-  await assert.rejects(authService.refreshSession({ refreshToken: oldSession.refreshToken }), { statusCode: 401 });
-  const fresh = await authService.refreshSession({ refreshToken: tokens.issue(stored).refreshToken });
-  assert.equal(fresh.user.tokenVersion, 1);
 });
 
 test("changePassword propio devuelve sesión nueva y la vieja deja de servir", async () => {

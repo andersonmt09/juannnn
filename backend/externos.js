@@ -66,7 +66,6 @@ const transporter = env.smtp.host
 const MAIL_SUBJECTS = {
   [CODE_PURPOSE.REGISTRATION]: "AXON Security · Código de verificación",
   [CODE_PURPOSE.LOGIN]: "AXON Security · Código de inicio de sesión",
-  [CODE_PURPOSE.PASSWORD_RESET]: "AXON Security · Código para restablecer tu contraseña",
 };
 
 const mail = {

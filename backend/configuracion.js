@@ -84,7 +84,7 @@ const SECURITY = Object.freeze({
 const PAGINATION = Object.freeze({ DEFAULT_LIMIT: 20, MAX_LIMIT: 100 });
 
 // Para qué se envió un código de verificación.
-const CODE_PURPOSE = Object.freeze({ LOGIN: "login", REGISTRATION: "registration", PASSWORD_RESET: "password_reset" });
+const CODE_PURPOSE = Object.freeze({ LOGIN: "login", REGISTRATION: "registration" });
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
