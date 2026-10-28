@@ -7,19 +7,18 @@ const assert = require("node:assert/strict");
 const bcrypt = require("bcryptjs");
 const { HttpError, isValidEmail, isValidHttpMethod, isPositiveInteger, toRoutePattern } = require("../configuracion");
 const { MessageResponseDto, ErrorResponseDto } = require("../vistas/comunes");
-const { CredentialsRequestDto, ForgotPasswordRequestDto, ResetPasswordRequestDto, RegisterRequestDto, VerifyCodeRequestDto, SessionResponseDto, VerificationRequiredResponseDto } = require("../vistas/autenticacion");
-const {
-  ListUsersRequestDto,
-  UserIdRequestDto,
-  CreateUserRequestDto,
-  UpdateUserRequestDto,
-  ChangePasswordRequestDto,
-  UserDto,
-  UserListResponseDto,
-} = require("../vistas/usuarios");
-const { CreateMonitoredEndpointRequestDto, MonitoredEndpointIdRequestDto, MonitoredEndpointDto, MonitoredEndpointDetailResponseDto } = require("../vistas/monitoreo");
-const { HealthResponseDto, ListRequestLogsRequestDto, RequestLogIdRequestDto, RequestLogDetailResponseDto } = require("../vistas/metricas");
-const { RunSimulationRequestDto, SimulationResponseDto } = require("../vistas/simulacion");
+// DTO de petición (req)
+const { CredentialsRequestDto, ForgotPasswordRequestDto, ResetPasswordRequestDto, RegisterRequestDto, VerifyCodeRequestDto } = require("../dto/autenticacion");
+const { ListUsersRequestDto, UserIdRequestDto, CreateUserRequestDto, UpdateUserRequestDto, ChangePasswordRequestDto } = require("../dto/usuarios");
+const { CreateMonitoredEndpointRequestDto, MonitoredEndpointIdRequestDto } = require("../dto/monitoreo");
+const { ListRequestLogsRequestDto, RequestLogIdRequestDto } = require("../dto/metricas");
+const { RunSimulationRequestDto } = require("../dto/simulacion");
+// Vistas (res)
+const { SessionResponseDto, VerificationRequiredResponseDto } = require("../vistas/autenticacion");
+const { UserDto, UserListResponseDto } = require("../vistas/usuarios");
+const { MonitoredEndpointDto, MonitoredEndpointDetailResponseDto } = require("../vistas/monitoreo");
+const { HealthResponseDto, RequestLogDetailResponseDto } = require("../vistas/metricas");
+const { SimulationResponseDto } = require("../vistas/simulacion");
 const User = require("../modelos/usuario");
 const MonitoredEndpoint = require("../modelos/endpoint-monitoreado");
 const RequestLog = require("../modelos/registro-peticion");
@@ -484,7 +483,7 @@ test("User convierte ids de texto en números y tokenVersion ausente en 0", () =
 // ---------- T2: DTOs nuevos ----------
 
 test("CredentialsRequestDto normaliza el correo y ya no existe el alias LoginRequestDto", () => {
-  assert.equal(require("../vistas/autenticacion").LoginRequestDto, undefined);
+  assert.equal(require("../dto/autenticacion").LoginRequestDto, undefined);
   assert.equal(authService.login, undefined);
   const dto = new CredentialsRequestDto({ email: " A@B.com ", password: "x" });
   assert.equal(dto.email, "a@b.com");

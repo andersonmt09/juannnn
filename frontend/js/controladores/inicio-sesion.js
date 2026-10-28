@@ -6,7 +6,7 @@
 import { renderLoginView } from "../vistas/inicio-sesion.js";
 import { http } from "../modelos/api.js";
 import { getHealth } from "./panel.js";
-import { CredentialsRequestDto, ResendCodeRequestDto } from "../vistas/dto.js";
+import { CredentialsRequestDto, ResendCodeRequestDto } from "../dto/autenticacion.js";
 import { session, VERIFICATION_PURPOSE } from "../modelos/sesion.js";
 import { toast } from "../utilidades.js";
 

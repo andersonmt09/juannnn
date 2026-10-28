@@ -3,7 +3,7 @@ import { renderActivityView } from "../vistas/actividad.js";
 import { stream } from "../modelos/eventos.js";
 import { http } from "../modelos/api.js";
 import { getRequest } from "./panel.js";
-import { ListRequestLogsRequestDto } from "../vistas/dto.js";
+import { ListRequestLogsRequestDto, RequestLogIdRequestDto } from "../dto/metricas.js";
 import { toast, exportToCsv } from "../utilidades.js";
 
 // ---------- Endpoints ----------
@@ -56,7 +56,7 @@ export function showActivity(container) {
       const mine = ++ticket;
       view.showRequestLoading();
       try {
-        const log = await getRequest(row.id);
+        const log = await getRequest(new RequestLogIdRequestDto({ id: row.id }));
         if (active && mine === ticket) view.showRequestDetail(log);
       } catch (error) {
         if (mine !== ticket) return;

@@ -3,6 +3,7 @@
 // api:activity, stream:closed (el servidor cerró), stream:status (cambió la conexión)
 // y stream:pong (resultado de ping()).
 import { session } from "./sesion.js";
+import { StreamRequestDto } from "../dto/eventos.js";
 import { ensureFreshSession, REFRESH } from "./api.js";
 
 const STREAM_URL = "/api/events/stream";
@@ -73,7 +74,7 @@ function open() {
 
   closeSource();
   setStatus(STATUS.CONNECTING);
-  source = new EventSource(`${STREAM_URL}?token=${encodeURIComponent(token)}`);
+  source = new EventSource(`${STREAM_URL}${new StreamRequestDto({ token }).toQuery()}`);
 
   source.onopen = () => {
     retries = 0;

@@ -43,7 +43,8 @@ La base de datos **no forma parte del proyecto**: aquí no hay SQL (`SELECT`, `D
 axon-stack-flow/
 ├── backend/
 │   ├── modelos/            usuario, codigo-verificacion, endpoint-monitoreado, registro-peticion, base-datos
-│   ├── vistas/             comunes, autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
+│   ├── dto/                DTO de petición (req): comunes, autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
+│   ├── vistas/             Respuestas (res): comunes, autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
 │   ├── controladores/      index (une los módulos) + autenticacion, usuarios, monitoreo, metricas, simulacion, eventos (cada uno declara sus endpoints)
 │   ├── servicios/          autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
 │   ├── middlewares/        autenticacion, validacion, registro-peticiones, errores
@@ -59,8 +60,9 @@ axon-stack-flow/
 │   ├── img/                favicon.svg
 │   ├── js/
 │   │   ├── modelos/        sesion (sesión y tema), api (solo el cliente HTTP), eventos (tiempo real)
+│   │   ├── dto/            DTO de petición (req): comunes, autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
 │   │   ├── vistas/         inicio-sesion, registro, verificacion, recuperar-contrasena, panel, usuarios, monitoreo, actividad, perfil
-│   │   │                   + dto (DTO de petición) + componentes (menú, tablas, tarjetas, modal, panel lateral de detalle, gráficas, arquitectura...)
+│   │   │                   + componentes (menú, tablas, tarjetas, modal, panel lateral de detalle, gráficas, arquitectura...)
 │   │   ├── controladores/  los mismos nombres que vistas/ + menu; cada uno declara los endpoints que usa
 │   │   ├── principal.js    Pantallas (#/...), permisos por rol y navegación
 │   │   └── utilidades.js   Elementos HTML, íconos, notificaciones, formatos, CSV y almacenamiento
@@ -75,8 +77,9 @@ axon-stack-flow/
 | Capa | Carpeta | Responsabilidad |
 |---|---|---|
 | **Modelo** | `modelos/` | Una clase por entidad; única capa que pide y guarda datos (en la API externa) |
-| **Vista** | `vistas/` | Los DTO de cada recurso en un solo archivo. **Petición (req):** reúne body, `:id` y `?query`, los limpia y los valida. **Respuesta (res):** define el JSON que sale; nunca se envía un modelo directo ni el hash de la contraseña |
-| **Controlador** | `controladores/` | Declara sus endpoints (Router: método, URL, acceso, DTO de petición y función), recibe la petición ya validada (`req.dto`), llama al servicio y responde con la vista. `controladores/index.js` los une |
+| **DTO de petición (req)** | `dto/` | Un archivo por recurso. Reúne body, `:id` y `?query`, los limpia y los valida (`BaseRequestDto` y las validaciones están en `dto/comunes.js`) |
+| **Vista (res)** | `vistas/` | Solo las respuestas: define el JSON que sale; nunca se envía un modelo directo ni el hash de la contraseña |
+| **Controlador** | `controladores/` | Arriba declara sus endpoints (Router: `router.<método>(ruta, middlewares, validateRequest(XRequestDto), función)`) y debajo las funciones; recibe la petición ya validada (`req.dto`), llama al servicio y responde con la vista. `controladores/index.js` los une |
 | Servicios | `servicios/` | Reglas de negocio. Devuelven datos del dominio, no respuestas HTTP |
 | Middlewares | `middlewares/` | Token y roles, límite de intentos, validación, registro de peticiones y errores |
 
@@ -86,7 +89,7 @@ axon-stack-flow/
 |---|---|---|
 | **Modelo** | `js/modelos/` | Estado del cliente (sesión y tema), el cliente HTTP (`api.js`) y la conexión en tiempo real |
 | **Vista** | `js/vistas/` | Una por pantalla. Solo dibuja los datos que recibe y avisa de los eventos (`onSave`, `onDelete`…). No llama a la API ni navega |
-| **Controlador** | `js/controladores/` | Uno por pantalla. Declara sus endpoints, arma el DTO de petición (`vistas/dto.js`) con los datos de la vista, se los pasa a la vista, atiende sus eventos, muestra los mensajes y las confirmaciones y decide la navegación |
+| **Controlador** | `js/controladores/` | Uno por pantalla. Declara sus endpoints, arma el DTO de petición (`js/dto/`) con los datos de la vista, se los pasa a la vista, atiende sus eventos, muestra los mensajes y las confirmaciones y decide la navegación |
 
 Cada recurso tiene el mismo nombre en todas las capas. Por ejemplo, **usuarios**:
 
@@ -94,8 +97,9 @@ Cada recurso tiene el mismo nombre en todas las capas. Por ejemplo, **usuarios**
 |---|---|
 | Vista (frontend) | `frontend/js/vistas/usuarios.js` |
 | Controlador (frontend) | `frontend/js/controladores/usuarios.js` |
-| DTO de petición (frontend) | `frontend/js/vistas/dto.js` |
-| Vista (DTO de petición y respuesta) | `backend/vistas/usuarios.js` |
+| DTO de petición (frontend) | `frontend/js/dto/usuarios.js` |
+| DTO de petición (backend) | `backend/dto/usuarios.js` |
+| Vista (respuesta) | `backend/vistas/usuarios.js` |
 | Controlador (backend) | `backend/controladores/usuarios.js` |
 | Servicio | `backend/servicios/usuarios.js` |
 | Modelo | `backend/modelos/usuario.js` |
@@ -104,7 +108,7 @@ Los nombres de carpetas y archivos están en español; el código interno (varia
 
 ## Endpoints
 
-Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador. Las vistas están en `backend/vistas/` con el nombre del recurso, y los endpoints del frontend están al inicio de cada archivo de `frontend/js/controladores/`. `LoginRequestDto` se conserva como alias de `CredentialsRequestDto`.
+Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador. Los DTO de petición están en `backend/dto/` y las respuestas en `backend/vistas/`, con el nombre del recurso, y los endpoints del frontend están al inicio de cada archivo de `frontend/js/controladores/`.
 
 | Método | Ruta | Acceso | Vista de petición (req) | Vista de respuesta (res) | Llamado en el frontend |
 |---|---|---|---|---|---|
@@ -169,7 +173,7 @@ El login sigue el diagrama de secuencia del tablero. Cada participante tiene su 
 |---|---|
 | Usuario | La persona en el navegador |
 | Vista | `frontend/js/vistas/inicio-sesion.js` (`onSubmit({ email, password })`). Su controlador, `controladores/inicio-sesion.js`, llama a `login(new CredentialsRequestDto({ email, password }))` |
-| DTO de entrada (usu, contra) | `CredentialsRequestDto` en `backend/vistas/autenticacion.js` |
+| DTO de entrada (usu, contra) | `CredentialsRequestDto` en `backend/dto/autenticacion.js` |
 | Controlador | `login` en `backend/controladores/autenticacion.js` |
 | `validateCredentials(usu, contra)` | `authService.validateCredentials({ email, password })`, que llama a `User.validateCredentials(email, password)` |
 | Modelo | `backend/modelos/usuario.js`: convierte la fila de la base en un `User` |
@@ -225,7 +229,7 @@ Cada usuario tiene un número de versión de sesión, `token_version` (entero, 0
 
 `POST /auth/verify-code` del documento corresponde a `POST /auth/register/verify` y `POST /auth/login/verify`; `/auth/verify-registration`, a `/auth/register/verify`; `/auth/resend-registration`, a `/auth/register/resend-code`; y `/auth/resend-code`, a `/auth/login/resend-code`. La recuperación de contraseña (`/auth/password/forgot` y `/auth/password/reset`) y el detalle (`/monitoring/endpoints/:id` y `/metrics/requests/:id`) son ampliaciones del tablero. `POST /api/axonApi` se mantiene como alias de `POST /api/simulations`. Socket.IO se reemplazó por Server-Sent Events, que no necesita dependencias adicionales.
 
-Se usa un único servidor (puerto 4000) en lugar de dos (5173 y 4000). Los DTO de los diagramas (`UsuarioDTO.cs`) equivalen a los de `backend/vistas/autenticacion.js`, y `validarCredenciales` a `validateCredentials`.
+Se usa un único servidor (puerto 4000) en lugar de dos (5173 y 4000). Los DTO de los diagramas (`UsuarioDTO.cs`) equivalen a los de `backend/dto/autenticacion.js` y `backend/vistas/autenticacion.js`, y `validarCredenciales` a `validateCredentials`.
 
 ## API de la base de datos externa
 

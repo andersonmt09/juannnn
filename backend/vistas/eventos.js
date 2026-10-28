@@ -1,21 +1,4 @@
-// Vista de /api/events: petición del stream y DTOs de los eventos SSE.
-const { BaseRequestDto } = require("./comunes");
-
-// ---------- Petición (req) ----------
-
-// GET /api/events/stream?token=
-class StreamRequestDto extends BaseRequestDto {
-  constructor({ token } = {}) {
-    super();
-    this.token = String(token || "").trim();
-  }
-  validate() {
-    return this.token ? [] : ["El token es obligatorio"];
-  }
-}
-
-// ---------- Respuesta (eventos y respuestas) ----------
-
+// Vista (res) de /api/events: eventos SSE y respuestas del stream.
 // stream:connected
 class ConnectedEventDto {
   constructor({ clientId }) {
@@ -54,4 +37,4 @@ class PongResponseDto {
   }
 }
 
-module.exports = { StreamRequestDto, ConnectedEventDto, HeartbeatEventDto, ActivityEventDto, PongResponseDto };
+module.exports = { ConnectedEventDto, HeartbeatEventDto, ActivityEventDto, PongResponseDto };

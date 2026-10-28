@@ -1,7 +1,7 @@
 // Controlador de #/register: valida la confirmación, crea la cuenta y lleva a la verificación.
 import { renderRegisterView } from "../vistas/registro.js";
 import { http } from "../modelos/api.js";
-import { RegisterRequestDto } from "../vistas/dto.js";
+import { RegisterRequestDto } from "../dto/autenticacion.js";
 import { session, VERIFICATION_PURPOSE } from "../modelos/sesion.js";
 import { toast } from "../utilidades.js";
 

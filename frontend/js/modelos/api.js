@@ -2,7 +2,7 @@
 // El cliente agrega el token, lo renueva una vez si expira y, si la sesión ya no es válida,
 // avisa con el evento SESSION_EXPIRED_EVENT (lo atiende controladores/menu.js).
 import { session } from "./sesion.js";
-import { RefreshTokenRequestDto } from "../vistas/dto.js";
+import { RefreshTokenRequestDto } from "../dto/autenticacion.js";
 
 // ---------- Cliente HTTP ----------
 
@@ -105,7 +105,7 @@ export async function request(method, path, body, canRetry = true) {
   return data;
 }
 
-// Atajos para los controladores. body: un DTO de petición (ver vistas/dto.js).
+// Atajos para los controladores. body: un DTO de petición (ver dto/).
 export const http = {
   get: (path) => request("GET", path),
   post: (path, body) => request("POST", path, body),

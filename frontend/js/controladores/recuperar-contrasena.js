@@ -3,7 +3,7 @@
 import { renderForgotPasswordView } from "../vistas/recuperar-contrasena.js";
 import { http } from "../modelos/api.js";
 import { getHealth } from "./panel.js";
-import { ForgotPasswordRequestDto, ResetPasswordRequestDto } from "../vistas/dto.js";
+import { ForgotPasswordRequestDto, ResetPasswordRequestDto } from "../dto/autenticacion.js";
 import { toast } from "../utilidades.js";
 
 // ---------- Endpoints ----------

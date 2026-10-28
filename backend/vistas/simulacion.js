@@ -1,24 +1,4 @@
-// Vista de /api/simulations: petición de la simulación y respuesta con las capas medidas.
-const { BaseRequestDto } = require("./comunes");
-
-const OPERATIONS = ["users", "endpoints", "requests"];
-
-// ---------- Petición (req) ----------
-
-// POST /api/simulations
-class RunSimulationRequestDto extends BaseRequestDto {
-  constructor({ operation = "users", forceError = false } = {}) {
-    super();
-    this.operation = String(operation).trim().toLowerCase();
-    this.forceError = forceError === true || forceError === "true";
-  }
-  validate() {
-    return OPERATIONS.includes(this.operation) ? [] : [`La operación debe ser una de: ${OPERATIONS.join(", ")}`];
-  }
-}
-
-// ---------- Respuesta (res) ----------
-
+// Vista (res) de /api/simulations: lo que el servidor devuelve al cliente.
 const LAYER_NAMES = {
   client: "Cliente / UI",
   api: "Capa API",
@@ -48,4 +28,4 @@ class SimulationResponseDto {
   }
 }
 
-module.exports = { OPERATIONS, RunSimulationRequestDto, SimulationResponseDto };
+module.exports = { SimulationResponseDto };

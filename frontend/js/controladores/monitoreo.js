@@ -3,7 +3,8 @@ import { renderMonitoringView } from "../vistas/monitoreo.js";
 import { confirmDialog } from "../vistas/componentes.js";
 import { http } from "../modelos/api.js";
 import { getRequest } from "./panel.js";
-import { CreateMonitoredEndpointRequestDto } from "../vistas/dto.js";
+import { CreateMonitoredEndpointRequestDto, MonitoredEndpointIdRequestDto } from "../dto/monitoreo.js";
+import { RequestLogIdRequestDto } from "../dto/metricas.js";
 import { session } from "../modelos/sesion.js";
 import { toast } from "../utilidades.js";
 
@@ -15,10 +16,10 @@ import { toast } from "../utilidades.js";
 // POST   /monitoring/endpoints      (admin)
 // DELETE /monitoring/endpoints/:id  (admin)
 const listEndpoints = () => http.get("/monitoring/endpoints").then((res) => res.data);
-const getEndpoint = (id) => http.get(`/monitoring/endpoints/${id}`).then((res) => res.data);
+const getEndpoint = (dto) => http.get(`/monitoring/endpoints/${dto.id}`).then((res) => res.data);
 const listApiRoutes = () => http.get("/monitoring/routes").then((res) => res.data);
 const addEndpoint = (dto) => http.post("/monitoring/endpoints", dto).then((res) => res.data);
-const removeEndpoint = (id) => http.delete(`/monitoring/endpoints/${id}`);
+const removeEndpoint = (dto) => http.delete(`/monitoring/endpoints/${dto.id}`);
 
 export async function showMonitoring(container) {
   let endpoints = [];
@@ -44,7 +45,7 @@ export async function showMonitoring(container) {
       const mine = ++ticket;
       view.showDetailLoading();
       try {
-        const detail = await getEndpoint(endpoint.id);
+        const detail = await getEndpoint(new MonitoredEndpointIdRequestDto({ id: endpoint.id }));
         if (!active || mine !== ticket) return;
         selected = detail;
         view.showEndpointDetail(detail);
@@ -59,7 +60,7 @@ export async function showMonitoring(container) {
       const mine = ++ticket;
       view.showDetailLoading();
       try {
-        const log = await getRequest(request.id);
+        const log = await getRequest(new RequestLogIdRequestDto({ id: request.id }));
         if (!active || mine !== ticket) return;
         view.showRequestDetail(log, selected);
       } catch (error) {
@@ -102,7 +103,7 @@ export async function showMonitoring(container) {
       });
       if (!confirmed) return;
       try {
-        await removeEndpoint(endpoint.id);
+        await removeEndpoint(new MonitoredEndpointIdRequestDto({ id: endpoint.id }));
         ticket++;
         selected = null;
         view.closeDetail();

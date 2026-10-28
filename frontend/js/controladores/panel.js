@@ -1,7 +1,8 @@
 // Controlador de #/dashboard: carga métricas y servicios, corre simulaciones y sigue el stream en vivo.
 import { createDashboardView } from "../vistas/panel.js";
 import { http } from "../modelos/api.js";
-import { RunSimulationRequestDto } from "../vistas/dto.js";
+import { RunSimulationRequestDto } from "../dto/simulacion.js";
+import { RequestLogIdRequestDto } from "../dto/metricas.js";
 import { stream } from "../modelos/eventos.js";
 import { session } from "../modelos/sesion.js";
 import { toast, exportToCsv } from "../utilidades.js";
@@ -15,7 +16,7 @@ import { toast, exportToCsv } from "../utilidades.js";
 export const getDashboard = () => http.get("/metrics/dashboard").then((res) => res.data);
 export const getServices = () => http.get("/metrics/services").then((res) => res.data);
 // Detalle de una petición registrada, con el usuario que la hizo (o null).
-export const getRequest = (id) => http.get(`/metrics/requests/${id}`).then((res) => res.data);
+export const getRequest = (dto) => http.get(`/metrics/requests/${dto.id}`).then((res) => res.data);
 
 // Con la BD caída el backend responde 503 pero con cuerpo útil: se devuelve igual.
 export async function getHealth() {
@@ -57,7 +58,7 @@ export function showDashboard(container) {
       const mine = ++ticket;
       view.showRequestLoading();
       try {
-        const log = await getRequest(row.id);
+        const log = await getRequest(new RequestLogIdRequestDto({ id: row.id }));
         if (alive && mine === ticket) view.showRequestDetail(log);
       } catch (error) {
         if (mine !== ticket) return;

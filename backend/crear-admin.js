@@ -2,7 +2,7 @@
 // Uso: npm run crear-admin -- "Nombre" correo@dominio.com "Contraseña"
 const { validateEnvironment, ROLES } = require("./configuracion");
 const userService = require("./servicios/usuarios");
-const { CreateUserRequestDto } = require("./vistas/usuarios");
+const { CreateUserRequestDto } = require("./dto/usuarios");
 
 async function main() {
   validateEnvironment();

@@ -2,7 +2,7 @@
 import { renderUsersView } from "../vistas/usuarios.js";
 import { confirmDialog } from "../vistas/componentes.js";
 import { http } from "../modelos/api.js";
-import { ListUsersRequestDto, CreateUserRequestDto, UpdateUserRequestDto, ChangePasswordRequestDto } from "../vistas/dto.js";
+import { ListUsersRequestDto, UserIdRequestDto, CreateUserRequestDto, UpdateUserRequestDto, ChangePasswordRequestDto } from "../dto/usuarios.js";
 import { session } from "../modelos/sesion.js";
 import { toast, exportToCsv } from "../utilidades.js";
 
@@ -14,12 +14,12 @@ import { toast, exportToCsv } from "../utilidades.js";
 // PATCH  /users/:id/password    (con sesión; también lo usa perfil)
 // DELETE /users/:id             (admin)
 const listUsers = (dto) => http.get(`/users${dto.toQuery()}`);
-export const getUser = (id) => http.get(`/users/${id}`).then((res) => res.data);
+export const getUser = (dto) => http.get(`/users/${dto.id}`).then((res) => res.data);
 const createUser = (dto) => http.post("/users", dto).then((res) => res.data);
-const updateUser = (id, dto) => http.put(`/users/${id}`, dto).then((res) => res.data);
+const updateUser = (idDto, dto) => http.put(`/users/${idDto.id}`, dto).then((res) => res.data);
 // Si es la contraseña propia, la respuesta trae una sesión nueva { accessToken, refreshToken, user }.
-export const changePassword = (id, dto) => http.patch(`/users/${id}/password`, dto);
-const removeUser = (id) => http.delete(`/users/${id}`);
+export const changePassword = (idDto, dto) => http.patch(`/users/${idDto.id}/password`, dto);
+const removeUser = (dto) => http.delete(`/users/${dto.id}`);
 
 // Todos los usuarios (recorre todas las páginas), para exportar a CSV.
 async function listAllUsers() {
@@ -68,8 +68,8 @@ export async function showUsers(container) {
     }
     const isSelf = editingUser.id === currentUserId;
     // El rol propio no se cambia: no se envía.
-    await updateUser(editingUser.id, new UpdateUserRequestDto({ name, email, role: isSelf ? undefined : role }));
-    if (password && !isSelf) await changePassword(editingUser.id, new ChangePasswordRequestDto({ password }));
+    await updateUser(new UserIdRequestDto({ id: editingUser.id }), new UpdateUserRequestDto({ name, email, role: isSelf ? undefined : role }));
+    if (password && !isSelf) await changePassword(new UserIdRequestDto({ id: editingUser.id }), new ChangePasswordRequestDto({ password }));
     toast.success("Usuario actualizado");
   }
 
@@ -82,7 +82,7 @@ export async function showUsers(container) {
       const mine = ++ticket;
       view.showDetailLoading();
       try {
-        const detail = await getUser(user.id);
+        const detail = await getUser(new UserIdRequestDto({ id: user.id }));
         if (!active || mine !== ticket) return;
         view.showUserDetail(detail, { isSelf: detail.id === currentUserId });
       } catch (error) {
@@ -117,7 +117,7 @@ export async function showUsers(container) {
       });
       if (!confirmed) return;
       try {
-        await removeUser(user.id);
+        await removeUser(new UserIdRequestDto({ id: user.id }));
         ticket++;
         view.closeDetail();
         toast.success("Usuario eliminado");
