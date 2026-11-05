@@ -47,7 +47,7 @@ axon-stack-flow/
 │   ├── controladores/      index (une los módulos) + autenticacion, usuarios, monitoreo, metricas, simulacion, eventos (solo endpoints, sin lógica)
 │   ├── servicios/          autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
 │   ├── middlewares/        autenticacion, validacion, registro-peticiones, errores
-│   ├── pruebas/            unitarias.test.js, api.test.js, carga.js
+│   ├── pruebas/            unitarias/, api.test.js, carga.js
 │   ├── configuracion.js    Variables de entorno, constantes (roles, seguridad), errores y validaciones
 │   ├── externos.js         API de la base de datos externa, correo y tokens JWT
 │   ├── servidor.js         Express (API + frontend), seguridad (Helmet/CSP) y arranque

@@ -8,8 +8,8 @@
     "start": "node backend/servidor.js",
     "dev": "node --watch backend/servidor.js",
     "crear-admin": "node backend/crear-admin.js",
-    "test": "node --test backend/pruebas/unitarias.test.js backend/pruebas/api.test.js",
-    "pruebas:unitarias": "node --test backend/pruebas/unitarias.test.js",
+    "test": "node --test backend/pruebas/unitarias/dto-autenticacion.test.js backend/pruebas/unitarias/dto-monitoreo-metricas.test.js backend/pruebas/unitarias/dto-usuarios.test.js backend/pruebas/unitarias/eventos.test.js backend/pruebas/unitarias/modelos.test.js backend/pruebas/unitarias/rutas.test.js backend/pruebas/unitarias/servicio-autenticacion.test.js backend/pruebas/unitarias/servicio-metricas-simulacion.test.js backend/pruebas/unitarias/servicio-monitoreo.test.js backend/pruebas/unitarias/servicio-usuarios.test.js backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/vistas.test.js backend/pruebas/api.test.js",
+    "pruebas:unitarias": "node --test backend/pruebas/unitarias/dto-autenticacion.test.js backend/pruebas/unitarias/dto-monitoreo-metricas.test.js backend/pruebas/unitarias/dto-usuarios.test.js backend/pruebas/unitarias/eventos.test.js backend/pruebas/unitarias/modelos.test.js backend/pruebas/unitarias/rutas.test.js backend/pruebas/unitarias/servicio-autenticacion.test.js backend/pruebas/unitarias/servicio-metricas-simulacion.test.js backend/pruebas/unitarias/servicio-monitoreo.test.js backend/pruebas/unitarias/servicio-usuarios.test.js backend/pruebas/unitarias/utilidades.test.js backend/pruebas/unitarias/vistas.test.js",
     "pruebas:integracion": "node --test backend/pruebas/api.test.js",
     "pruebas:carga": "node backend/pruebas/carga.js"
   },
