@@ -1,0 +1,22 @@
+// registra todos los modelos (uno por tabla). Uso: const { User, Session } = require("../modelos");
+module.exports = {
+  roles: require("./roles_modelo"),
+  userStatuses: require("./estados_usuario_modelo"),
+  User: require("./usuarios_modelo"),
+  Session: require("./sesiones_modelo"),
+  LoginAttempt: require("./intentos_inicio_sesion_modelo"),
+  UserAudit: require("./auditoria_usuarios_modelo"),
+  codePurposes: require("./propositos_codigo_modelo"),
+  VerificationCode: require("./codigos_verificacion_modelo"),
+  SentEmail: require("./correos_enviados_modelo"),
+  LiveConnection: require("./conexiones_en_vivo_modelo"),
+  httpMethods: require("./metodos_http_modelo"),
+  MonitoredEndpoint: require("./rutas_vigiladas_modelo"),
+  httpStatusCodes: require("./codigos_estado_http_modelo"),
+  RequestLog: require("./registros_peticiones_modelo"),
+  Simulation: require("./simulaciones_modelo"),
+  layers: require("./capas_modelo"),
+  SimulationLayer: require("./capas_simulacion_modelo"),
+  services: require("./servicios_modelo"),
+  ServiceCheck: require("./revisiones_servicio_modelo"),
+};

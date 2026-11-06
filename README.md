@@ -4,9 +4,9 @@ Aplicación web para administrar usuarios con inicio de sesión en dos pasos (co
 
 | Parte | Carpeta | Tecnología |
 |---|---|---|
-| Backend (API REST) | `backend/` | Node.js 18+, Express 4, JWT, bcrypt, Server-Sent Events |
-| Frontend (interfaz web) | `frontend/` | HTML, CSS y JavaScript (módulos ES), servido por el mismo backend |
-| Base de datos | Externa | Se consulta por medio de su API. No hay código de base de datos en el proyecto |
+| Backend (API REST) | `BACKEND/` | Node.js 18+, Express 4, JWT, bcrypt, Server-Sent Events |
+| Frontend (interfaz web) | `FRONTEND/` | HTML, CSS y JavaScript (módulos ES), servido por el mismo backend |
+| Base de datos | Externa (19 tablas) | Se consulta por medio de su API. No hay código de base de datos en el proyecto |
 
 ## Funcionalidades
 
@@ -32,84 +32,89 @@ vista ─► controlador ─► modelo (api.js) ── req ──► ruta ─►
   └──── datos ◄─────────────┴──────────── res ◄──────────── vista de respuesta ◄────────────────────┘
 ```
 
-Un solo servidor atiende las dos partes: `/api/...` es la API y cualquier otra dirección entrega el frontend. Por eso no hace falta CORS ni configurar la URL de la API en el frontend.
+Un solo servidor atiende las dos partes: `/api/...` es la API y `/vistas/...` son las páginas del frontend. Por eso no hace falta CORS ni configurar la URL de la API en el frontend.
 
-La base de datos **no forma parte del proyecto**: aquí no hay SQL (`SELECT`, `DELETE`...), tablas, conexión directa ni usuarios escritos en el código. Los modelos del backend piden y guardan los datos llamando a la API de la base de datos externa (GET, POST, PATCH, DELETE) desde `externos.js`, con la dirección y la clave definidas en `backend/.env`, archivo que no se sube al repositorio. El respaldo de la base de datos es responsabilidad de ese servicio externo.
+La base de datos **no forma parte del proyecto**: aquí no hay SQL (`SELECT`, `DELETE`...), conexión directa ni usuarios escritos en el código. Solo se conocen los 19 recursos de su API (ver "API de la base de datos externa"). Los modelos del backend piden y guardan los datos llamando a la API de la base de datos externa (GET, POST, PATCH, DELETE) desde `config/base-datos.js`, con la dirección y la clave definidas en `BACKEND/.env`, archivo que no se sube al repositorio. El respaldo de la base de datos es responsabilidad de ese servicio externo.
 
 ## Estructura de carpetas
 
+La organización sigue la misma de nuestro proyecto de referencia (Glamping): `BACKEND/` con `main`, `config`, `controladores`, `rutas`, `modelos` (uno por tabla) y `esquemas` (DTO), y `FRONTEND/` con `css`, `js` y `vistas` (una página por pantalla).
+
 ```
-axon-stack-flow/
-├── backend/
-│   ├── modelos/            usuario, codigo-verificacion, endpoint-monitoreado, registro-peticion, base-datos
-│   ├── dto/                req: clases de petición y funciones que la reciben (comunes, autenticacion, usuarios, monitoreo, metricas, simulacion, eventos)
-│   ├── vistas/             Respuestas (res): comunes, autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
-│   ├── controladores/      index (une los módulos) + autenticacion, usuarios, monitoreo, metricas, simulacion, eventos (solo endpoints, sin lógica)
-│   ├── servicios/          autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
-│   ├── middlewares/        autenticacion, validacion, registro-peticiones, errores
+AXON_Stack_Flow/
+├── BACKEND/
+│   ├── main.js             Arranca el servidor y registra todos los controladores (API + FRONTEND)
+│   ├── config/             configuracion (variables y constantes), base-datos (API externa y catálogos),
+│   │                       seguridad (tokens JWT), correo, autenticacion (sesión, roles y límite de intentos),
+│   │                       validacion, errores, registro_peticiones
+│   ├── controladores/      <modulo>_controlador.js: los endpoints de cada módulo (prefijo + router)
+│   │                       autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
+│   ├── rutas/              La lógica de negocio que usan los endpoints (mismos nombres) + datos_iniciales (primer admin)
+│   ├── modelos/            <tabla>_modelo.js: un archivo por tabla (19) + index.js que los registra todos
+│   ├── esquemas/           DTOs_Comunes, DTOs_Usuarios_Autenticacion, DTOs_Monitoreo_Metricas, DTOs_Simulacion_Eventos
+│   │                       (cada uno con sus DTO de petición y de respuesta)
 │   ├── pruebas/            unitarias/, api.test.js, carga.js
-│   ├── configuracion.js    Variables de entorno, constantes (roles, seguridad), errores y validaciones
-│   ├── externos.js         API de la base de datos externa, correo y tokens JWT
-│   ├── servidor.js         Express (API + frontend), seguridad (Helmet/CSP) y arranque
-│   ├── crear-admin.js      Crea el primer administrador
+│   ├── LEEME.md            Cómo correr el backend
+│   ├── package.json
 │   └── .env.example
 │
-├── frontend/
-│   ├── css/                estilos.css (tokens de diseño, componentes y pantallas)
+├── FRONTEND/
+│   ├── css/                estilos.css
 │   ├── img/                favicon.svg
 │   ├── js/
-│   │   ├── modelos/        sesion (sesión y tema), api (solo el cliente HTTP), eventos (tiempo real)
-│   │   ├── dto/            DTO de petición (req): comunes, autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
-│   │   ├── vistas/         inicio-sesion, registro, verificacion, panel, usuarios, monitoreo, actividad, perfil
-│   │   │                   + componentes (menú, tablas, tarjetas, modal, panel lateral de detalle, gráficas, arquitectura...)
-│   │   ├── controladores/  los mismos nombres que vistas/ + menu; cada uno declara los endpoints que usa
-│   │   ├── principal.js    Pantallas (#/...), permisos por rol y navegación
-│   │   └── utilidades.js   Elementos HTML, íconos, notificaciones, formatos, CSV y almacenamiento
-│   └── index.html
+│   │   ├── app.js          La cargan todas las páginas: revisa la sesión y el rol y dibuja la pantalla
+│   │   ├── modelos/        sesion (sesión y tema), api (cliente HTTP), eventos (tiempo real)
+│   │   ├── dto/            DTO de petición: comunes, autenticacion, usuarios, monitoreo, metricas, simulacion, eventos
+│   │   ├── vistas/         Lo que dibuja cada pantalla + componentes (menú, tablas, tarjetas, gráficas...)
+│   │   ├── controladores/  Uno por pantalla + menu; cada uno declara los endpoints que usa
+│   │   └── utilidades.js
+│   └── vistas/             Una página por pantalla: inicio-sesion, registro, verificacion, panel,
+│                           usuarios, monitoreo, actividad, perfil (.html)
 │
-├── package.json
 └── README.md
 ```
 
 ### Backend
 
-| Capa | Carpeta | Responsabilidad |
-|---|---|---|
-| **Modelo** | `modelos/` | Una clase por entidad; única capa que pide y guarda datos (en la API externa) |
-| **DTO de petición (req)** | `dto/` | Un archivo por recurso. Arriba, las clases `*RequestDto`: reúnen body, `:id` y `?query`, los limpian y los validan; debajo, las funciones que reciben la petición (`req`): leen `req.dto` y `req.user`, llaman al servicio y responden con la vista (`BaseRequestDto` y las validaciones están en `dto/comunes.js`) |
-| **Vista (res)** | `vistas/` | Solo las respuestas: define el JSON que sale; nunca se envía un modelo directo ni el hash de la contraseña |
-| **Controlador** | `controladores/` | Solo endpoints: una línea por ruta (`router.<método>(ruta, middlewares, validateRequest(XRequestDto), función)`) con la función importada de `dto/`. Sin lógica. `controladores/index.js` los une |
-| Servicios | `servicios/` | Reglas de negocio. Devuelven datos del dominio, no respuestas HTTP |
-| Middlewares | `middlewares/` | Token y roles, límite de intentos, validación, registro de peticiones y errores |
+| Carpeta | Qué tiene |
+|---|---|
+| `main.js` | Crea la aplicación, la seguridad (Helmet/CSP), registra los controladores y sirve el FRONTEND |
+| `config/` | Todo lo que configura el sistema: variables de entorno, conexión a la API de la base, tokens, correo y los filtros que pasan las peticiones (sesión, roles, validación, errores, registro) |
+| `controladores/` | Solo los endpoints: `router.<método>(ruta, filtros, validateRequest(XRequestDto), función)` y, debajo, la función que recibe `req`/`res`, llama a `rutas/` y responde con un DTO de respuesta |
+| `rutas/` | La lógica de negocio. Devuelve datos, no respuestas HTTP |
+| `modelos/` | Un archivo por tabla. Es la única capa que lee y guarda datos (en la API externa) |
+| `esquemas/` | Los DTO: los de petición limpian y validan lo que llega; los de respuesta definen el JSON que sale (nunca el hash de la contraseña) |
 
 ### Frontend
 
-| Capa | Carpeta | Responsabilidad |
-|---|---|---|
-| **Modelo** | `js/modelos/` | Estado del cliente (sesión y tema), el cliente HTTP (`api.js`) y la conexión en tiempo real |
-| **Vista** | `js/vistas/` | Una por pantalla. Solo dibuja los datos que recibe y avisa de los eventos (`onSave`, `onDelete`…). No llama a la API ni navega |
-| **Controlador** | `js/controladores/` | Uno por pantalla. Declara sus endpoints, arma el DTO de petición (`js/dto/`) con los datos de la vista, se los pasa a la vista, atiende sus eventos, muestra los mensajes y las confirmaciones y decide la navegación |
+| Carpeta | Qué tiene |
+|---|---|
+| `vistas/*.html` | Una página por pantalla. Cada una carga `css/estilos.css` y `js/app.js` |
+| `js/app.js` | Revisa si hay sesión y el rol; si la página no le corresponde, lleva a la correcta |
+| `js/modelos/` | Sesión y tema, el cliente HTTP (`api.js`) y la conexión en tiempo real |
+| `js/vistas/` | Dibuja los datos que recibe y avisa de los eventos (`onSave`, `onDelete`…). No llama a la API |
+| `js/controladores/` | Declara sus endpoints, arma el DTO de petición (`js/dto/`), atiende los eventos de la vista y navega |
 
 Cada recurso tiene el mismo nombre en todas las capas. Por ejemplo, **usuarios**:
 
 | Capa | Archivo |
 |---|---|
-| Vista (frontend) | `frontend/js/vistas/usuarios.js` |
-| Controlador (frontend) | `frontend/js/controladores/usuarios.js` |
-| DTO de petición (frontend) | `frontend/js/dto/usuarios.js` |
-| DTO de petición (backend) | `backend/dto/usuarios.js` |
-| Vista (respuesta) | `backend/vistas/usuarios.js` |
-| Controlador (backend) | `backend/controladores/usuarios.js` |
-| Servicio | `backend/servicios/usuarios.js` |
-| Modelo | `backend/modelos/usuario.js` |
+| Página | `FRONTEND/vistas/usuarios.html` |
+| Vista (frontend) | `FRONTEND/js/vistas/usuarios.js` |
+| Controlador (frontend) | `FRONTEND/js/controladores/usuarios.js` |
+| DTO de petición (frontend) | `FRONTEND/js/dto/usuarios.js` |
+| Endpoints (backend) | `BACKEND/controladores/usuarios_controlador.js` |
+| DTO de petición y de respuesta | `BACKEND/esquemas/DTOs_Usuarios_Autenticacion.js` |
+| Lógica | `BACKEND/rutas/usuarios.js` |
+| Modelo | `BACKEND/modelos/usuarios_modelo.js` |
 
 Los nombres de carpetas y archivos están en español; el código interno (variables, funciones, clases y endpoints) está en inglés.
 
 ## Endpoints
 
-Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador. Los DTO de petición están en `backend/dto/` y las respuestas en `backend/vistas/`, con el nombre del recurso, y los endpoints del frontend están al inicio de cada archivo de `frontend/js/controladores/`.
+Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador. Los endpoints y sus funciones están en `BACKEND/controladores/<modulo>_controlador.js` y los DTO de petición y de respuesta en `BACKEND/esquemas/DTOs_*.js`, y los endpoints del frontend están al inicio de cada archivo de `FRONTEND/js/controladores/`.
 
-| Método | Ruta | Acceso | Vista de petición (req) | Vista de respuesta (res) | Llamado en el frontend |
+| Método | Ruta | Acceso | DTO de petición (req) | DTO de respuesta (res) | Llamado en el frontend |
 |---|---|---|---|---|---|
 | GET | `/health` | Público | — | `HealthResponseDto` | `getHealth` |
 | POST | `/auth/register` | Público | `RegisterRequestDto` | `VerificationRequiredResponseDto` | `register` |
@@ -168,11 +173,11 @@ El login sigue el diagrama de secuencia del tablero. Cada participante tiene su 
 | Participante del diagrama | En AXON |
 |---|---|
 | Usuario | La persona en el navegador |
-| Vista | `frontend/js/vistas/inicio-sesion.js` (`onSubmit({ email, password })`). Su controlador, `controladores/inicio-sesion.js`, llama a `login(new CredentialsRequestDto({ email, password }))` |
-| DTO de entrada (usu, contra) | `CredentialsRequestDto` en `backend/dto/autenticacion.js` |
-| Endpoint | `POST /api/auth/login` en `backend/controladores/autenticacion.js`; la función `login` está en `backend/dto/autenticacion.js` |
+| Vista | `FRONTEND/js/vistas/inicio-sesion.js` (`onSubmit({ email, password })`). Su controlador, `controladores/inicio-sesion.js`, llama a `login(new CredentialsRequestDto({ email, password }))` |
+| DTO de entrada (usu, contra) | `CredentialsRequestDto` en `BACKEND/esquemas/DTOs_Usuarios_Autenticacion.js` |
+| Endpoint | `POST /api/auth/login` en `BACKEND/controladores/autenticacion_controlador.js`; la función `login` está debajo de la lista de endpoints, en el mismo archivo |
 | `validateCredentials(usu, contra)` | `authService.validateCredentials({ email, password })`, que llama a `User.validateCredentials(email, password)` |
-| Modelo | `backend/modelos/usuario.js`: convierte la fila de la base en un `User` |
+| Modelo | `BACKEND/modelos/usuarios_modelo.js`: convierte la fila de la base en un `User` |
 | Base de datos | API externa: `GET /users?email=&includeInactive=true&limit=1` |
 | DTO de salida | `UserDto`, dentro de `SessionResponseDto.user` |
 
@@ -182,7 +187,7 @@ Pasos:
 2. `POST /api/auth/login`: la ruta valida el body con `CredentialsRequestDto` (correo válido y contraseña no vacía).
 3. El controlador llama a `validateCredentials`. El servicio pide al Modelo `User.validateCredentials`, que busca el correo en la API externa y compara la contraseña con bcrypt.
 4. **Credenciales válidas:** el Modelo devuelve el `User`. El servicio comprueba que la cuenta esté activa y verificada, y `startLoginVerification` genera el código de 6 dígitos y lo envía al correo. La respuesta es `VerificationRequiredResponseDto` y la Vista pasa a `#/verify`.
-5. El usuario escribe el código (`POST /api/auth/login/verify`). Si es correcto, el backend responde con `SessionResponseDto` (`accessToken`, `refreshToken` y `user` como `UserDto`) y se muestra el panel: `#/dashboard` para el administrador y `#/monitoring` para el usuario común.
+5. El usuario escribe el código (`POST /api/auth/login/verify`). Si es correcto, el backend responde con `SessionResponseDto` (`accessToken`, `refreshToken` y `user` como `UserDto`) y se muestra el panel: `panel.html` para el administrador y `monitoreo.html` para el usuario común.
 6. **Credenciales inválidas** (el correo no existe o la contraseña no coincide, el "( )" vacío del diagrama): el Modelo devuelve `null`, el servicio responde 401 "Credenciales incorrectas" con `ErrorResponseDto` y la Vista muestra el error. Una cuenta desactivada responde 403, y una sin verificar, 403 con el código `EMAIL_NOT_VERIFIED`.
 
 El hash de la contraseña nunca sale del backend: la Vista solo recibe un `UserDto`.
@@ -201,7 +206,7 @@ Las filas en vivo de `#/activity` se pueden abrir porque `api:activity` trae el 
 
 ## Sesiones y `token_version`
 
-Cada usuario tiene un número de versión de sesión, `token_version` (entero, 0 por defecto), guardado en el recurso `/users` de la API externa. El modelo `User` lo lee como `tokenVersion`.
+Cada usuario tiene un número de versión de sesión, `token_version` (entero, 0 por defecto), guardado en el recurso `/users` de la API externa. Además cada inicio de sesión y cada renovación guardan una fila en `/sessions`, y al cambiar `token_version` esas filas se marcan con `revoked_at`; es solo un registro, la validez sigue dependiendo del JWT y de `token_version`. El modelo `User` lo lee como `tokenVersion`.
 
 - Los dos tokens (acceso y renovación) llevan `ver`, la versión del usuario al emitirse.
 - En cada petición y en cada renovación se compara `ver` con la versión actual. Si no coincide, responde 401 "La sesión ya no es válida".
@@ -212,42 +217,48 @@ Cada usuario tiene un número de versión de sesión, `token_version` (entero, 0
 
 `POST /auth/verify-code` del documento corresponde a `POST /auth/register/verify` y `POST /auth/login/verify`; `/auth/verify-registration`, a `/auth/register/verify`; `/auth/resend-registration`, a `/auth/register/resend-code`; y `/auth/resend-code`, a `/auth/login/resend-code`. El detalle (`/monitoring/endpoints/:id` y `/metrics/requests/:id`) es una ampliación del tablero. `POST /api/axonApi` se mantiene como alias de `POST /api/simulations`. Socket.IO se reemplazó por Server-Sent Events, que no necesita dependencias adicionales.
 
-Se usa un único servidor (puerto 4000) en lugar de dos (5173 y 4000). Los DTO de los diagramas (`UsuarioDTO.cs`) equivalen a los de `backend/dto/autenticacion.js` y `backend/vistas/autenticacion.js`, y `validarCredenciales` a `validateCredentials`.
+Se usa un único servidor (puerto 4000) en lugar de dos (5173 y 4000). Los DTO de los diagramas (`UsuarioDTO.cs`) equivalen a los de `BACKEND/esquemas/DTOs_Usuarios_Autenticacion.js` (petición y respuesta), y `validarCredenciales` a `validateCredentials`.
 
 ## API de la base de datos externa
 
-Los modelos usan los siguientes recursos de la API externa. Cada petición envía la clave en el encabezado `x-api-key`, y los datos viajan en JSON con los nombres de columna de la base (`password_hash`, `email_verified`, `created_at`...). Las columnas dependen del recurso:
+La base tiene **19 tablas sin ciclos** (árbol de 18 relaciones). Cada tabla es un recurso de la API externa con las mismas operaciones: `GET /recurso` (filtros de igualdad por query, `page`, `limit` → `{ data, total }`), `GET /recurso/:id`, `POST /recurso`, `PATCH /recurso/:id` y `DELETE /recurso/:id`. Cada petición envía la clave en `x-api-key` y los datos viajan en JSON con los nombres de columna (`password_hash`, `role_id`, `created_at`...).
 
-| Recurso | Columnas |
+| Grupo | Recursos (tabla) |
 |---|---|
-| `/users` | `id`, `name`, `email`, `password_hash`, `role`, `email_verified`, `created_by_id`, `token_version`, `created_date`, `updated_date` |
-| `/verification-codes` | `id`, `user_id`, `email`, `purpose`, `code_hash`, `expires_at`, `attempts`, `used`, `created_at` |
-| `/endpoints` | `id`, `name`, `method`, `path`, `description`, `created_at` |
-| `/request-logs` | `id`, `method`, `path`, `route`, `status_code`, `latency_ms`, `source`, `user_id`, `created_at` |
+| Usuarios | `/roles`, `/user-statuses`, `/users` (`role_id`, `status_id`), `/sessions`, `/login-attempts`, `/user-audit` |
+| Códigos y correo | `/code-purposes`, `/verification-codes` (`purpose_id`), `/sent-emails` |
+| Tiempo real | `/live-connections` |
+| Monitoreo | `/http-methods`, `/endpoints` (`method_id`), `/http-status-codes`, `/request-logs` (`endpoint_id`, `user_id`, `status_code_id`) |
+| Simulación y servicios | `/simulations` (`request_log_id`), `/layers`, `/simulation-layers`, `/services`, `/service-checks` |
 
-`token_version` es una columna entera nueva de `/users` (0 por defecto). `purpose` de `/verification-codes` admite `login` y `registration`.
+Los catálogos (`roles`, `user_statuses`, `code_purposes`, `http_methods`, `http_status_codes`, `layers`, `services`) se leen una vez y quedan en la caché de `modelos/catalogo.js`, que traduce nombre ↔ id. El modelo `User` sigue mostrando `role` como `admin`, `user` o `inactive` (cuando el estado es `inactive`); eliminar un usuario es ponerle el estado `inactive`.
 
-| Modelo | Método | Ruta | Uso |
-|---|---|---|---|
-| `base-datos.js` | GET | `/health` | Comprobar que la API responde (y medir su latencia) |
-| `usuario.js` | GET | `/users?page=&limit=` | Usuarios activos paginados → `{ data, total }` |
-| | GET | `/users?email=&includeInactive=true&limit=1` | Buscar por correo (incluye inactivos) |
-| | GET | `/users/:id` | Un usuario (404 si no existe) |
-| | GET | `/users/count-by-role` | `{ admin, user, inactive }` |
-| | POST | `/users` | Crear usuario |
-| | PATCH | `/users/:id` | Editar datos, contraseña (junto con `token_version`), verificación o rol |
-| `codigo-verificacion.js` | POST | `/verification-codes` | Guardar un código (hash) |
-| | GET | `/verification-codes/active?email=&purpose=` | Último código vigente (404 si no hay) |
-| | POST | `/verification-codes/:id/attempts` | Sumar un intento |
-| | PATCH | `/verification-codes/:id` | Marcar como usado |
-| | POST | `/verification-codes/invalidate` | Invalidar los códigos anteriores (`email` y `purpose`) |
-| `endpoint-monitoreado.js` | GET | `/endpoints`, `/endpoints/:id` | Endpoints monitoreados → `{ data }` |
-| | POST / DELETE | `/endpoints`, `/endpoints/:id` | Agregar y quitar |
-| `registro-peticion.js` | POST | `/request-logs` | Registrar una petición (`method`, `path`, `route`, `status_code`, `latency_ms`, `source`, `user_id`) → responde `{ id }` |
-| | GET | `/request-logs?page=&limit=&method=&statusClass=&route=` | Historial del más nuevo al más viejo → `{ data, total }`. `statusClass` es `2xx`, `3xx`, `4xx` o `5xx`; `route` filtra por la ruta exacta (patrón) |
-| | GET | `/request-logs/:id` | Un registro (404 si no existe) |
-| | GET | `/request-logs/summary` | `{ total, last24h, avgLatencyMs, byStatus, byMethod }` (promedio sobre todos los registros) |
-| | GET | `/request-logs/stats-by-route` | `{ data: [{ method, route, total, errors, avgLatencyMs, lastRequestAt }] }`, donde `errors` cuenta respuestas con código 400 o superior |
+**Qué se guarda y cuándo** (los registros secundarios nunca rompen la petición: si fallan, se ignoran):
+
+| Tabla | Se escribe cuando |
+|---|---|
+| `user_audit` | Se crea, edita o elimina un usuario o un administrador cambia la contraseña de otro (`user_id` es quien actúa, `target_email` el afectado) |
+| `login_attempts` | Cada intento de login, correcto o no |
+| `sessions` | Al verificar el login, al renovar y al cambiar la contraseña propia; `revoked_at` cuando cambia `token_version` |
+| `sent_emails` | Cada correo con un código |
+| `live_connections` | Al abrir y cerrar cada conexión del stream (`closed_at`, `close_reason`) |
+| `request_logs` | Cada petición a la API (`endpoint_id` es nulo si la ruta no está vigilada) |
+| `simulations` y `simulation_layers` | Cada simulación, con sus tiempos en vista, controlador, servicio y modelo |
+| `service_checks` | Cada `GET /api/metrics/services`, una fila por servicio |
+
+Consultas especiales que se conservan:
+
+| Método | Ruta | Uso |
+|---|---|---|
+| GET | `/health` | Comprobar que la API responde (y medir su latencia) |
+| GET | `/users?email=&includeInactive=true&limit=1` | Buscar por correo (incluye inactivos); sin `includeInactive` solo salen los activos |
+| GET | `/users/count-by-role` | `{ admin, user, inactive }` |
+| GET | `/verification-codes/active?email=&purpose_id=` | Último código vigente (404 si no hay) |
+| POST | `/verification-codes/:id/attempts` | Sumar un intento |
+| POST | `/verification-codes/invalidate` | Invalidar los códigos anteriores (`email` y `purpose_id`) |
+| GET | `/request-logs?page=&limit=&method=&statusClass=&route=` | Historial del más nuevo al más viejo; `statusClass` es `2xx`, `3xx`, `4xx` o `5xx`; `route` filtra por el patrón de la ruta |
+| GET | `/request-logs/summary` | `{ total, last24h, avgLatencyMs, byStatus, byMethod }` |
+| GET | `/request-logs/stats-by-route` | `{ data: [{ method, route, total, errors, avgLatencyMs, lastRequestAt }] }` (`errors` cuenta códigos 400 o superiores) |
 
 `path` se guarda sin la query y `route` es la ruta en forma de patrón (`/api/users/15` se guarda como `/api/users/:id`), para agrupar las estadísticas por endpoint.
 
@@ -257,7 +268,7 @@ Si la API externa no responde, el backend devuelve 503; si responde con error, 5
 
 **Requisitos:** Node.js 18 o superior, y la dirección y la clave de la API de la base de datos externa.
 
-Todos los comandos se ejecutan desde la carpeta raíz del proyecto.
+Todos los comandos se ejecutan desde la carpeta `BACKEND` (`cd BACKEND`).
 
 **1. Instalar dependencias**
 
@@ -268,7 +279,7 @@ npm install
 **2. Configurar la conexión.** Copia el archivo de ejemplo y complétalo:
 
 ```bash
-cp backend/.env.example backend/.env       # Windows: copy backend\.env.example backend\.env
+cp .env.example .env       # Windows: copy .env.example .env
 ```
 
 | Variable | Descripción |
@@ -305,7 +316,7 @@ Abre http://localhost:4000 e inicia sesión con el administrador creado. La API 
 | `npm run crear-admin -- "Nombre" correo "Clave"` | Crea un usuario administrador |
 | `npm test` | Todas las pruebas (unitarias e integración) |
 | `npm run pruebas:unitarias` | Solo pruebas unitarias (no necesitan base de datos) |
-| `npm run pruebas:integracion` | Solo pruebas de la API (necesitan `backend/.env` y la API de la base de datos disponible) |
+| `npm run pruebas:integracion` | Solo pruebas de la API (necesitan `BACKEND/.env` y la API de la base de datos disponible) |
 | `npm run pruebas:carga` | 200 peticiones a `/api/health` con 20 a la vez; muestra el promedio y el percentil 95 (con el servidor encendido) |
 
 Para revisar las dependencias: `npm outdated` (versiones nuevas) y `npm audit` (vulnerabilidades conocidas).
@@ -325,4 +336,4 @@ Para revisar las dependencias: `npm outdated` (versiones nuevas) y `npm audit` (
 - El proyecto no tiene acceso directo a la base: solo usa su API, con una clave y un tiempo máximo de espera.
 - Cabeceras de seguridad con Helmet y una política de contenido (CSP) que solo permite scripts propios (Chart.js se sirve desde el mismo servidor en `/vendor`) y las fuentes de Google.
 - Mismo origen para la API y la interfaz, así que no se abre CORS.
-- Credenciales solo en `backend/.env`, excluido del repositorio.
+- Credenciales solo en `BACKEND/.env`, excluido del repositorio.

@@ -1,0 +1,29 @@
+{
+  "name": "axon-stack-flow",
+  "version": "3.0.0",
+  "description": "Gestión de usuarios con inicio de sesión en dos pasos y monitoreo de la API",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js",
+    "dev": "node --watch main.js",
+    "crear-admin": "node rutas/datos_iniciales.js",
+    "test": "node --test pruebas/unitarias/dto-autenticacion.test.js pruebas/unitarias/dto-monitoreo-metricas.test.js pruebas/unitarias/dto-usuarios.test.js pruebas/unitarias/eventos.test.js pruebas/unitarias/modelos.test.js pruebas/unitarias/rutas.test.js pruebas/unitarias/servicio-autenticacion.test.js pruebas/unitarias/servicio-metricas-simulacion.test.js pruebas/unitarias/servicio-monitoreo.test.js pruebas/unitarias/servicio-usuarios.test.js pruebas/unitarias/utilidades.test.js pruebas/unitarias/vistas.test.js pruebas/api.test.js",
+    "pruebas:unitarias": "node --test pruebas/unitarias/dto-autenticacion.test.js pruebas/unitarias/dto-monitoreo-metricas.test.js pruebas/unitarias/dto-usuarios.test.js pruebas/unitarias/eventos.test.js pruebas/unitarias/modelos.test.js pruebas/unitarias/rutas.test.js pruebas/unitarias/servicio-autenticacion.test.js pruebas/unitarias/servicio-metricas-simulacion.test.js pruebas/unitarias/servicio-monitoreo.test.js pruebas/unitarias/servicio-usuarios.test.js pruebas/unitarias/utilidades.test.js pruebas/unitarias/vistas.test.js",
+    "pruebas:integracion": "node --test pruebas/api.test.js",
+    "pruebas:carga": "node pruebas/carga.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "chart.js": "^4.6.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^10.2.1"
+  }
+}

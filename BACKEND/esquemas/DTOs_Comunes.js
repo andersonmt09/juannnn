@@ -1,0 +1,68 @@
+// DTO compartidos: validaciones de texto, correo y contraseña, mensajes y errores
+const { HttpError, SECURITY, isValidEmail } = require("../config/configuracion");
+
+// ---------- Petición (validan y limpian lo que llega)
+
+const cleanText = (value) => (typeof value === "string" ? value.trim() : value);
+
+function nameErrors(name) {
+  if (typeof name !== "string") return ["El nombre debe ser texto"];
+  if (name.length < 2) return ["El nombre debe tener al menos 2 caracteres"];
+  if (name.length > SECURITY.NAME_MAX_LENGTH) return [`El nombre no puede superar ${SECURITY.NAME_MAX_LENGTH} caracteres`];
+  return [];
+}
+
+const emailErrors = (email) => (isValidEmail(email) ? [] : ["El correo electrónico no es válido"]);
+
+function passwordErrors(password) {
+  if (typeof password !== "string") return ["La contraseña debe ser texto"];
+  const { PASSWORD_MIN_LENGTH: min, PASSWORD_MAX_LENGTH: max } = SECURITY;
+  if (password.length < min || Buffer.byteLength(password) > max) return [`La contraseña debe tener entre ${min} y ${max} caracteres (las tildes y los emojis cuentan como más de uno)`];
+  return [];
+}
+
+const codeErrors = (code) => (typeof code === "string" && /^\d{6}$/.test(code) ? [] : ["El código debe tener 6 dígitos"]);
+
+// cada DTO limpia en el constructor y define validate()
+class BaseRequestDto {
+  validate() {
+    return [];
+  }
+
+  assertValid() {
+    const errors = this.validate();
+    if (errors.length) throw HttpError.badRequest(errors[0], errors);
+    return this;
+  }
+}
+
+// ---------- Respuesta (lo que se devuelve)
+
+class MessageResponseDto {
+  constructor(message) {
+    this.ok = true;
+    this.message = message;
+  }
+}
+
+class ErrorResponseDto {
+  constructor(message, { errors, code, path, method } = {}) {
+    this.ok = false;
+    this.message = message;
+    if (errors) this.errors = errors;
+    if (code) this.code = code;
+    if (path) this.path = path;
+    if (method) this.method = method;
+  }
+}
+
+module.exports = {
+  cleanText,
+  nameErrors,
+  emailErrors,
+  passwordErrors,
+  codeErrors,
+  BaseRequestDto,
+  MessageResponseDto,
+  ErrorResponseDto,
+};

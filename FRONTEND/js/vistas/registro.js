@@ -1,0 +1,46 @@
+import { el } from "../utilidades.js";
+import { passwordField } from "./componentes.js";
+import { buildAuthShell } from "./inicio-sesion.js";
+
+export function renderRegisterView(container, { onSubmit }) {
+  const submit = el("button", { type: "submit", class: "btn btn-primary btn-block" }, [el("span", {}, ["Crear cuenta"])]);
+  const password = passwordField({ id: "reg-password", name: "password", label: "Contraseña", autocomplete: "new-password", hint: "Entre 8 y 72 caracteres", minlength: 8 });
+  password.input.maxLength = 72;
+  const confirm = passwordField({ id: "reg-confirm", name: "confirmPassword", label: "Confirmar contraseña", autocomplete: "new-password" });
+  confirm.input.maxLength = 72;
+  const form = el("form", {}, [
+    el("div", { class: "field" }, [
+      el("label", { class: "field-label", for: "reg-name" }, ["Nombre completo"]),
+      el("input", { id: "reg-name", name: "name", class: "input", required: true, minlength: "2", maxlength: "100", autocomplete: "name", placeholder: "Tu nombre" }),
+    ]),
+    el("div", { class: "field" }, [
+      el("label", { class: "field-label", for: "reg-email" }, ["Correo electrónico"]),
+      el("input", { id: "reg-email", name: "email", type: "email", class: "input", required: true, autocomplete: "email", placeholder: "tu@correo.com" }),
+    ]),
+    password,
+    confirm,
+    submit,
+  ]);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    onSubmit(Object.fromEntries(new FormData(form)));
+  });
+
+  const card = el("section", { class: "auth-card", "aria-labelledby": "reg-title" }, [
+    el("h1", { id: "reg-title" }, ["Crear cuenta"]),
+    el("p", { class: "auth-sub" }, ["Regístrate para empezar a usar el panel"]),
+    form,
+    el("p", { class: "auth-foot" }, ["¿Ya tienes cuenta? ", el("a", { href: "inicio-sesion.html" }, ["Inicia sesión"])]),
+  ]);
+  const shell = buildAuthShell(card);
+  container.replaceChildren(shell.layout);
+
+  return {
+    setHealth: shell.setHealth,
+    setLoading(loading) {
+      submit.disabled = loading;
+      submit.classList.toggle("is-loading", loading);
+      submit.setAttribute("aria-busy", String(loading));
+    },
+  };
+}
