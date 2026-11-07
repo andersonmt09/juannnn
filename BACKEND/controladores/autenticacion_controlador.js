@@ -1,11 +1,12 @@
-// endpoints /api/auth: cada uno valida con su DTO, llama a rutas/autenticacion.js y responde
+// endpoints /api/auth: solo la lista (método, ruta, filtros y DTO de petición)
 const { Router } = require("express");
-const { asyncHandler, clientInfo, CODE_PURPOSE } = require("../config/configuracion");
+const { asyncHandler } = require("../config/configuracion");
 const { authRateLimiter, loginEmailLimiter, resendIpLimiter, resendEmailLimiter } = require("../config/autenticacion");
 const { validateRequest } = require("../config/validacion");
-const { RegisterRequestDto, CredentialsRequestDto, VerifyCodeRequestDto, ResendCodeRequestDto, RefreshTokenRequestDto, VerificationRequiredResponseDto, EmailVerifiedResponseDto, SessionResponseDto } = require("../esquemas/DTOs_Usuarios_Autenticacion");
-const authService = require("../rutas/autenticacion");
-const { MessageResponseDto } = require("../esquemas/DTOs_Comunes");
+const { RegisterRequestDto, CredentialsRequestDto, VerifyCodeRequestDto, ResendCodeRequestDto, RefreshTokenRequestDto } = require("../esquemas/DTOs_Usuarios_Autenticacion");
+
+// las funciones de cada endpoint están en esquemas/DTOs_Usuarios_Autenticacion.js
+const { register, verifyRegistration, login, verifyLogin, resendLoginCode, resendRegistrationCode, refreshToken } = require("../esquemas/DTOs_Usuarios_Autenticacion");
 
 const router = Router();
 
@@ -23,38 +24,5 @@ router.post("/login/verify", authRateLimiter, validateRequest(VerifyCodeRequestD
 router.post("/login/resend-code", resendIpLimiter, resendEmailLimiter, validateRequest(ResendCodeRequestDto), asyncHandler(resendLoginCode));
 // POST /api/auth/refresh-token - público
 router.post("/refresh-token", validateRequest(RefreshTokenRequestDto), asyncHandler(refreshToken));
-
-async function register(req, res) {
-  const result = await authService.register(req.dto);
-  res.status(201).json(new VerificationRequiredResponseDto(result));
-}
-
-async function verifyRegistration(req, res) {
-  await authService.verifyRegistration(req.dto);
-  res.json(new EmailVerifiedResponseDto());
-}
-
-async function login(req, res) {
-  const user = await authService.validateCredentials(req.dto, clientInfo(req));
-  res.json(new VerificationRequiredResponseDto(await authService.startLoginVerification(user)));
-}
-
-async function verifyLogin(req, res) {
-  res.json(new SessionResponseDto(await authService.verifyLogin(req.dto, clientInfo(req))));
-}
-
-async function resendLoginCode(req, res) {
-  await authService.resendCode({ email: req.dto.email, purpose: CODE_PURPOSE.LOGIN });
-  res.json(new MessageResponseDto("Código reenviado"));
-}
-
-async function resendRegistrationCode(req, res) {
-  await authService.resendCode({ email: req.dto.email, purpose: CODE_PURPOSE.REGISTRATION });
-  res.json(new MessageResponseDto("Código reenviado"));
-}
-
-async function refreshToken(req, res) {
-  res.json(new SessionResponseDto(await authService.refreshSession(req.dto, clientInfo(req))));
-}
 
 module.exports = { prefijo: "/auth", router };

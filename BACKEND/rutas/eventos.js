@@ -100,4 +100,4 @@ function closeAll() {
   stopHeartbeat();
 }
 
-module.exports = { subscribe, unsubscribe, publish, publishActivity, countClients, closeAll };
+Object.assign(module.exports, { subscribe, unsubscribe, publish, publishActivity, countClients, closeAll });

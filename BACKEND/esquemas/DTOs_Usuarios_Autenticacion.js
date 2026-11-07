@@ -193,6 +193,7 @@ class SessionResponseDto {
   }
 }
 
+// se exportan antes de cargar rutas/: las rutas también usan estos DTO
 module.exports = {
   RegisterRequestDto,
   CredentialsRequestDto,
@@ -211,3 +212,88 @@ module.exports = {
   EmailVerifiedResponseDto,
   SessionResponseDto,
 };
+
+// ---------- Funciones de los endpoints (reciben req, llaman a rutas/ y responden con un DTO)
+
+const authService = require("../rutas/autenticacion");
+const userService = require("../rutas/usuarios");
+const { clientInfo, CODE_PURPOSE } = require("../config/configuracion");
+const { MessageResponseDto } = require("./DTOs_Comunes");
+
+// autenticacion
+async function register(req, res) {
+  const result = await authService.register(req.dto);
+  res.status(201).json(new VerificationRequiredResponseDto(result));
+}
+
+async function verifyRegistration(req, res) {
+  await authService.verifyRegistration(req.dto);
+  res.json(new EmailVerifiedResponseDto());
+}
+
+async function login(req, res) {
+  const user = await authService.validateCredentials(req.dto, clientInfo(req));
+  res.json(new VerificationRequiredResponseDto(await authService.startLoginVerification(user)));
+}
+
+async function verifyLogin(req, res) {
+  res.json(new SessionResponseDto(await authService.verifyLogin(req.dto, clientInfo(req))));
+}
+
+async function resendLoginCode(req, res) {
+  await authService.resendCode({ email: req.dto.email, purpose: CODE_PURPOSE.LOGIN });
+  res.json(new MessageResponseDto("Código reenviado"));
+}
+
+async function resendRegistrationCode(req, res) {
+  await authService.resendCode({ email: req.dto.email, purpose: CODE_PURPOSE.REGISTRATION });
+  res.json(new MessageResponseDto("Código reenviado"));
+}
+
+async function refreshToken(req, res) {
+  res.json(new SessionResponseDto(await authService.refreshSession(req.dto, clientInfo(req))));
+}
+
+// usuarios
+async function list(req, res) {
+  res.json(new UserListResponseDto(await userService.list(req.dto)));
+}
+
+async function getById(req, res) {
+  res.json(new UserResponseDto(await userService.getById(req.dto.id, req.user)));
+}
+
+async function create(req, res) {
+  res.status(201).json(new UserResponseDto(await userService.create(req.dto, req.user)));
+}
+
+async function update(req, res) {
+  res.json(new UserResponseDto(await userService.update(req.dto.id, req.dto.changes(), req.user)));
+}
+
+async function changePassword(req, res) {
+  const session = await userService.changePassword(req.dto.id, req.dto, req.user, clientInfo(req));
+  // propia: sesión nueva, las demás se cierran
+  res.json(session ? new SessionResponseDto(session) : new MessageResponseDto("Contraseña actualizada"));
+}
+
+async function remove(req, res) {
+  await userService.remove(req.dto.id, req.user);
+  res.json(new MessageResponseDto("Usuario eliminado"));
+}
+
+Object.assign(module.exports, {
+  register,
+  verifyRegistration,
+  login,
+  verifyLogin,
+  resendLoginCode,
+  resendRegistrationCode,
+  refreshToken,
+  list,
+  getById,
+  create,
+  update,
+  changePassword,
+  remove,
+});

@@ -1,11 +1,12 @@
-// endpoints /api/users: cada uno valida con su DTO, llama a rutas/usuarios.js y responde
+// endpoints /api/users: solo la lista (método, ruta, filtros y DTO de petición)
 const { Router } = require("express");
-const { asyncHandler, clientInfo, ROLES } = require("../config/configuracion");
+const { asyncHandler, ROLES } = require("../config/configuracion");
 const { authenticate, authorize } = require("../config/autenticacion");
 const { validateRequest } = require("../config/validacion");
-const { ListUsersRequestDto, CreateUserRequestDto, UpdateUserRequestDto, ChangePasswordRequestDto, UserIdRequestDto, UserResponseDto, UserListResponseDto, SessionResponseDto } = require("../esquemas/DTOs_Usuarios_Autenticacion");
-const userService = require("../rutas/usuarios");
-const { MessageResponseDto } = require("../esquemas/DTOs_Comunes");
+const { ListUsersRequestDto, CreateUserRequestDto, UpdateUserRequestDto, ChangePasswordRequestDto, UserIdRequestDto } = require("../esquemas/DTOs_Usuarios_Autenticacion");
+
+// las funciones de cada endpoint están en esquemas/DTOs_Usuarios_Autenticacion.js
+const { list, getById, create, update, changePassword, remove } = require("../esquemas/DTOs_Usuarios_Autenticacion");
 
 const router = Router();
 const adminOnly = [authenticate, authorize(ROLES.ADMIN)];
@@ -22,32 +23,5 @@ router.put("/:id", adminOnly, validateRequest(UpdateUserRequestDto), asyncHandle
 router.patch("/:id/password", authenticate, validateRequest(ChangePasswordRequestDto), asyncHandler(changePassword));
 // DELETE /api/users/:id - admin
 router.delete("/:id", adminOnly, validateRequest(UserIdRequestDto), asyncHandler(remove));
-
-async function list(req, res) {
-  res.json(new UserListResponseDto(await userService.list(req.dto)));
-}
-
-async function getById(req, res) {
-  res.json(new UserResponseDto(await userService.getById(req.dto.id, req.user)));
-}
-
-async function create(req, res) {
-  res.status(201).json(new UserResponseDto(await userService.create(req.dto, req.user)));
-}
-
-async function update(req, res) {
-  res.json(new UserResponseDto(await userService.update(req.dto.id, req.dto.changes(), req.user)));
-}
-
-async function changePassword(req, res) {
-  const session = await userService.changePassword(req.dto.id, req.dto, req.user, clientInfo(req));
-  // propia: sesión nueva, las demás se cierran
-  res.json(session ? new SessionResponseDto(session) : new MessageResponseDto("Contraseña actualizada"));
-}
-
-async function remove(req, res) {
-  await userService.remove(req.dto.id, req.user);
-  res.json(new MessageResponseDto("Usuario eliminado"));
-}
 
 module.exports = { prefijo: "/users", router };

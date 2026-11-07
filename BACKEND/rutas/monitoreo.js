@@ -58,4 +58,4 @@ async function remove(id) {
   await MonitoredEndpoint.delete(id);
 }
 
-module.exports = { endpointStatus, list, getById, create, remove };
+Object.assign(module.exports, { endpointStatus, list, getById, create, remove });

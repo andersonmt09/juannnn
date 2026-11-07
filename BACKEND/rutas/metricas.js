@@ -112,4 +112,4 @@ async function getServices(user) {
   return services;
 }
 
-module.exports = { getDashboard, listRequests, getRequest, checkHealth, getServices };
+Object.assign(module.exports, { getDashboard, listRequests, getRequest, checkHealth, getServices });

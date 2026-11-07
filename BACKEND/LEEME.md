@@ -16,8 +16,8 @@ npm start
 - `main.js`         -> arranca el servidor y registra todos los controladores.
 - `config/`         -> configuración: variables de entorno, conexión a la base, tokens, correo,
                        sesión y permisos, validación, errores y registro de peticiones.
-- `controladores/`  -> endpoints (get/post/put/patch/delete) de cada módulo. Cada archivo expone `prefijo` y `router`.
+- `controladores/`  -> solo los endpoints (get/post/put/patch/delete) de cada módulo. Cada archivo expone `prefijo` y `router`.
 - `rutas/`          -> lógica de negocio que usan los endpoints.
 - `modelos/`        -> un archivo por tabla (19); `modelos/index.js` los registra todos.
-- `esquemas/`       -> DTO de petición y de respuesta, agrupados por tema (`DTOs_*.js`).
+- `esquemas/`       -> DTO de petición, DTO de respuesta y las funciones (req, res) de cada endpoint, agrupados por tema (`DTOs_*.js`).
 - `pruebas/`        -> pruebas unitarias y de integración.

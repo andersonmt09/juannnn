@@ -52,7 +52,7 @@ AXON_Stack_Flow/
 │   ├── rutas/              La lógica de negocio que usan los endpoints (mismos nombres) + datos_iniciales (primer admin)
 │   ├── modelos/            <tabla>_modelo.js: un archivo por tabla (19) + index.js que los registra todos
 │   ├── esquemas/           DTOs_Comunes, DTOs_Usuarios_Autenticacion, DTOs_Monitoreo_Metricas, DTOs_Simulacion_Eventos
-│   │                       (cada uno con sus DTO de petición y de respuesta)
+│   │                       (DTO de petición, de respuesta y las funciones que reciben req)
 │   ├── pruebas/            unitarias/, api.test.js, carga.js
 │   ├── LEEME.md            Cómo correr el backend
 │   ├── package.json
@@ -80,10 +80,10 @@ AXON_Stack_Flow/
 |---|---|
 | `main.js` | Crea la aplicación, la seguridad (Helmet/CSP), registra los controladores y sirve el FRONTEND |
 | `config/` | Todo lo que configura el sistema: variables de entorno, conexión a la API de la base, tokens, correo y los filtros que pasan las peticiones (sesión, roles, validación, errores, registro) |
-| `controladores/` | Solo los endpoints: `router.<método>(ruta, filtros, validateRequest(XRequestDto), función)` y, debajo, la función que recibe `req`/`res`, llama a `rutas/` y responde con un DTO de respuesta |
+| `controladores/` | Solo los endpoints: una línea por ruta, `router.<método>(ruta, filtros, validateRequest(XRequestDto), función)` |
 | `rutas/` | La lógica de negocio. Devuelve datos, no respuestas HTTP |
 | `modelos/` | Un archivo por tabla. Es la única capa que lee y guarda datos (en la API externa) |
-| `esquemas/` | Los DTO: los de petición limpian y validan lo que llega; los de respuesta definen el JSON que sale (nunca el hash de la contraseña) |
+| `esquemas/` | Los DTO: los de petición limpian y validan lo que llega; los de respuesta definen el JSON que sale (nunca el hash de la contraseña); y las funciones de cada endpoint, que reciben `req`, llaman a `rutas/` y responden con un DTO |
 
 ### Frontend
 
@@ -103,8 +103,8 @@ Cada recurso tiene el mismo nombre en todas las capas. Por ejemplo, **usuarios**
 | Vista (frontend) | `FRONTEND/js/vistas/usuarios.js` |
 | Controlador (frontend) | `FRONTEND/js/controladores/usuarios.js` |
 | DTO de petición (frontend) | `FRONTEND/js/dto/usuarios.js` |
-| Endpoints (backend) | `BACKEND/controladores/usuarios_controlador.js` |
-| DTO de petición y de respuesta | `BACKEND/esquemas/DTOs_Usuarios_Autenticacion.js` |
+| Endpoints (backend) | `BACKEND/controladores/usuarios_controlador.js` (solo la lista) |
+| DTO y funciones de los endpoints | `BACKEND/esquemas/DTOs_Usuarios_Autenticacion.js` |
 | Lógica | `BACKEND/rutas/usuarios.js` |
 | Modelo | `BACKEND/modelos/usuarios_modelo.js` |
 
@@ -112,7 +112,7 @@ Los nombres de carpetas y archivos están en español; el código interno (varia
 
 ## Endpoints
 
-Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador. Los endpoints y sus funciones están en `BACKEND/controladores/<modulo>_controlador.js` y los DTO de petición y de respuesta en `BACKEND/esquemas/DTOs_*.js`, y los endpoints del frontend están al inicio de cada archivo de `FRONTEND/js/controladores/`.
+Todas las rutas empiezan por `/api`. **Sesión** indica que la ruta exige el token de acceso (`Authorization: Bearer <token>`); **Admin**, que además exige rol de administrador. Los endpoints están en `BACKEND/controladores/<modulo>_controlador.js`; los DTO y las funciones de cada endpoint, en `BACKEND/esquemas/DTOs_*.js`, y los endpoints del frontend están al inicio de cada archivo de `FRONTEND/js/controladores/`.
 
 | Método | Ruta | Acceso | DTO de petición (req) | DTO de respuesta (res) | Llamado en el frontend |
 |---|---|---|---|---|---|
@@ -175,7 +175,7 @@ El login sigue el diagrama de secuencia del tablero. Cada participante tiene su 
 | Usuario | La persona en el navegador |
 | Vista | `FRONTEND/js/vistas/inicio-sesion.js` (`onSubmit({ email, password })`). Su controlador, `controladores/inicio-sesion.js`, llama a `login(new CredentialsRequestDto({ email, password }))` |
 | DTO de entrada (usu, contra) | `CredentialsRequestDto` en `BACKEND/esquemas/DTOs_Usuarios_Autenticacion.js` |
-| Endpoint | `POST /api/auth/login` en `BACKEND/controladores/autenticacion_controlador.js`; la función `login` está debajo de la lista de endpoints, en el mismo archivo |
+| Endpoint | `POST /api/auth/login` en `BACKEND/controladores/autenticacion_controlador.js`; la función `login` está en `BACKEND/esquemas/DTOs_Usuarios_Autenticacion.js` |
 | `validateCredentials(usu, contra)` | `authService.validateCredentials({ email, password })`, que llama a `User.validateCredentials(email, password)` |
 | Modelo | `BACKEND/modelos/usuarios_modelo.js`: convierte la fila de la base en un `User` |
 | Base de datos | API externa: `GET /users?email=&includeInactive=true&limit=1` |

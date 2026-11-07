@@ -93,4 +93,4 @@ async function remove(id, requester) {
   audit(requester, "delete", user.email, "cuenta eliminada");
 }
 
-module.exports = { list, getById, create, update, changePassword, remove };
+Object.assign(module.exports, { list, getById, create, update, changePassword, remove });

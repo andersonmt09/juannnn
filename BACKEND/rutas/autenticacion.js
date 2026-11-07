@@ -134,7 +134,7 @@ async function verifyCode({ email, purpose, code }) {
   await VerificationCode.markUsed(record.id);
 }
 
-module.exports = {
+Object.assign(module.exports, {
   register,
   verifyRegistration,
   validateCredentials,
@@ -145,4 +145,4 @@ module.exports = {
   refreshSession,
   authenticateToken,
   generateCode,
-};
+});

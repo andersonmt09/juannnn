@@ -90,6 +90,7 @@ class PongResponseDto {
   }
 }
 
+// se exportan antes de cargar rutas/: las rutas también usan estos DTO
 module.exports = {
   RunSimulationRequestDto,
   OPERATIONS,
@@ -100,3 +101,41 @@ module.exports = {
   ActivityEventDto,
   PongResponseDto,
 };
+
+// ---------- Funciones de los endpoints (reciben req, llaman a rutas/ y responden con un DTO)
+
+const simulationService = require("../rutas/simulacion");
+const eventService = require("../rutas/eventos");
+
+// simulacion
+async function run(req, res) {
+  const onLogged = (save) => { res.locals.onLogged = save; };
+  res.json(await simulationService.runTracked(req.dto, req.receivedAt, onLogged, (result) => new SimulationResponseDto(result, { path: req.baseUrl })));
+}
+
+// eventos
+function stream(req, res) {
+  res.set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+  res.flushHeaders();
+  res.write("retry: 5000\n\n");
+
+  const clientId = eventService.subscribe(res, req.user, req.dto.token);
+  res.write(`event: stream:connected\ndata: ${JSON.stringify(new ConnectedEventDto({ clientId }))}\n\n`);
+
+  req.on("close", () => eventService.unsubscribe(clientId));
+}
+
+function ping(req, res) {
+  res.json(new PongResponseDto());
+}
+
+Object.assign(module.exports, {
+  run,
+  stream,
+  ping,
+});

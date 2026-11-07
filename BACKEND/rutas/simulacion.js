@@ -84,4 +84,4 @@ async function runTracked(dto, receivedAt, onLogged, buildView) {
   return view;
 }
 
-module.exports = { run, record, runTracked };
+Object.assign(module.exports, { run, record, runTracked });

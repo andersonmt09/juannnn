@@ -185,6 +185,7 @@ class ApiRouteListResponseDto {
   }
 }
 
+// se exportan antes de cargar rutas/: las rutas también usan estos DTO
 module.exports = {
   CreateMonitoredEndpointRequestDto,
   MonitoredEndpointIdRequestDto,
@@ -202,3 +203,71 @@ module.exports = {
   MonitoredEndpointDetailResponseDto,
   ApiRouteListResponseDto,
 };
+
+// ---------- Funciones de los endpoints (reciben req, llaman a rutas/ y responden con un DTO)
+
+const monitoringService = require("../rutas/monitoreo");
+const metricService = require("../rutas/metricas");
+const { MessageResponseDto } = require("./DTOs_Comunes");
+
+// monitoreo
+const apiRoutes = (req) => req.app.locals.apiRoutes || [];
+
+function listRoutes(req, res) {
+  res.json(new ApiRouteListResponseDto(apiRoutes(req)));
+}
+
+async function list(req, res) {
+  res.json(new MonitoredEndpointListResponseDto(await monitoringService.list()));
+}
+
+async function getById(req, res) {
+  res.json(new MonitoredEndpointDetailResponseDto(
+    await monitoringService.getById(req.dto.id),
+    { isAdmin: req.user.isAdmin() },
+  ));
+}
+
+async function create(req, res) {
+  res.status(201).json(new MonitoredEndpointResponseDto(await monitoringService.create(req.dto, apiRoutes(req))));
+}
+
+async function remove(req, res) {
+  await monitoringService.remove(req.dto.id);
+  res.json(new MessageResponseDto("Endpoint eliminado del monitoreo"));
+}
+
+// metricas
+async function getDashboard(req, res) {
+  res.json(new DashboardResponseDto(await metricService.getDashboard()));
+}
+
+async function listRequests(req, res) {
+  res.json(new RequestLogListResponseDto(await metricService.listRequests(req.dto)));
+}
+
+async function getRequest(req, res) {
+  res.json(new RequestLogDetailResponseDto(await metricService.getRequest(req.dto.id)));
+}
+
+async function getServices(req, res) {
+  res.json(new ServiceListResponseDto(await metricService.getServices(req.user)));
+}
+
+async function checkHealth(req, res) {
+  const status = await metricService.checkHealth();
+  res.status(status.databaseAvailable ? 200 : 503).json(new HealthResponseDto(status));
+}
+
+Object.assign(module.exports, {
+  listRoutes,
+  list,
+  getById,
+  create,
+  remove,
+  getDashboard,
+  listRequests,
+  getRequest,
+  getServices,
+  checkHealth,
+});
